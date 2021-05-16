@@ -7,7 +7,7 @@
             [malli.core :as m]
             [clojure.string :as string]))
 
-(def delimiters ["✳️" "🔚"])
+(def delimiters ["✳" "🔚"])
 
 ;; regex adapted from comb; licensed under EPLv2
 (def parser-regex
@@ -15,6 +15,14 @@
    (str "(?s)\\A"
         "(?:" "(.*?)"
         (first delimiters) "(.*?)" (last delimiters)
+        ")?"
+        "(.*)\\z")))
+
+(defn get-parser-regex [start end]
+  (re-pattern
+   (str "(?s)\\A"
+        "(?:" "(.*?)"
+        start "(.*?)" end
         ")?"
         "(.*)\\z")))
 
@@ -161,7 +169,7 @@
   ([parsed-form form-nmspc post-validator]
    (binding [*ns* (create-ns form-nmspc)]
      (refer-clojure)
-     (require '[respatialized.render :refer :all])
+     ;; (require '[respatialized.render :refer :all])
      (clojure.walk/postwalk
       (fn [i] (if (m/validate parsed-expr-model i)
                 (form->hiccup (eval-parsed-expr i false post-validator))
