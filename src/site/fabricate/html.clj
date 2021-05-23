@@ -752,3 +752,15 @@
           (tree-seq #(and (vector? %) (keyword? (first %))) rest c))))
 
 (def phrasing? (m/validator (schema/subschema html ::phrasing-content)))
+
+(defn validate-element [elem]
+  (if (and (vector? elem)
+           (keyword? (first elem)))
+    (let [form-kw (first elem)
+          valid? (get element-validators (ns-kw form-kw))]
+      (if (valid? elem)
+                {:result elem}
+                {:err {:type ::invalid-form
+                       :message (str "Invalid <" (name form-kw) "> form")
+                       :cause ((get element-explainers (ns-kw form-kw)) elem)}}))
+    elem))

@@ -159,3 +159,17 @@
    (partition-by section?)
    (partition-all 2)
    (map process-chunk)))
+
+(defn doc-header
+  "Returns a default header from a map with a post's metadata."
+  [{:keys [title page-style scripts site-title]
+    :or {site-title "Fabricate"}}]
+  (let [page-header
+        (apply conj
+               [:head
+                [:title (str "Fabricate | " title)]
+                [:meta {:charset "utf-8"}]
+                [:meta {:http-equiv "X-UA-Compatible" :content "IE=edge,chrome=1"}]
+                [:meta {:name "viewport" :content "width=device-width, initial-scale=1.0, user-scalable=no"}]]
+               scripts)]
+    (if page-style (conj page-header [:style page-style]) page-header)))
