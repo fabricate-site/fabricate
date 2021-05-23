@@ -750,3 +750,5 @@
   (some? (some
           #(m/validate atomic-element %)
           (tree-seq #(and (vector? %) (keyword? (first %))) rest c))))
+
+(def phrasing? (m/validator (schema/subschema html ::phrasing-content)))
