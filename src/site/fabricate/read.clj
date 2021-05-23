@@ -3,11 +3,17 @@
   {:license {:source "https://github.com/weavejester/comb"
              :type "Eclipse Public License, v1.0"}}
   (:require [clojure.edn :as edn]
+            [hiccup.util :as util]
+            [clojure.pprint :refer [pprint]]
             [clojure.tools.reader :as r]
             [malli.core :as m]
             [clojure.string :as string]))
 
 (def delimiters ["✳" "🔚"])
+
+(def delimiters-2 {:add "➕"
+                   :run "▶️"
+                   :end "⏹"})
 
 ;; regex adapted from comb; licensed under EPLv2
 (def parser-regex
@@ -200,3 +206,31 @@
         (if yield?
           (eval (r/read-string exp))
           (do (eval (r/read-string exp)) nil))))))
+
+(defn include-source
+  ([{:keys [details]
+     :or {details nil}
+     :as opts} file-path]
+   (let [source-code (slurp file-path)]
+     (if details (conj [:details [:summary details]]
+                        [:pre [:code source-code]])
+        [:pre [:code source-code]])))
+  ([file-path] (include-source {} file-path)))
+
+(defn include-def
+  "Excerpts the source code of the given symbol in the given file."
+  ([{:keys [render-fn def-syms container]
+     :or {render-fn #(util/escape-html (with-out-str (pprint %)))
+          def-syms #{'def 'defn}
+          container [:pre [:code {:class "language-clojure"}]]}} sym f]
+   (with-open [r (clojure.java.io/reader f)]
+     (loop [source (java.io.PushbackReader. r)]
+       (if (not (.ready source)) :not-found
+           (let [e (try (r/read source)
+                        (catch Exception e nil))]
+             (if (and (list? e)
+                      (def-syms (first e))
+                      (= sym (symbol (second e))))
+               (conj container (render-fn e))
+               (recur source)))))))
+  ([sym f] (include-def {} sym f)))
