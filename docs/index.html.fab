@@ -1,7 +1,7 @@
-✳ (ns site.fabricate.intro
+✳ (ns site.fabricate.docs.intro
 (:require [garden.core :as garden]
-[site.fabricate.read :as read]
-[site.fabricate.page :refer :all]
+[site.fabricate.prototype.read :as read]
+[site.fabricate.prototype.page :refer :all]
           [garden.stylesheet :as stylesheet])) 🔚
 
 ✳ (def page-css
@@ -23,7 +23,7 @@
    [:p {:margin-bottom "2rem"}]
    )) 🔚
 
-✳ (def metadata {:title "Introducing Fabricate"
+✳ (def metadata {:title "Introduction"
                   :page-style page-css}) 🔚
 
 
