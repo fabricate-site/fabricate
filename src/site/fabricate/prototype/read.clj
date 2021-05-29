@@ -1,4 +1,4 @@
-(ns site.fabricate.read
+(ns site.fabricate.prototype.read
   "Parsing utilities for embedded clojure forms."
   {:license {:source "https://github.com/weavejester/comb"
              :type "Eclipse Public License, v1.0"}}

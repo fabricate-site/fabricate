@@ -1,17 +1,17 @@
-(ns site.fabricate.read-test
+(ns site.fabricate.prototype.read-test
   (:require  [clojure.test :as t]
-             [site.fabricate.page :refer [em link code blockquote]]
+             [site.fabricate.prototype.page :refer [em link code blockquote]]
              [malli.core :as m]
              [hiccup.core :as hiccup]
              #_[respatialized.document :as doc]
-             [site.fabricate.read :refer :all]))
+             [site.fabricate.prototype.read :refer :all]))
 
-(defn ns-refer [f]
+(defn setup [f]
   (def parse-eval (comp eval-all parse))
-  (require '[site.fabricate.page :refer [em link]])
+  (require '[site.fabricate.prototype.page :refer [em link]])
   (f))
 
-(t/use-fixtures :once ns-refer)
+(t/use-fixtures :once setup)
 
 (t/deftest regex
   (t/testing "regular expression"
@@ -35,9 +35,9 @@
     (t/is (= (eval-expr ":foo") nil)
           "Non-forms should be evaluated and not returned.")
 
-    (t/is (= (eval-expr "=((+ 3 4)") :site.fabricate.read/parse-error)
+    (t/is (= (eval-expr "=((+ 3 4)") :site.fabricate.prototype.read/parse-error)
           "Invalid exprs should return error values")
-    (t/is (= (eval-expr "=(unknown-function 3 4)") :site.fabricate.read/parse-error)
+    (t/is (= (eval-expr "=(unknown-function 3 4)") :site.fabricate.prototype.read/parse-error)
           "Invalid exprs should return error values")))
 
 (t/deftest parser
@@ -126,7 +126,7 @@
                (parse-eval "✳(ns test-form-ns)🔚 baz ✳(def var 3)🔚 foo ✳=var🔚"))
             "In-form defs should be evaluated successfully.")
 
-      (t/is (= (parse-eval "✳=(site.fabricate.page/em 3)🔚")
+      (t/is (= (parse-eval "✳=(site.fabricate.prototype.page/em 3)🔚")
                [[:em 3]])
             "Namespace scoping should be preserved")
       (t/is (= (parse-eval "✳=(em 3)🔚")
@@ -173,7 +173,7 @@
           "In-form defs should be evaluated successfully.")
 
     (t/is (= [[:em 3]]
-             (parse-eval "✳=(site.fabricate.page/em 3)🔚"))
+             (parse-eval "✳=(site.fabricate.prototype.page/em 3)🔚"))
           "Namespace scoping should be preserved")
 
     (t/is (= [[:em 3]] (parse-eval "✳=(em 3)🔚"))

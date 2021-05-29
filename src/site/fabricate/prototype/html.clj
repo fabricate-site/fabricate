@@ -1,4 +1,4 @@
-(ns site.fabricate.html
+(ns site.fabricate.prototype.html
   "Namespace for malli schemas"
   (:require
    [clojure.string :as str]
@@ -14,7 +14,7 @@
    [malli.dot :as md]
    [malli.error :as me]
    [malli.util :as mu]
-   [site.fabricate.schema :as schema]))
+   [site.fabricate.prototype.schema :as schema]))
 
 (def block-level-tags
   "MDN list of block-level HTML element tags"

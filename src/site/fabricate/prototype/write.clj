@@ -1,12 +1,12 @@
-(ns site.fabricate.write
+(ns site.fabricate.prototype.write
   (:require
    [clojure.java.io :as io]
    [clojure.string :as string]
    [hiccup2.core :as hiccup]
    [hiccup.page :as hp]
-   [site.fabricate.read :as read]
-   [site.fabricate.html :as html]
-   [site.fabricate.page :as page]
+   [site.fabricate.prototype.read :as read]
+   [site.fabricate.prototype.html :as html]
+   [site.fabricate.prototype.page :as page]
    [juxt.dirwatch :refer [watch-dir close-watcher]]
    ))
 
@@ -133,7 +133,7 @@
       (println "rendered"))))
 
 (defn load-deps []
-  (require '[site.fabricate.html :refer :all]))
+  (require '[site.fabricate.prototype.html :refer :all]))
 
 (defn draft
   ([]
@@ -156,14 +156,8 @@
   (future (draft)))
 
 (defn publish
-  ([{:keys [files directory]
+  ([{:keys [files dirs]
      :as opts}]
-
-   #_(css/-main)
-   (if (and (= 1 (count files))
-            (.isDirectory (io/file (first files))))
-     (do
-       (render-template-files
-        (get-template-files (first files)
-                            template-suffix)))
-     (do (render-template-files files)))))
+   (let [all-files
+         (apply concat files (map #(get-template-files % template-suffix) dirs))]
+     (render-template-files all-files))))

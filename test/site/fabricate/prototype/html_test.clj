@@ -1,6 +1,6 @@
-(ns site.fabricate.html-test
-  (:require [site.fabricate.html :as html :refer :all]
-            [site.fabricate.schema :as schema]
+(ns site.fabricate.prototype.html-test
+  (:require [site.fabricate.prototype.html :as html :refer :all]
+            [site.fabricate.prototype.schema :as schema]
             [malli.core :as m :refer [validate]]
             [malli.error :as me]
             [malli.generator :as mg]
@@ -126,7 +126,7 @@
         (let [data (get example-forms elem
                         [elem "sample string"])
               schema (schema/subschema
-                      html (ns-kw 'site.fabricate.html elem))]
+                      html (ns-kw 'site.fabricate.prototype.html elem))]
           (t/is (valid-schema? schema data)))))
 
     (t/is (palpable? [:p "text"]))
@@ -141,7 +141,7 @@
 
   (t/testing "example forms"
     (doseq [[k v] example-forms]
-      (let [schema (schema/subschema html (ns-kw 'site.fabricate.html k))]
+      (let [schema (schema/subschema html (ns-kw 'site.fabricate.prototype.html k))]
         (t/testing (str "model for element: <" (symbol k) ">")
           (t/is (valid-schema? schema v))))))
 

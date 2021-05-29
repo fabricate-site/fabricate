@@ -1,4 +1,4 @@
-(ns site.fabricate.schema
+(ns site.fabricate.prototype.schema
   (:require [malli.core :as m]))
 
 (defn has-reqd?

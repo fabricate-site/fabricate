@@ -1,7 +1,7 @@
-(ns site.fabricate.page
+(ns site.fabricate.prototype.page
   "Utility functions for working with HTML page elements."
   (:require
-   [site.fabricate.html :as html]
+   [site.fabricate.prototype.html :as html]
    [hiccup2.core :as hiccup]
    [hiccup.page :as hp]
    [hiccup.util :as hu]

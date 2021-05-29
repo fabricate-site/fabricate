@@ -1,5 +1,5 @@
-(ns site.fabricate.page-test
-  (:require [site.fabricate.page :refer :all ]
+(ns site.fabricate.prototype.page-test
+  (:require [site.fabricate.prototype.page :refer :all ]
             [hiccup2.core :as hiccup]
             [clojure.test :as t]))
 
