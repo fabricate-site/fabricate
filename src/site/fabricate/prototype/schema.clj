@@ -1,5 +1,6 @@
 (ns site.fabricate.prototype.schema
-  (:require [malli.core :as m]))
+  (:require [malli.core :as m]
+            [clojure.spec.alpha :as spec]))
 
 (defn has-reqd?
   "Checks to see if at least one entry in the given map schema has required keys"
@@ -13,3 +14,16 @@
 
 (defn subschema [[_ meta-map orig-ref] new-ref]
   [:schema meta-map new-ref])
+
+(defn ns-form?
+  "Returns true if the given form is a valid Clojure (ns ...) special form"
+  [form]
+  (not=
+   :clojure.spec.alpha/invalid
+   (spec/conform
+    (spec/cat
+     :ns-sym #(= % 'ns)
+     :ns-name simple-symbol?
+     :attr-map (spec/? map?)
+     :ns-clauses :clojure.core.specs.alpha/ns-clauses)
+    form)))

@@ -45,25 +45,25 @@
   (t/testing "parsed element model"
     (t/is
      (m/validate parsed-expr-model
-               {:src "✳=(+ 3 4)🔚"
-                :expr '(+ 3 4)
-                :err nil
-                :result 7}))
+                 {:src "✳=(+ 3 4)🔚"
+                  :expr '(+ 3 4)
+                  :err nil
+                  :result 7}))
     (t/is
      (m/validate parsed-expr-model
-               {:src "✳(+ 3 4)🔚"
-                :expr '(do (+ 3 4) nil)
-                :err nil
-                :result nil}))
+                 {:src "✳(+ 3 4)🔚"
+                  :expr '(do (+ 3 4) nil)
+                  :err nil
+                  :result nil}))
     (t/is
      (m/validate parsed-expr-model
-               {:src "✳((+ 3 4)🔚"
-                :expr nil
-                :err {:type clojure.lang.ExceptionInfo
-                      :cause "Unexpected EOF while reading item 1 of list."
-                      :phase nil
-                      :message "Unexpected EOF while reading item 1 of list."}
-                :result nil})))
+                 {:src "✳((+ 3 4)🔚"
+                  :expr nil
+                  :err {:type clojure.lang.ExceptionInfo
+                        :cause "Unexpected EOF while reading item 1 of list."
+                        :phase nil
+                        :message "Unexpected EOF while reading item 1 of list."}
+                  :result nil})))
 
   (t/testing "expression parsing"
     (t/is (= ["text " {:expr '(+ 2 3)
@@ -113,6 +113,17 @@
 
     )
 
+  (t/testing "metadata retrieval"
+    (t/is (= '(def metadata {:title "Test" :namespace (ns site.fabricate.demo)})
+             (-> "✳(def metadata {:title \"Test\" :namespace (ns site.fabricate.demo)})🔚"
+                 parse
+                 get-metadata)))
+
+    (t/is (= nil
+             (-> "✳(+ 3 4 5)🔚"
+                 parse
+                 get-metadata))))
+
   (t/testing "eval all"
     (let [parse-eval (comp eval-all parse)]
       (t/is (= (parse-eval "✳=:foo🔚 bar ✳=:baz🔚")
@@ -143,12 +154,12 @@
 
   (t/testing "eval with error messages"
     #_(t/is (m/validate
-           (doc/subschema doc/html :doc/div)
-           (form->hiccup {:expr nil,
-                          :src "✳=((+ 2 3)🔚",
-                          :err {:type clojure.lang.ExceptionInfo,
-                                :message "Unexpected EOF while reading item 1 of list."},
-                          :result nil})))
+             (doc/subschema doc/html :doc/div)
+             (form->hiccup {:expr nil,
+                            :src "✳=((+ 2 3)🔚",
+                            :err {:type clojure.lang.ExceptionInfo,
+                                  :message "Unexpected EOF while reading item 1 of list."},
+                            :result nil})))
 
     (t/is
      (= [:div 5]

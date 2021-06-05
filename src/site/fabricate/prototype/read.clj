@@ -7,12 +7,14 @@
             [clojure.pprint :refer [pprint]]
             [clojure.tools.reader :as r]
             [malli.core :as m]
+            [site.fabricate.prototype.schema :as schema]
+            [clojure.spec.alpha :as spec]
             [clojure.string :as string]))
 
 (def delimiters ["✳" "🔚"])
 
 (def delimiters-2 {:add "➕"
-                   :run "▶️"
+                   :run "▶"
                    :end "⏹"})
 
 ;; regex adapted from comb; licensed under EPLv2
@@ -32,7 +34,10 @@
         ")?"
         "(.*)\\z")))
 
-(def expr-model [:re parser-regex])
+(def ^{:doc "Malli schema for parser regex."} src-model [:re parser-regex])
+
+(comment
+  (m/validate src-model "✳(+ 3 4)🔚"))
 
 (defn eval-expr [expr]
   (if (.startsWith expr "=")
@@ -77,16 +82,27 @@
         raw (.digest algorithm (.getBytes s))]
     (format "%032x" (BigInteger. 1 raw))))
 
+(def ^{:doc "Model for parsed expressions."} expr-model
+  [:orn
+   [:yield {:doc "An expression intended to have its results embedded in the resulting text."} [:any]]
+   [:exec {:doc "An expression intended be evaluated for side effects or definitions."} [:any]]
+   [:nil {:doc "An invalid expression"} nil?]])
+
+(comment
+  (m/validate expr-model '(+ 3 4)))
+
 (def parsed-expr-model
   [:map
+   [:src {:doc (-> src-model var meta :doc)} src-model]
+   [:expr {:doc (-> expr-model var meta :doc)} expr-model]
+   [::parse-error {:optional true :doc ""}
+    [:map [:type [:fn class?]]
+     [:message [:string]]]]])
+
+(def evaluated-expr-model
+  [:map
    [:src expr-model]
-   [:expr [:orn [:nil nil?]
-           [:val [:any]]]]
-   [:err [:orn [:nil nil?]
-          [:error [:map [:type [:fn class?]]
-                   [:message [:string]]]]]]
-   [:result [:orn [:nil nil?]
-             [:val [:any]]]]])
+   [:expr ]])
 
 (defn parse
   ([src start-seq]
@@ -135,10 +151,37 @@
                         first
                         :expr)]
     (if (and (seq? first-expr)
-             (seq? (second first-expr))
-             (= (symbol 'ns) (first (second first-expr))))
-      (second (second first-expr))
-      nil)))
+             (schema/ns-form? (second first-expr)))
+        (second (second first-expr))
+        nil)))
+
+;; An alternative design choice: rather than making the ns form
+;; special and required as the first fabricate form, make the metadata map
+;; special and just put the unevaluated ns form within it.
+
+(def metadata-model
+  "Malli schema for unevaluated metadata form/map"
+  [:catn
+   [:def [:= 'def]]
+   [:name [:= 'metadata]]
+   [:meta-map map?]])
+
+(def metadata-expr-model
+  [:catn
+   [:do [:= 'do]]
+   [:metadata-form [:schema metadata-model]]
+   [:nil nil?]])
+
+(defn get-metadata
+  "Get the metadata form from the parse tree"
+  [expr-tree]
+  (->> expr-tree
+       (tree-seq vector? identity)
+       (filter #(and (m/validate parsed-expr-model %)
+                     (m/validate metadata-expr-model (:expr %))))
+       first
+       :expr
+       second))
 
 (defn eval-all
   ([parsed-form simplify?]
