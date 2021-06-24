@@ -161,3 +161,47 @@
    (let [all-files
          (apply concat files (map #(get-template-files % template-suffix) dirs))]
      (render-template-files all-files))))
+
+;; fsm based implementation here
+
+(defn write-page!
+  "Writes the page. Returns a tuple with the resulting state and the page contents."
+  [{:keys [output-file page-content]
+    :as page-data}]
+  (let [state
+        (if
+            (not (string? page-content)) ::write-error
+            (try (do (spit page-content) ::written)
+                 (catch Exception e ::write-error)))]
+    [state page-data]))
+
+(def =>write-page! [:=> [:cat sketch/published-page-metadata-schema]
+                    [:catn [:state [:enum ::write-error ::written]]
+                     [:page-data sketch/published-page-metadata-schema]]])
+
+(comment
+  (m/validate =>write-page! write-page!
+              {::m/function-checker mg/function-checker}))
+
+;; consider moving this to the page namespace
+(defn populate-page-meta
+  {:malli/schema
+   [:=> [:cat sketch/page-metadata-schema [:? :map]]
+    sketch/page-metadata-schema]}
+  ([{:keys [namespace page-content output-file input-file] :as page-data}
+    {:keys [output-dir] :as site-settings}]
+   (assoc page-data
+          :namespace (or (read/yank-ns page-content)
+                         namespace
+                         (symbol (str "tmp-ns." (Math/abs (hash page-content)))))
+          :output-file (or output-file
+                           (get-output-filename input-file
+                                                output-dir)))))
+
+(comment
+  (def =>populate-page-meta
+    [:=> [[sketch/page-metadata-schema [:? :map]]] sketch/page-metadata-schema])
+
+  (meta (var populate-page-meta))
+
+  )
