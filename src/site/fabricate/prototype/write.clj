@@ -1,20 +1,46 @@
 (ns site.fabricate.prototype.write
+  "Fabricate's namespace for writing HTML pages. This file combines
+   fabricate's other namespaces for reading source files, parsing
+   & restructuring their contents, and generating HTML pages with
+   additional functions for input and output in order to achieve the
+   purpose of the library: create HTML documents.
+
+  The central method that it uses to combine these functions from
+  other namespaces is a finite-state-machine."
   (:require
    [clojure.java.io :as io]
    [clojure.string :as string]
    [hiccup2.core :as hiccup]
    [hiccup.page :as hp]
+   [malli.core :as m]
+   [malli.generator :as mg]
+   [site.fabricate.sketch :as sketch]
    [site.fabricate.prototype.read :as read]
    [site.fabricate.prototype.html :as html]
    [site.fabricate.prototype.page :as page]
+   [site.fabricate.prototype.schema :as schema]
    [juxt.dirwatch :refer [watch-dir close-watcher]]
    ))
 
 (def pages
+  "This variable holds the current state of all the pages created
+   by fabricate."
   (atom {}))
 
-(def template-suffix ".fab")
-(def template-suffix-regex (re-pattern (str "#*[.]" template-suffix "$")))
+(def page-schema
+  ""
+  [:map
+   [:page-meta sketch/page-metadata-schema]
+   [:state (into [:enum] (keys sketch/rerender-state-machine))]])
+
+(def pages-schema
+  [:map-of :string page-schema])
+
+(def default-site-settings
+  {:template-suffix ".fab"
+   :output-dir "./pages"})
+
+(def template-suffix-regex (re-pattern (str "#*[.]" (:template-suffix default-site-settings) "$")))
 
 (defn template-str->hiccup
   "Attempts to parse the given string"
@@ -46,16 +72,19 @@
        (hiccup/html body)
        "</html>"))
 
+
+
+
+
+
 (defn template->hiccup
   "Converts a template file to a hiccup data structure for the page."
   [t]
   (let [parsed (read/parse t)
         form-ns (read/yank-ns parsed)
-        tmpl-ns (if form-ns form-ns
-                    (symbol (str "tmp-ns." (Math/abs (hash parsed)))))
         evaluated  (read/eval-with-errors
-                    parsed tmpl-ns html/validate-element)
-        page-meta (read/eval-in-ns 'metadata tmpl-ns)
+                    parsed form-ns html/validate-element)
+        page-meta (ns-resolve form-ns 'metadata)
         body-content
         (into [:article {:lang "en"}]
               page/sectionize-contents
@@ -97,7 +126,7 @@
      (render-template-file f page-fn out-dir)))
   ([template-files page-fn] (render-template-files template-files page-fn "pages"))
   ([template-files] (render-template-files template-files template->hiccup "pages"))
-  ([] (render-template-files (get-template-files "content" template-suffix))))
+  ([] (render-template-files (get-template-files "content" (:template-suffix default-site-settings)))))
 
 
 
@@ -106,8 +135,11 @@
     (do
       (println "Parse error detected, skipping")
       old-map)
-    (assoc old-map page-name {:data page-contents
-                              :html (hiccup->html-str page-contents)})))
+    (assoc old-map page-name
+           {:data page-contents
+            :html (hiccup->html-str page-contents)})))
+
+
 
 (defn write-file! [output-path html-content]
   (if (not
@@ -132,14 +164,14 @@
       (update-and-write! (.toString file))
       (println "rendered"))))
 
-(defn load-deps []
-  (require '[site.fabricate.prototype.html :refer :all]))
+
 
 (defn draft
   ([]
    (do
-     (load-deps)
-     (doseq [fp (get-template-files "content" template-suffix)]
+     ;; (load-deps)
+     (doseq [fp (get-template-files "content" (:template-suffix
+                                               default-site-settings))]
        (update-and-write! fp))
      (println "establishing file watch")
      (let [fw (watch-dir rerender (io/file "./content/"))]
@@ -159,7 +191,10 @@
   ([{:keys [files dirs]
      :as opts}]
    (let [all-files
-         (apply concat files (map #(get-template-files % template-suffix) dirs))]
+         (apply concat files
+                (map #(get-template-files
+                       %
+                       (:template-suffix default-site-settings)) dirs))]
      (render-template-files all-files))))
 
 ;; fsm based implementation here

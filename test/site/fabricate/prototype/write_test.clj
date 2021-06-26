@@ -1,5 +1,6 @@
 (ns site.fabricate.prototype.write-test
   (:require [site.fabricate.prototype.write :refer :all]
+            [site.fabricate.prototype.read :as read]
             [malli.core :as m]
             [clojure.test :as t]))
 
@@ -29,3 +30,14 @@
                     populate-page-meta))
 
   )
+
+(t/deftest doc-rendering
+  (t/testing "readme"
+    (t/is (string?
+           (-> "./README.md.fab"
+               slurp
+               read/parse
+               read/eval-with-errors
+               last)))
+
+    ))
