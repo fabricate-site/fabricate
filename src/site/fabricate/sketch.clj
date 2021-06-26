@@ -28,8 +28,7 @@
      [:unparsed [:cat [:enum :rendered] :string]]
      [:parsed [:fn vector?]]
      [:validated html/html]
-     [:rendered [:cat [:enum :rendered] :string]]
-     ]]])
+     [:rendered [:cat [:enum :rendered] :string]]]]])
 
 (def published-page-metadata-schema
   (mu/required-keys page-metadata-schema
@@ -44,9 +43,7 @@
               {:title "Example post"
                :input-file "./content/example.html.fab"
                :output-file "./output/demo-file.html"
-               :namespace 'demo-ns})
-
-  )
+               :namespace 'demo-ns}))
 
 (def page-schema
   [:map
@@ -79,7 +76,6 @@
   ;; how users could potentially extend fabricate while having
   ;; some guarantees that their functions fit into the structure
   ;; provided by fabricate.
-
   )
 
 (def live-reload-state-kws
@@ -120,7 +116,7 @@
    ::read/eval-error #{['catch-error ::fallback]
                        ['catch-error ::skip]}
    ::read/render-error #{['catch-error ::fallback]
-                       ['catch-error ::skip]}
+                         ['catch-error ::skip]}
    ::write-error #{['catch-error ::fallback]
                    ['catch-error ::skip]}
    ::fallback #{[spit ::written]}
@@ -136,7 +132,7 @@
   by which they can be brought back towards stability, and provide
   a programmable application architecture for users of fabricate."
   {:site.fabricate.prototype.write/file-changed #{[read/parse ::read/parsed]
-                          [read/parse ::read/read-error]}
+                                                  [read/parse ::read/read-error]}
    ::read/parsed #{[read/eval-with-errors ::read/evaluated]
                    [read/eval-with-errors ::read/eval-error]}
    ::read/evaluated #{['template->html ::page/rendered]
@@ -151,18 +147,73 @@
    ::read/render-error #{['catch-error :site.fabricate.prototype.write/fallback]
                          ['catch-error :site.fabricate.prototype.write/skip]}
    :site.fabricate.prototype.write/write-error #{['catch-error :site.fabricate.prototype.write/fallback]
-                         ['catch-error :site.fabricate.prototype.write/skip]}
+                                                 ['catch-error :site.fabricate.prototype.write/skip]}
    :site.fabricate.prototype.write/fallback #{[spit :site.fabricate.prototype.write/done]}
    :site.fabricate.prototype.write/skip #{[identity :site.fabricate.prototype.write/done]}})
 
+(comment
+  ;; schemas all the way down: schemas are states are data
+  (def malli-fsm-cyclic
+    {[:enum :a] [:or [:enum :b] [:enum :c]]
+     [:enum :b] [:or [:enum :d]]
+     [:enum :c] [:or [:enum :d]]
+     [:enum :d] [:or [:enum :a]]})
+
+  (def malli-fsm-dag
+    {:fsm/start [:enum :a]
+     [:enum :a] [:or [:enum :b] [:enum :c]]
+     [:enum :b] [:or [:enum :d]]
+     [:enum :c] [:or [:enum :d]]
+     [:enum :d] [:enum :fsm/end]})
+
+  (defn >5? [x] (if (> 5 x) :greater :lesser))
+
+  (def  function-state-machine
+    "Function state machine: pattern guards are defined solely by
+    the contract/schema/signature of the function's inputs and outputs."
+    {:init 'slurp
+     'slurp 'read/parse
+     'read/parse 'read/eval-with-errors
+     'read/eval-with-errors 'template->html
+     'template->html 'spit
+     'spit :exit}))
+
+(def malli-fsm-data-fns
+  {:string {:op identity
+            :exit-state :fsm/end}
+   :int {:op >5?
+         :exit-state :checked}
+   [:enum :greater] {:op (fn [_] "greater")
+                     :exit-state :fsm/end}
+   [:enum :lesser] {:op (fn [_] "lesser")
+                    :exit-state :fsm/end}})
+
+(defn advance-malli-fsm [fsm-map val]
+  (if (= :fsm/end (:fsm/state val)) val
+      (let [current-val
+            (if (and (map? val) (contains? val :fsm/state))
+              val
+              {:value val :fsm/state :fsm/start})
+            matching-schema (->> fsm-map
+                                 keys
+                                 (filter #(m/validate % (:value current-val)))
+                                 first)
+            {:keys [op exit-state]} (get fsm-map matching-schema)]
+        {:value (op val) :fsm/state exit-state})))
+
+(->> 3
+     (advance-malli-fsm malli-fsm-data-fns)
+     (advance-malli-fsm malli-fsm-data-fns)
+     (advance-malli-fsm malli-fsm-data-fns)
+     )
 
 (defn malli?
   "Returns true if the given form is a valid malli schema"
   [form]
   (try (do (m/schema form) true)
        (catch Exception e
-           #_(prn (Throwable->map e))
-           false)))
+         #_(prn (Throwable->map e))
+         false)))
 
 (def state-action-behavior
   "Malli schema for the ⟨s,α,t⟩ triple, \"where s and t are
