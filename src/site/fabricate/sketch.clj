@@ -12,20 +12,20 @@
 
 (def page-metadata-schema
   [:map
+   [:input-file [:orn [:path :string]
+                 [:file [:fn #(instance? java.io.File %)]]]]
+   [:unparsed-content {:optional true} :string]
+   [:parsed-content {:optional true} [:fn vector?]]
    [:title {:optional true} :string]
    [:namespace {:optional true}
     [:orn
      [:name symbol?]
      [:form [:fn schema/ns-form?]]]]
    [:page-style {:optional true} :string]
-   [:input-file [:orn [:path :string]
-                 [:file [:fn #(instance? java.io.File %)]]]]
    [:output-file {:optional true}
     [:orn [:undefined nil?]
      [:path :string]
      [:file [:fn #(instance? java.io.File %)]]]]
-   [:unparsed-content {:optional true} :string]
-   [:parsed-content {:optional true} [:fn vector?]]
    [:hiccup-content {:optional true} html/html]
    [:rendered-content {:optional true} :string]])
 
@@ -187,7 +187,7 @@
                                           keys
                                           (filter #(m/validate % (:value current-val)))
                                           first)
-                     {:keys [op target-state]} (get fsm-map matching-schema)]
+                     {:keys [op description target-state]} (get fsm-map matching-schema)]
                  {:value (op (:value current-val)) :fsm/state target-state})))
 
 (comment (defn >5? [x] (if (> 5 x) :greater :lesser))

@@ -198,40 +198,6 @@
                        (:template-suffix default-site-settings)) dirs))]
      (render-template-files all-files))))
 
-;; fsm based implementation here
-;;
-;; write the succession of states, then fill in the schemas
-;; describing the desired states, and the functions
-;; that produce that particular succession of states
-
-(def operations
-  {[:and :string [:fn #(.exists (io/file %))]]
-   {:op (fn [f] {:input-file (io/as-file f)})
-    :description "Representing input path as :input-file entry in page data map"
-    :target-state :page-map}
-   (-> sketch/page-metadata-schema
-       (mu/dissoc :output-file)
-       (mu/dissoc :title)
-       (mu/dissoc :namespace)
-       (mu/dissoc :page-style)
-       (mu/dissoc :unparsed-content)
-       (mu/dissoc :parsed-content)
-       (mu/dissoc :hiccup-content)
-       (mu/dissoc :rendered-content))
-   {:op (fn [{:keys [input-file] :as page-data}]
-          (assoc page-data :unparsed-content (slurp input-file)))
-    :description "Reading in the page content as a string"
-    :target-state :input-read}
-   #_(-> sketch/page-metadata-schema
-       (mu/dissoc :output-file)
-       (mu/dissoc :title)
-       (mu/dissoc :namespace)
-       (mu/dissoc :page-style)
-       (mu/dissoc :parsed-content)
-       (mu/dissoc :hiccup-content)
-       (mu/dissoc :rendered-content))
-   })
-
 (defn write-page!
   "Writes the page. Returns a tuple with the resulting state and the page contents."
   [{:keys [output-file page-content]
@@ -256,12 +222,12 @@
   {:malli/schema
    [:=> [:cat sketch/page-metadata-schema [:? :map]]
     sketch/page-metadata-schema]}
-  ([{:keys [namespace page-content output-file input-file] :as page-data}
+  ([{:keys [namespace parsed-content output-file input-file] :as page-data}
     {:keys [output-dir] :as site-settings}]
    (assoc page-data
-          :namespace (or (read/yank-ns page-content)
+          :namespace (or (read/yank-ns parsed-content)
                          namespace
-                         (symbol (str "tmp-ns." (Math/abs (hash page-content)))))
+                         (symbol (str "tmp-ns." (Math/abs (hash parsed-content)))))
           :output-file (or output-file
                            (get-output-filename input-file
                                                 output-dir)))))
@@ -273,3 +239,55 @@
   (meta (var populate-page-meta))
 
   )
+
+;; fsm based implementation here
+;;
+;; write the succession of states, then fill in the schemas
+;; describing the desired states, and the functions
+;; that produce that particular succession of states
+
+(def operations
+  {[:and :string [:fn #(.exists (io/file %))]]
+   {:op (fn [f] {:input-file (io/as-file f)})
+    :description "Representing input path as :input-file entry in page data map"
+    :target-state :page-map}
+   (-> sketch/page-metadata-schema
+       (mu/dissoc :output-file)
+       (mu/dissoc :title)
+       (mu/dissoc :namespace)
+       (mu/dissoc :page-style)
+       (mu/dissoc :unparsed-content)
+       (mu/dissoc :parsed-content)
+       (mu/dissoc :hiccup-content)
+       (mu/dissoc :rendered-content)
+       mu/closed-schema)
+   {:op (fn [{:keys [input-file] :as page-data}]
+          (assoc page-data :unparsed-content (slurp input-file)))
+    :description "Reading in the page content as a string"
+    :target-state :input-read}
+   (-> sketch/page-metadata-schema
+       (mu/dissoc :output-file)
+       (mu/dissoc :title)
+       (mu/dissoc :namespace)
+       (mu/dissoc :page-style)
+       (mu/dissoc :parsed-content)
+       (mu/dissoc :hiccup-content)
+       (mu/dissoc :rendered-content)
+       mu/closed-schema)
+   {:op (fn [{:keys [unparsed-content] :as page-data}]
+          (let [parsed (read/parse unparsed-content)]
+            (-> page-data
+                (assoc :parsed-content parsed)
+                (populate-page-meta  default-site-settings))))
+    :description "Parsing page content and deriving metadata from it"
+    :target-state :parsed}
+   (-> sketch/page-metadata-schema
+       (mu/dissoc :rendered-content)
+       (mu/dissoc :hiccup-content)
+       (mu/dissoc :title))
+   {:op (fn [{:keys [parsed-content namespace] :as page-data}]
+          (let [evaluated (read/eval-with-errors parsed-content namespace)]
+            (assoc page-data :hiccup-content evaluated)))
+    :description "Evaluating parsed page content"
+    :target-state :evaluated}
+   })
