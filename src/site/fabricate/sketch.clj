@@ -18,17 +18,16 @@
      [:name symbol?]
      [:form [:fn schema/ns-form?]]]]
    [:page-style {:optional true} :string]
-   [:input-file :string]
+   [:input-file [:orn [:path :string]
+                 [:file [:fn #(instance? java.io.File %)]]]]
    [:output-file {:optional true}
     [:orn [:undefined nil?]
-     [:defined :string]]]
-   [:page-content
-    {:optional true}
-    [:orn [:undefined nil?]
-     [:unparsed [:cat [:enum :rendered] :string]]
-     [:parsed [:fn vector?]]
-     [:validated html/html]
-     [:rendered [:cat [:enum :rendered] :string]]]]])
+     [:path :string]
+     [:file [:fn #(instance? java.io.File %)]]]]
+   [:unparsed-content {:optional true} :string]
+   [:parsed-content {:optional true} [:fn vector?]]
+   [:hiccup-content {:optional true} html/html]
+   [:rendered-content {:optional true} :string]])
 
 (def published-page-metadata-schema
   (mu/required-keys page-metadata-schema
@@ -166,7 +165,7 @@
      [:enum :c] [:or [:enum :d]]
      [:enum :d] [:enum :fsm/end]})
 
-  (defn >5? [x] (if (> 5 x) :greater :lesser))
+
 
   (def  function-state-machine
     "Function state machine: pattern guards are defined solely by
@@ -178,34 +177,39 @@
      'template->html 'spit
      'spit :exit}))
 
-(def malli-fsm-data-fns
-  {:string {:op identity
-            :exit-state :fsm/end}
-   :int {:op >5?
-         :exit-state :checked}
-   [:enum :greater] {:op (fn [_] "greater")
-                     :exit-state :fsm/end}
-   [:enum :lesser] {:op (fn [_] "lesser")
-                    :exit-state :fsm/end}})
-
 (defn advance-malli-fsm [fsm-map val]
-  (if (= :fsm/end (:fsm/state val)) val
-      (let [current-val
-            (if (and (map? val) (contains? val :fsm/state))
-              val
-              {:value val :fsm/state :fsm/start})
-            matching-schema (->> fsm-map
-                                 keys
-                                 (filter #(m/validate % (:value current-val)))
-                                 first)
-            {:keys [op exit-state]} (get fsm-map matching-schema)]
-        {:value (op val) :fsm/state exit-state})))
+           (if (= :fsm/end (:fsm/state val)) val
+               (let [current-val
+                     (if (and (map? val) (contains? val :fsm/state))
+                       val
+                       {:value val :fsm/state :fsm/start})
+                     matching-schema (->> fsm-map
+                                          keys
+                                          (filter #(m/validate % (:value current-val)))
+                                          first)
+                     {:keys [op target-state]} (get fsm-map matching-schema)]
+                 {:value (op (:value current-val)) :fsm/state target-state})))
 
-(->> 3
-     (advance-malli-fsm malli-fsm-data-fns)
-     (advance-malli-fsm malli-fsm-data-fns)
-     (advance-malli-fsm malli-fsm-data-fns)
-     )
+(comment (defn >5? [x] (if (> 5 x) :greater :lesser))
+
+         (def malli-fsm-data-fns
+           "FSM: Finite Schema Machine"
+           {:string {:op identity
+                     :exit-state :fsm/end}
+            :int {:op >5?
+                  :exit-state :checked}
+            [:enum :greater] {:op (fn [_] "greater")
+                              :exit-state :fsm/end}
+            [:enum :lesser] {:op (fn [_] "lesser")
+                             :exit-state :fsm/end}})
+
+
+
+         (->> 3
+              (advance-malli-fsm malli-fsm-data-fns)
+              (advance-malli-fsm malli-fsm-data-fns)
+              (advance-malli-fsm malli-fsm-data-fns)
+              ))
 
 (defn malli?
   "Returns true if the given form is a valid malli schema"

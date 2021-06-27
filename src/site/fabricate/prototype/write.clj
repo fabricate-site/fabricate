@@ -13,6 +13,7 @@
    [hiccup2.core :as hiccup]
    [hiccup.page :as hp]
    [malli.core :as m]
+   [malli.util :as mu]
    [malli.generator :as mg]
    [site.fabricate.sketch :as sketch]
    [site.fabricate.prototype.read :as read]
@@ -198,6 +199,38 @@
      (render-template-files all-files))))
 
 ;; fsm based implementation here
+;;
+;; write the succession of states, then fill in the schemas
+;; describing the desired states, and the functions
+;; that produce that particular succession of states
+
+(def operations
+  {[:and :string [:fn #(.exists (io/file %))]]
+   {:op (fn [f] {:input-file (io/as-file f)})
+    :description "Representing input path as :input-file entry in page data map"
+    :target-state :page-map}
+   (-> sketch/page-metadata-schema
+       (mu/dissoc :output-file)
+       (mu/dissoc :title)
+       (mu/dissoc :namespace)
+       (mu/dissoc :page-style)
+       (mu/dissoc :unparsed-content)
+       (mu/dissoc :parsed-content)
+       (mu/dissoc :hiccup-content)
+       (mu/dissoc :rendered-content))
+   {:op (fn [{:keys [input-file] :as page-data}]
+          (assoc page-data :unparsed-content (slurp input-file)))
+    :description "Reading in the page content as a string"
+    :target-state :input-read}
+   #_(-> sketch/page-metadata-schema
+       (mu/dissoc :output-file)
+       (mu/dissoc :title)
+       (mu/dissoc :namespace)
+       (mu/dissoc :page-style)
+       (mu/dissoc :parsed-content)
+       (mu/dissoc :hiccup-content)
+       (mu/dissoc :rendered-content))
+   })
 
 (defn write-page!
   "Writes the page. Returns a tuple with the resulting state and the page contents."
