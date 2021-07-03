@@ -10,10 +10,12 @@
    [site.fabricate.prototype.page :as page]
    [site.fabricate.prototype.schema :as schema]))
 
+(defn file? [f] (instance? java.io.File f))
+
 (def page-metadata-schema
   [:map
    [:input-file [:orn [:path :string]
-                 [:file [:fn #(instance? java.io.File %)]]]]
+                 [:file [:fn file?]]]]
    [:unparsed-content {:optional true} :string]
    [:parsed-content {:optional true} [:fn vector?]]
    [:title {:optional true} :string]
@@ -25,7 +27,7 @@
    [:output-file {:optional true}
     [:orn [:undefined nil?]
      [:path :string]
-     [:file [:fn #(instance? java.io.File %)]]]]
+     [:file [:fn file?]]]]
    [:hiccup-content {:optional true} html/html]
    [:rendered-content {:optional true} :string]])
 

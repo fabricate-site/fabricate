@@ -86,4 +86,14 @@
                 (sketch/advance-malli-fsm operations)
                 (sketch/advance-malli-fsm operations)
                 :value)
-           :hiccup-content))))
+           :hiccup-content))
+
+    #_(t/is (contains?
+           (->> "./README.md.fab"
+                (sketch/advance-malli-fsm operations)
+                (sketch/advance-malli-fsm operations)
+                (sketch/advance-malli-fsm operations)
+                (sketch/advance-malli-fsm operations)
+                (sketch/advance-malli-fsm operations)
+                :value)
+           :rendered-content))))

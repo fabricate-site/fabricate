@@ -246,34 +246,128 @@
 ;; describing the desired states, and the functions
 ;; that produce that particular succession of states
 
+(def input-state
+  [:and {:description "Fabricate input path represented as string"}
+   :string [:fn #(.endsWith % ".fab")]])
+
+(comment (m/validate input-state "./README.md.fab") )
+
+(def file-state
+  [:map {:closed true
+         :description "Fabricate input represented as :input-file java.io.File entry in page map"}
+   [:input-file [:fn sketch/file?]]])
+
+(def read-state
+  [:map {:closed true
+         :description "Fabricate input read in as string under :unparsed-content"}
+   [:input-file [:fn sketch/file?]]
+   [:unparsed-content :string]])
+
+;; could some kind of ordering among schemas
+;; be established whereby when attempting to validate
+;; a given value against more than one schema, the value
+;; is checked against the closed schemas before the open
+;; ones, thereby avoiding the problem of open schemas
+;; clashing with closed schemas that "fill in" the entries
+;; with more detail?
+;;
+;; the motivation for this is making the metadata for a post open
+;; to arbitrary data specified on a per-post level, which could
+;; alternately be achieved sans that ordering by just adding a
+;; :metadata entry to the post map
+
+(def parsed-state
+  [:map {:closed true
+         :description "Fabricate input parsed under :parsed-content and metadata associated with "}
+   [:input-file [:fn sketch/file?]]
+   [:unparsed-content :string]
+   [:parsed-content [:fn vector?]]
+   [:namespace {:optional true}
+    [:orn [:name symbol?]
+     [:form [:fn schema/ns-form?]]]]
+   [:page-style {:optional true} :string]
+   [:output-file {:optional true}
+    [:orn
+     [:path :string]
+     [:file [:fn sketch/file?]]]]])
+
+(def rendered-state
+  [:map {:closed true
+         :description "Fabricate input evaluated as well-formed HTML under :hiccup-content entry"}
+   [:input-file [:fn sketch/file?]]
+   [:unparsed-content :string]
+   [:parsed-content [:fn vector?]]
+   [:namespace {:optional true}
+    [:orn [:name symbol?]
+     [:form [:fn schema/ns-form?]]]]
+   [:page-style {:optional true} :string]
+   [:output-file {:optional true}
+    [:orn
+     [:path :string]
+     [:file [:fn sketch/file?]]]]
+   [:hiccup-content html/html]])
+
+;; a tagged union type approach could be used to
+;; represent the above state but for invalid html
+;; e.g. an entry like [:hiccup-conent [:fn vector?]]
+;; or similar.
+;;
+;; again, this requires some notion of ordering among
+;; the schemas in order to "do the right thing" if there
+;; are not guarantees of mutual exclusion; the schemas
+;; have greater and lesser degrees of specificity but that's
+;; only known to me as the programmer, it's not represented
+;; in the program.
+;;
+;; huh maybe [:or ] is sensitive to the order given perhaps???
+;;
+;; I also feel like the tagged union approach might overlap
+;; with stuff in malli already like :multi that I don't
+;; understand yet.
+;;
+;; another idea: instead of a simple sequence of schemas,
+;; the body of advance-malli-fsm could instead
+;; union them into a malli schema that can be dispatched on
+;; or refined or whatever
+
+(comment
+  (m/validate [:or [:map {:closed true
+                          :description "map1"}
+                    [:a :string]]
+               [:map {:description "map2"}
+                [:a :string]
+                [:b {:optional true} :string]]]
+              {:a "a"})
+  (m/parse [:orn [:map1 [:map {:closed true
+                               :description "map1"}
+                         [:a :string]]]
+            [:map2 [:map {:description "map2"}
+                    [:a :string]
+                    [:b {:optional true} :string]]]]
+           {:a "a"})
+
+  (m/parse [:orn
+            [:map2 [:map {:description "map2"}
+                    [:a :string]
+                    [:b {:optional true} :string]]]
+
+            [:map1 [:map {:closed true
+                          :description "map1"}
+                    [:a :string]]]
+            ]
+           {:a "a"}))
+
 (def operations
-  {[:and :string [:fn #(.exists (io/file %))]]
+  {input-state
    {:op (fn [f] {:input-file (io/as-file f)})
     :description "Representing input path as :input-file entry in page data map"
     :target-state :page-map}
-   (-> sketch/page-metadata-schema
-       (mu/dissoc :output-file)
-       (mu/dissoc :title)
-       (mu/dissoc :namespace)
-       (mu/dissoc :page-style)
-       (mu/dissoc :unparsed-content)
-       (mu/dissoc :parsed-content)
-       (mu/dissoc :hiccup-content)
-       (mu/dissoc :rendered-content)
-       mu/closed-schema)
+   file-state
    {:op (fn [{:keys [input-file] :as page-data}]
           (assoc page-data :unparsed-content (slurp input-file)))
     :description "Reading in the page content as a string"
     :target-state :input-read}
-   (-> sketch/page-metadata-schema
-       (mu/dissoc :output-file)
-       (mu/dissoc :title)
-       (mu/dissoc :namespace)
-       (mu/dissoc :page-style)
-       (mu/dissoc :parsed-content)
-       (mu/dissoc :hiccup-content)
-       (mu/dissoc :rendered-content)
-       mu/closed-schema)
+   read-state
    {:op (fn [{:keys [unparsed-content] :as page-data}]
           (let [parsed (read/parse unparsed-content)]
             (-> page-data
@@ -281,13 +375,32 @@
                 (populate-page-meta  default-site-settings))))
     :description "Parsing page content and deriving metadata from it"
     :target-state :parsed}
-   (-> sketch/page-metadata-schema
-       (mu/dissoc :rendered-content)
-       (mu/dissoc :hiccup-content)
-       (mu/dissoc :title))
+   parsed-state
    {:op (fn [{:keys [parsed-content namespace] :as page-data}]
           (let [evaluated (read/eval-with-errors parsed-content namespace)]
             (assoc page-data :hiccup-content evaluated)))
     :description "Evaluating parsed page content"
     :target-state :evaluated}
+   rendered-state
+   {:op (fn [{:keys [hiccup-content] :as page-data}]
+          (assoc page-data
+                 :rendered-content
+                 (first hiccup-content) ; TODO: function dispatch on file type
+                 ))}
    })
+
+
+(comment
+  (def ends-with-c
+    [:and {:description "String ending in c"}
+     :string [:fn #(.endsWith % "c")]])
+
+  (mu/to-map-syntax ends-with-c)
+
+  (m/validate [:and {:description "String ending in c"}
+               :string [:fn #(.endsWith % "c")]] "abc")
+
+  (m/validate [:fn {:description "less than 5"} #(< % 5)] 3)
+
+
+  )
