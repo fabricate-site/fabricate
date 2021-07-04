@@ -192,6 +192,28 @@
                      {:keys [op description target-state]} (get fsm-map matching-schema)]
                  {:value (op (:value current-val)) :fsm/state target-state})))
 
+(defn advance-finite-schema-machine [fsm-map val]
+  (let [union-schema
+        (into [:orn]
+              (map-indexed vector (keys fsm-map)))
+        ;; using numerically named :orn to lookup matching value
+        parsed (m/parse union-schema val)]
+    (if (= :malli.core/invalid parsed)
+      (do
+        (println "unmatched value")
+        val)
+      (let [op (get fsm-map
+                    (-> union-schema
+                        (nth (inc (first parsed)))
+                        last))]
+        (do
+          (println "advancing fsm")
+          (op val))))))
+
+(comment (assert (= 4 (advance-finite-schema-machine {:int inc} 3))))
+
+
+
 (comment (defn >5? [x] (if (> 5 x) :greater :lesser))
 
          (def malli-fsm-data-fns
@@ -222,14 +244,45 @@
          false)))
 
 (def state-action-behavior
-  "Malli schema for the ⟨s,α,t⟩ triple, \"where s and t are
+  "Malli schema for the ⟨s,α⟩ tuple, \"where s is a state
   states and α is an action.\" The action performs the transition
-  from s to t.
+  from s to a target state specified by the signature of α.
 
   In this implementation, states are defined by a malli schema.
 
   See Lamport [2008] - \"Computation and State Machines\""
   [:catn
-   [:start malli?]
-   [:action fn?]
-   [:end malli?]])
+   [:state malli?]
+   [:action fn?]])
+
+;; A vector of state-action tuples could be "compiled" and
+;; utility functions like m/parser could be used to derive
+;; functions by which arbitrary values could be quickly matched
+;; against all states for dispatch
+
+(comment
+  (m/validate [:or [:map {:closed true
+                          :description "map1"}
+                    [:a :string]]
+               [:map {:description "map2"}
+                [:a :string]
+                [:b {:optional true} :string]]]
+              {:a "a"})
+  (m/parse [:orn [:map1 [:map {:closed true
+                               :description "map1"}
+                         [:a :string]]]
+            [:map2 [:map {:description "map2"}
+                    [:a :string]
+                    [:b {:optional true} :string]]]]
+           {:a "a"})
+
+  (m/parse [:orn
+            [:map2 [:map {:description "map2"}
+                    [:a :string]
+                    [:b {:optional true} :string]]]
+
+            [:map1 [:map {:closed true
+                          :description "map1"}
+                    [:a :string]]]
+            ]
+           {:a "a"}))

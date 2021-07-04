@@ -27,3 +27,16 @@
      :attr-map (spec/? map?)
      :ns-clauses :clojure.core.specs.alpha/ns-clauses)
     form)))
+
+(defn
+  or->orn
+  "Transforms a unnamed :or schema into an indexed :orn (courtesy of Tommi Reiman)"
+  [s]
+  (m/into-schema :orn (m/properties s) (map-indexed vector (m/children s))))
+
+(comment
+  (assert (or->orn [:or :int :boolean])
+
+          [:orn [0 :int] [1 :boolean]])
+
+  )

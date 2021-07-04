@@ -41,16 +41,16 @@
                last)))
 
     (t/is (=  "./README.md.fab"
-              (-> (sketch/advance-malli-fsm operations "./README.md.fab")
-                  (get-in [:value :input-file])
+              (-> (sketch/advance-finite-schema-machine operations "./README.md.fab")
+                  (get :input-file)
                   .getPath)))
 
     (t/is (= (slurp "./README.md.fab")
-             (get-in
+             (get
               (->> "./README.md.fab"
-                   (sketch/advance-malli-fsm operations)
-                   (sketch/advance-malli-fsm operations))
-              [:value :unparsed-content])))
+                   (sketch/advance-finite-schema-machine operations)
+                   (sketch/advance-finite-schema-machine operations))
+              :unparsed-content)))
 
 
     (comment
@@ -65,35 +65,32 @@
                       (mu/dissoc :rendered-content))
 
                   (->> "./README.md.fab"
-                       (sketch/advance-malli-fsm operations)
-                       (sketch/advance-malli-fsm operations)
-                       :value)))
+                       (sketch/advance-finite-schema-machine operations)
+                       (sketch/advance-finite-schema-machine operations))))
 
     (t/is (set/subset?
            #{:parsed-content :namespace}
            (->> "./README.md.fab"
-                (sketch/advance-malli-fsm operations)
-                (sketch/advance-malli-fsm operations)
-                (sketch/advance-malli-fsm operations)
-                :value
+                (sketch/advance-finite-schema-machine operations)
+                (sketch/advance-finite-schema-machine operations)
+                (sketch/advance-finite-schema-machine operations)
                 keys
                 (into #{}))))
 
     (t/is (contains?
            (->> "./README.md.fab"
-                (sketch/advance-malli-fsm operations)
-                (sketch/advance-malli-fsm operations)
-                (sketch/advance-malli-fsm operations)
-                (sketch/advance-malli-fsm operations)
-                :value)
+                (sketch/advance-finite-schema-machine operations)
+                (sketch/advance-finite-schema-machine operations)
+                (sketch/advance-finite-schema-machine operations)
+                (sketch/advance-finite-schema-machine operations))
            :hiccup-content))
 
     #_(t/is (contains?
            (->> "./README.md.fab"
-                (sketch/advance-malli-fsm operations)
-                (sketch/advance-malli-fsm operations)
-                (sketch/advance-malli-fsm operations)
-                (sketch/advance-malli-fsm operations)
-                (sketch/advance-malli-fsm operations)
+                (sketch/advance-finite-schema-machine operations)
+                (sketch/advance-finite-schema-machine operations)
+                (sketch/advance-finite-schema-machine operations)
+                (sketch/advance-finite-schema-machine operations)
+                (sketch/advance-finite-schema-machine operations)
                 :value)
            :rendered-content))))

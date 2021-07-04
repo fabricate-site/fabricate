@@ -330,65 +330,30 @@
 ;; union them into a malli schema that can be dispatched on
 ;; or refined or whatever
 
-(comment
-  (m/validate [:or [:map {:closed true
-                          :description "map1"}
-                    [:a :string]]
-               [:map {:description "map2"}
-                [:a :string]
-                [:b {:optional true} :string]]]
-              {:a "a"})
-  (m/parse [:orn [:map1 [:map {:closed true
-                               :description "map1"}
-                         [:a :string]]]
-            [:map2 [:map {:description "map2"}
-                    [:a :string]
-                    [:b {:optional true} :string]]]]
-           {:a "a"})
-
-  (m/parse [:orn
-            [:map2 [:map {:description "map2"}
-                    [:a :string]
-                    [:b {:optional true} :string]]]
-
-            [:map1 [:map {:closed true
-                          :description "map1"}
-                    [:a :string]]]
-            ]
-           {:a "a"}))
 
 (def operations
-  {input-state
-   {:op (fn [f] {:input-file (io/as-file f)})
-    :description "Representing input path as :input-file entry in page data map"
-    :target-state :page-map}
-   file-state
-   {:op (fn [{:keys [input-file] :as page-data}]
-          (assoc page-data :unparsed-content (slurp input-file)))
-    :description "Reading in the page content as a string"
-    :target-state :input-read}
+  {input-state (fn [f] {:input-file (io/as-file f)})
+   file-state (fn [{:keys [input-file] :as page-data}]
+                (assoc page-data :unparsed-content (slurp input-file)))
    read-state
-   {:op (fn [{:keys [unparsed-content] :as page-data}]
-          (let [parsed (read/parse unparsed-content)]
-            (-> page-data
-                (assoc :parsed-content parsed)
-                (populate-page-meta  default-site-settings))))
-    :description "Parsing page content and deriving metadata from it"
-    :target-state :parsed}
+   (fn [{:keys [unparsed-content] :as page-data}]
+     (let [parsed (read/parse unparsed-content)]
+       (-> page-data
+           (assoc :parsed-content parsed)
+           (populate-page-meta  default-site-settings))))
    parsed-state
-   {:op (fn [{:keys [parsed-content namespace] :as page-data}]
-          (let [evaluated (read/eval-with-errors parsed-content namespace)]
-            (assoc page-data :hiccup-content evaluated)))
-    :description "Evaluating parsed page content"
-    :target-state :evaluated}
-   rendered-state
-   {:op (fn [{:keys [hiccup-content] :as page-data}]
-          (assoc page-data
-                 :rendered-content
-                 (first hiccup-content) ; TODO: function dispatch on file type
-                 ))}
-   })
+   (fn [{:keys [parsed-content namespace] :as page-data}]
+     (let [evaluated (read/eval-with-errors parsed-content namespace)]
+       (assoc page-data :hiccup-content evaluated)))
 
+   rendered-state
+   (fn [{:keys [hiccup-content] :as page-data}]
+     (assoc page-data
+            :rendered-content
+            (first hiccup-content)
+            ))})
+
+(comment (keys operations))
 
 (comment
   (def ends-with-c
