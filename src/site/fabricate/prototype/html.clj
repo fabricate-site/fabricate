@@ -1,5 +1,6 @@
 (ns site.fabricate.prototype.html
-  "Namespace for malli schemas"
+  "Namespace for creating HTML forms using Hiccup data structures and
+   for verifying their structural correctness using malli schemas."
   (:require
    [clojure.string :as str]
    [clojure.set :as set]
