@@ -338,23 +338,13 @@
            :description "Fabricate markdown input evaluated as markdown string"}
      [:file-extension [:enum  "md" "markdown"]]])))
 
-;; a tagged union type approach could be used to
-;; represent the above state but for invalid html
-;; e.g. an entry like [:hiccup-conent [:fn vector?]]
-;; or similar.
-;;
-;; again, this requires some notion of ordering among
-;; the schemas in order to "do the right thing" if there
-;; are not guarantees of mutual exclusion; the schemas
-;; have greater and lesser degrees of specificity but that's
-;; only known to me as the programmer, it's not represented
-;; in the program.
-;;
-;; huh maybe [:or ] is sensitive to the order given perhaps???
-;;
-;; I also feel like the tagged union approach might overlap
-;; with stuff in malli already like :multi that I don't
-;; understand yet.
+(def rendered-state
+  (mu/merge
+   evaluated-state
+    [:map {:description "Fabricate input rendered to output string"
+           :open true
+           :fsm/state :fsm/exit}        ; indicating the exit state
+     [:rendered-content :string]]))
 
 (def operations
   {input-state (fn [f] {:input-file (io/as-file f)})
@@ -372,27 +362,28 @@
        (assoc page-data :evaluated-content evaluated)))
    markdown-state
    (fn [{:keys [evaluated-content] :as page-data}]
-     (assoc page-data :rendered-content (first evaluated-content)))
+     (assoc page-data :rendered-content (apply str evaluated-content)))
    html-state
    (fn [{:keys [hiccup-content] :as page-data}]
      (assoc page-data
             :rendered-content
-            (first hiccup-content)
-            ))})
+            (hiccup/html (first hiccup-content))))
+   rendered-state
+   (fn [{:keys [rendered-content output-file] :as page-data}]
+     (do
+       (println "writing page content to" output-file)
+       (spit output-file rendered-content)
+       page-data))})
 
-(comment (keys operations))
+(comment (keys operations)
 
-(comment
-  (def ends-with-c
-    [:and {:description "String ending in c"}
-     :string [:fn #(.endsWith % "c")]])
+         (->> "./README.md.fab"
+              (sketch/advance-finite-schema-machine operations)
+              (sketch/advance-finite-schema-machine operations)
+              (sketch/advance-finite-schema-machine operations)
+              (sketch/advance-finite-schema-machine operations)
+              (sketch/advance-finite-schema-machine operations)
+              (sketch/advance-finite-schema-machine operations)
+              )
 
-  (mu/to-map-syntax ends-with-c)
-
-  (m/validate [:and {:description "String ending in c"}
-               :string [:fn #(.endsWith % "c")]] "abc")
-
-  (m/validate [:fn {:description "less than 5"} #(< % 5)] 3)
-
-
-  )
+         )

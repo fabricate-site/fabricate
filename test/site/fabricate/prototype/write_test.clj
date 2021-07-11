@@ -85,6 +85,15 @@
                 (sketch/advance-finite-schema-machine operations))
            :evaluated-content))
 
+    (t/is
+     (->> "./README.md.fab"
+          (sketch/advance-finite-schema-machine operations)
+          (sketch/advance-finite-schema-machine operations)
+          (sketch/advance-finite-schema-machine operations)
+          (sketch/advance-finite-schema-machine operations)
+          (sketch/advance-finite-schema-machine operations)
+          (m/validate rendered-state)))
+
     #_(t/is (contains?
              (->> "./README.md.fab"
                   (sketch/advance-finite-schema-machine operations)
