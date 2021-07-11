@@ -3,6 +3,7 @@
   Highly experimental, subject to arbitrary changes."
   (:require
    [malli.core :as m]
+   [malli.error :as me]
    [malli.util :as mu]
    [hiccup2.core :as hiccup]
    [site.fabricate.prototype.read :as read]
@@ -200,14 +201,15 @@
         parsed (m/parse union-schema val)]
     (if (= :malli.core/invalid parsed)
       (do
-        (println "unmatched value")
+        (println "unmatched value" (me/humanize (m/explain union-schema val)))
         val)
-      (let [op (get fsm-map
-                    (-> union-schema
+      (let [matched-schema (-> union-schema
                         (nth (inc (first parsed)))
-                        last))]
+                        last)
+            op (get fsm-map matched-schema)]
         (do
-          (println "advancing fsm")
+          (println "advancing fsm:" (get (m/properties matched-schema)
+                                        :description))
           (op val))))))
 
 (comment (assert (= 4 (advance-finite-schema-machine {:int inc} 3))))

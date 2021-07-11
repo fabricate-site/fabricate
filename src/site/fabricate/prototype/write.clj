@@ -41,7 +41,9 @@
   {:template-suffix ".fab"
    :output-dir "./pages"})
 
-(def template-suffix-regex (re-pattern (str "#*[.]" (:template-suffix default-site-settings) "$")))
+(def template-suffix-regex
+  (let [suffix (:template-suffix default-site-settings)]
+    (re-pattern (str "#*[.]" (subs suffix 1 (count suffix)) "$"))))
 
 (defn template-str->hiccup
   "Attempts to parse the given string"
@@ -66,6 +68,9 @@
        first
        (#(str out-dir "/" %))))
   ([path] (get-output-filename path "./pages")))
+
+(comment (get-output-filename "./pages/test-file.txt.fab")
+         )
 
 (defn hiccup->html-str [[tag head body]]
   (str "<!DOCTYPE html>\n<html>"
@@ -224,13 +229,15 @@
     sketch/page-metadata-schema]}
   ([{:keys [namespace parsed-content output-file input-file] :as page-data}
     {:keys [output-dir] :as site-settings}]
-   (assoc page-data
-          :namespace (or (read/yank-ns parsed-content)
-                         namespace
-                         (symbol (str "tmp-ns." (Math/abs (hash parsed-content)))))
-          :output-file (or output-file
-                           (get-output-filename input-file
-                                                output-dir)))))
+   (-> page-data
+       (assoc :namespace (or (read/yank-ns parsed-content)
+                             namespace
+                             (symbol (str "tmp-ns." (Math/abs (hash parsed-content)))))
+              :output-file (or output-file
+                               (get-output-filename (.getPath input-file)
+                                                    output-dir)))
+       (merge (read/get-file-metadata (.getPath input-file)))
+       (merge (last (read/get-metadata parsed-content))))))
 
 (comment
   (def =>populate-page-meta
@@ -278,12 +285,16 @@
 
 (def parsed-state
   [:map {:closed true
-         :description "Fabricate input parsed under :parsed-content and metadata associated with "}
+         :description "Fabricate input parsed under :parsed-content and metadata associated with page map"}
    [:input-file [:fn sketch/file?]]
+   [:fabricate/suffix [:enum (:template-suffix default-site-settings)]]
+   [:filename :string]
+   [:file-extension :string]
    [:unparsed-content :string]
    [:parsed-content [:fn vector?]]
+   [:title {:optional true} :string]
    [:namespace {:optional true}
-    [:orn [:name symbol?]
+    [:orn [:name :symbol]
      [:form [:fn schema/ns-form?]]]]
    [:page-style {:optional true} :string]
    [:output-file {:optional true}
@@ -291,45 +302,58 @@
      [:path :string]
      [:file [:fn sketch/file?]]]]])
 
-(def rendered-state
+(def evaluated-state
+  [:map {:closed true
+         :description "Fabricate evaluated under :evaluated-content"}
+   [:input-file [:fn sketch/file?]]
+   [:unparsed-content :string]
+   [:parsed-content [:fn vector?]]
+   [:evaluated-content [:fn vector?]]
+   [:fabricate/suffix [:enum (:template-suffix default-site-settings)]]
+   [:filename :string]
+   [:file-extension :string]
+   [:namespace {:optional true}
+    [:orn [:name :symbol]
+     [:form [:fn schema/ns-form?]]]]
+   [:page-style {:optional true} :string]
+   [:title {:optional true} :string]
+   [:output-file {:optional true}
+    [:orn
+     [:path :string]
+     [:file [:fn sketch/file?]]]]])
+
+(def html-state
   [:map {:closed true
          :description "Fabricate input evaluated as well-formed HTML under :hiccup-content entry"}
    [:input-file [:fn sketch/file?]]
    [:unparsed-content :string]
    [:parsed-content [:fn vector?]]
    [:namespace {:optional true}
-    [:orn [:name symbol?]
+    [:orn [:name :symbol]
      [:form [:fn schema/ns-form?]]]]
    [:page-style {:optional true} :string]
+   [:title {:optional true} :string]
    [:output-file {:optional true}
     [:orn
      [:path :string]
      [:file [:fn sketch/file?]]]]
    [:hiccup-content html/html]])
 
-;; a tagged union type approach could be used to
-;; represent the above state but for invalid html
-;; e.g. an entry like [:hiccup-conent [:fn vector?]]
-;; or similar.
-;;
-;; again, this requires some notion of ordering among
-;; the schemas in order to "do the right thing" if there
-;; are not guarantees of mutual exclusion; the schemas
-;; have greater and lesser degrees of specificity but that's
-;; only known to me as the programmer, it's not represented
-;; in the program.
-;;
-;; huh maybe [:or ] is sensitive to the order given perhaps???
-;;
-;; I also feel like the tagged union approach might overlap
-;; with stuff in malli already like :multi that I don't
-;; understand yet.
-;;
-;; another idea: instead of a simple sequence of schemas,
-;; the body of advance-malli-fsm could instead
-;; union them into a malli schema that can be dispatched on
-;; or refined or whatever
+(def markdown-state
+  (mu/closed-schema
+   (mu/merge
+    evaluated-state
+    [:map {:closed true
+           :description "Fabricate markdown input evaluated as markdown string"}
+     [:file-extension [:enum  "md" "markdown"]]])))
 
+(def rendered-state
+  (mu/merge
+   evaluated-state
+    [:map {:description "Fabricate input rendered to output string"
+           :open true
+           :fsm/state :fsm/exit}        ; indicating the exit state
+     [:rendered-content :string]]))
 
 (def operations
   {input-state (fn [f] {:input-file (io/as-file f)})
@@ -344,28 +368,31 @@
    parsed-state
    (fn [{:keys [parsed-content namespace] :as page-data}]
      (let [evaluated (read/eval-with-errors parsed-content namespace)]
-       (assoc page-data :hiccup-content evaluated)))
-
-   rendered-state
+       (assoc page-data :evaluated-content evaluated)))
+   markdown-state
+   (fn [{:keys [evaluated-content] :as page-data}]
+     (assoc page-data :rendered-content (apply str evaluated-content)))
+   html-state
    (fn [{:keys [hiccup-content] :as page-data}]
      (assoc page-data
             :rendered-content
-            (first hiccup-content)
-            ))})
+            (hiccup/html (first hiccup-content))))
+   rendered-state
+   (fn [{:keys [rendered-content output-file] :as page-data}]
+     (do
+       (println "writing page content to" output-file)
+       (spit output-file rendered-content)
+       page-data))})
 
-(comment (keys operations))
+(comment (keys operations)
 
-(comment
-  (def ends-with-c
-    [:and {:description "String ending in c"}
-     :string [:fn #(.endsWith % "c")]])
+         (->> "./README.md.fab"
+              (sketch/advance-finite-schema-machine operations)
+              (sketch/advance-finite-schema-machine operations)
+              (sketch/advance-finite-schema-machine operations)
+              (sketch/advance-finite-schema-machine operations)
+              (sketch/advance-finite-schema-machine operations)
+              (sketch/advance-finite-schema-machine operations)
+              )
 
-  (mu/to-map-syntax ends-with-c)
-
-  (m/validate [:and {:description "String ending in c"}
-               :string [:fn #(.endsWith % "c")]] "abc")
-
-  (m/validate [:fn {:description "less than 5"} #(< % 5)] 3)
-
-
-  )
+         )

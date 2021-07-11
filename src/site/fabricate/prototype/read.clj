@@ -8,8 +8,8 @@
             [clojure.tools.reader :as r]
             [malli.core :as m]
             [site.fabricate.prototype.schema :as schema]
-            [clojure.spec.alpha :as spec]
-            [clojure.string :as string]))
+            [clojure.string :as string]
+            [clojure.java.io :as io]))
 
 (def delimiters ["✳" "🔚"])
 
@@ -216,14 +216,20 @@
 
 (defn eval-with-errors
   ([parsed-form form-nmspc post-validator]
-   (binding [*ns* (create-ns form-nmspc)]
-     (refer-clojure)
-     ;; (require '[respatialized.render :refer :all])
-     (clojure.walk/postwalk
-      (fn [i] (if (m/validate parsed-expr-model i)
-                (form->hiccup (eval-parsed-expr i false post-validator))
-                i))
-      parsed-form)))
+   (if (symbol? form-nmspc)
+     (binding [*ns* (create-ns form-nmspc)]
+       (refer-clojure)
+       (clojure.walk/postwalk
+        (fn [i] (if (m/validate parsed-expr-model i)
+                  (form->hiccup (eval-parsed-expr i false post-validator))
+                  i))
+        parsed-form))
+     (do (eval form-nmspc)
+         (clojure.walk/postwalk
+        (fn [i] (if (m/validate parsed-expr-model i)
+                  (form->hiccup (eval-parsed-expr i false post-validator))
+                  i))
+        parsed-form))))
   ([parsed-form form-nmspc] (eval-with-errors parsed-form form-nmspc (fn [e] {:result e})))
   ([parsed-form] (eval-with-errors parsed-form (symbol (str *ns*)))))
 
@@ -277,3 +283,22 @@
                (conj container (render-fn e))
                (recur source)))))))
   ([sym f] (include-def {} sym f)))
+
+(def file-metadata-schema
+  [:map {:description "File metadata used by fabricate"}
+   [:filename {:description "The title of the file, absent any prefixes"} :string]
+   [:file-extension {:description "The extension of the output format of the file"} :string]
+   [:fabricate/suffix {:description "The suffix following the output file extension"} :string]
+   [:created {:optional true :description "When the file was created"} :string]
+   [:modified {:optional true :description "When the file was modified"}]])
+
+(defn get-file-metadata [file-path]
+
+  (let [file-path (if (.startsWith file-path "./")
+                    (subs file-path 2 (count file-path))
+                    file-path)
+        [fname output-extension suffix]
+        (string/split file-path (re-pattern "\\."))]
+    {:filename fname
+     :file-extension output-extension
+     :fabricate/suffix (str "." suffix)}))
