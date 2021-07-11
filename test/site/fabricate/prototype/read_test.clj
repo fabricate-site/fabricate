@@ -199,5 +199,5 @@
   (t/testing "Filename utilities"
     (t/is (= {:filename "README"
               :file-extension "md"
-              :fabricate/suffix "fab"}
-             (get-file-metadata "README.md.fab")))))
+              :fabricate/suffix ".fab"}
+             (get-file-metadata "./README.md.fab")))))

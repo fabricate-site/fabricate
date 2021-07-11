@@ -279,8 +279,11 @@
 
 (def parsed-state
   [:map {:closed true
-         :description "Fabricate input parsed under :parsed-content and metadata associated with "}
+         :description "Fabricate input parsed under :parsed-content and metadata associated with page map"}
    [:input-file [:fn sketch/file?]]
+   [:fabricate/suffix [:enum (:template-suffix default-site-settings)]]
+   [:filename :string]
+   [:file-extension :string]
    [:unparsed-content :string]
    [:parsed-content [:fn vector?]]
    [:namespace {:optional true}

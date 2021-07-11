@@ -83,14 +83,14 @@
                 (sketch/advance-finite-schema-machine operations)
                 (sketch/advance-finite-schema-machine operations)
                 (sketch/advance-finite-schema-machine operations))
-           :markdown-content))
+           :evaluated-content))
 
     #_(t/is (contains?
-           (->> "./README.md.fab"
-                (sketch/advance-finite-schema-machine operations)
-                (sketch/advance-finite-schema-machine operations)
-                (sketch/advance-finite-schema-machine operations)
-                (sketch/advance-finite-schema-machine operations)
-                (sketch/advance-finite-schema-machine operations)
-                :value)
-           :rendered-content))))
+             (->> "./README.md.fab"
+                  (sketch/advance-finite-schema-machine operations)
+                  (sketch/advance-finite-schema-machine operations)
+                  (sketch/advance-finite-schema-machine operations)
+                  (sketch/advance-finite-schema-machine operations)
+                  (sketch/advance-finite-schema-machine operations)
+                  :value)
+             :rendered-content))))
