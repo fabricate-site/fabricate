@@ -14,8 +14,10 @@
           "FSM should conform to spec"))
 
   (t/testing "advance"
-    (t/is (= 3 (advance example-fsm 2))))
+    (t/is (= 3 (advance example-fsm 2)))
+    (t/is (= 0 (advance example-fsm 0))))
 
   (t/testing "complete"
     (t/is (= 3 (complete example-fsm 1)))
-    (t/is (= 3 (complete example-fsm 2)))))
+    (t/is (= 3 (complete example-fsm 2)))
+    (t/is (= 0 (complete example-fsm 0)))))
