@@ -4,9 +4,9 @@
             [clojure.test :as t]))
 
 (def example-fsm
-  {[:enum 1] inc
-   [:enum 2] inc
-   [:enum 3] identity})
+  {[:enum {:description "state 1"} 1] inc
+   [:enum {:description "state 2"} 2] inc
+   [:enum {:description "final state"} 3] identity})
 
 (t/deftest finite-schema-machines
   (t/testing "schema"
