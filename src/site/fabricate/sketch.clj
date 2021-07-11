@@ -180,37 +180,9 @@
      'template->html 'spit
      'spit :exit}))
 
-(defn advance-malli-fsm [fsm-map val]
-           (if (= :fsm/end (:fsm/state val)) val
-               (let [current-val
-                     (if (and (map? val) (contains? val :fsm/state))
-                       val
-                       {:value val :fsm/state :fsm/start})
-                     matching-schema (->> fsm-map
-                                          keys
-                                          (filter #(m/validate % (:value current-val)))
-                                          first)
-                     {:keys [op description target-state]} (get fsm-map matching-schema)]
-                 {:value (op (:value current-val)) :fsm/state target-state})))
 
-(defn advance-finite-schema-machine [fsm-map val]
-  (let [union-schema
-        (into [:orn]
-              (map-indexed vector (keys fsm-map)))
-        ;; using numerically named :orn to lookup matching value
-        parsed (m/parse union-schema val)]
-    (if (= :malli.core/invalid parsed)
-      (do
-        (println "unmatched value" (me/humanize (m/explain union-schema val)))
-        val)
-      (let [matched-schema (-> union-schema
-                        (nth (inc (first parsed)))
-                        last)
-            op (get fsm-map matched-schema)]
-        (do
-          (println "advancing fsm:" (get (m/properties matched-schema)
-                                        :description))
-          (op val))))))
+
+
 
 (comment (assert (= 4 (advance-finite-schema-machine {:int inc} 3))))
 
@@ -245,17 +217,7 @@
          #_(prn (Throwable->map e))
          false)))
 
-(def state-action-behavior
-  "Malli schema for the ⟨s,α⟩ tuple, \"where s is a state
-  states and α is an action.\" The action performs the transition
-  from s to a target state specified by the signature of α.
 
-  In this implementation, states are defined by a malli schema.
-
-  See Lamport [2008] - \"Computation and State Machines\""
-  [:catn
-   [:state malli?]
-   [:action fn?]])
 
 ;; A vector of state-action tuples could be "compiled" and
 ;; utility functions like m/parser could be used to derive
@@ -288,3 +250,20 @@
                     [:a :string]]]
             ]
            {:a "a"}))
+
+(comment
+  (defn maybe-inc
+    ([value prob]
+     (let [p (rand 1)]
+       (if (>= p prob) value (inc value))))
+    ([prob] (fn [value] (maybe-inc value prob)))
+    ([] (maybe-inc 0.95)))
+
+  ;; if a probabilistic function is passed in to the
+  ;; state advancement mechanism, you get a Markov chain?
+
+  (let [num-seq (iterate (maybe-inc 0.65) 1)]
+    (reduce (fn [num n] (if (= n num) (reduced num) n))
+            num-seq))
+
+  )
