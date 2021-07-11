@@ -8,22 +8,33 @@
             [malli.util :as mu]
             [clojure.test :as t]))
 
+(t/deftest file-utils
+  #_(t/testing "suffix regex"
+    (t/is (re-matches template-suffix-regex "test-file.txt.fab")))
+  (t/testing "output path fn"
+    (t/is (= "./pages/test-file.txt"
+             (get-output-filename "./pages/test-file.txt.fab")))))
+
 (t/deftest page-fsm
   (t/testing "page metadata"
-    (t/is (= {:namespace (symbol 'test-ns)
-              :parsed-content [{:expr '(do (ns test-ns) nil)
-                              :src "✳(ns test-ns)🔚"
-                              :err nil
-                              :result nil}]
-              :output-file "./pages/test-file"
-              :input-file "./content/test-file"}
-             (populate-page-meta
-              {:parsed-content [{:expr '(do (ns test-ns) nil)
-                               :src "✳(ns test-ns)🔚"
-                               :err nil
-                               :result nil}]
-               :input-file "./content/test-file"}
-              {:output-dir "./pages"}))))
+    (let [ex-file (io/file "./content/test-file.txt.fab")]
+      (t/is (= {:namespace (symbol 'test-ns)
+                :parsed-content [{:expr '(do (ns test-ns) nil)
+                                  :src "✳(ns test-ns)🔚"
+                                  :err nil
+                                  :result nil}]
+                :filename "content/test-file"
+                :file-extension "txt"
+                :fabricate/suffix ".fab"
+                :output-file "./pages/test-file.txt"
+                :input-file ex-file}
+               (populate-page-meta
+                {:parsed-content [{:expr '(do (ns test-ns) nil)
+                                   :src "✳(ns test-ns)🔚"
+                                   :err nil
+                                   :result nil}]
+                 :input-file ex-file}
+                {:output-dir "./pages"})))))
 
   (t/is (m/validate (-> populate-page-meta
                         var
@@ -68,14 +79,19 @@
                        (sketch/advance-finite-schema-machine operations)
                        (sketch/advance-finite-schema-machine operations))))
 
-    (t/is (set/subset?
-           #{:parsed-content :namespace}
-           (->> "./README.md.fab"
-                (sketch/advance-finite-schema-machine operations)
-                (sketch/advance-finite-schema-machine operations)
-                (sketch/advance-finite-schema-machine operations)
-                keys
-                (into #{}))))
+    (t/is
+     (let [output (->> "./README.md.fab"
+                       (sketch/advance-finite-schema-machine operations)
+                       (sketch/advance-finite-schema-machine operations)
+                       (sketch/advance-finite-schema-machine operations))]
+       (and (set/subset?
+             #{:parsed-content :namespace}
+             (->> output keys (into #{})))
+            (= "./README.md" (:output-file output))))
+
+     "Metadata should be properly populated")
+
+
 
     (t/is (contains?
            (->> "./README.md.fab"

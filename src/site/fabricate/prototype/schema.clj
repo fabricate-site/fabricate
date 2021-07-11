@@ -18,15 +18,16 @@
 (defn ns-form?
   "Returns true if the given form is a valid Clojure (ns ...) special form"
   [form]
-  (not=
-   :clojure.spec.alpha/invalid
-   (spec/conform
-    (spec/cat
-     :ns-sym #(= % 'ns)
-     :ns-name simple-symbol?
-     :attr-map (spec/? map?)
-     :ns-clauses :clojure.core.specs.alpha/ns-clauses)
-    form)))
+  (let [form (if (= 'quote (first form)) (last form) form)]
+    (not=
+     :clojure.spec.alpha/invalid
+     (spec/conform
+      (spec/cat
+       :ns-sym #(= % 'ns)
+       :ns-name simple-symbol?
+       :attr-map (spec/? map?)
+       :ns-clauses :clojure.core.specs.alpha/ns-clauses)
+      form))))
 
 (defn
   or->orn

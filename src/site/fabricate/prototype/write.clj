@@ -41,7 +41,9 @@
   {:template-suffix ".fab"
    :output-dir "./pages"})
 
-(def template-suffix-regex (re-pattern (str "#*[.]" (:template-suffix default-site-settings) "$")))
+(def template-suffix-regex
+  (let [suffix (:template-suffix default-site-settings)]
+    (re-pattern (str "#*[.]" (subs suffix 1 (count suffix)) "$"))))
 
 (defn template-str->hiccup
   "Attempts to parse the given string"
@@ -66,6 +68,9 @@
        first
        (#(str out-dir "/" %))))
   ([path] (get-output-filename path "./pages")))
+
+(comment (get-output-filename "./pages/test-file.txt.fab")
+         )
 
 (defn hiccup->html-str [[tag head body]]
   (str "<!DOCTYPE html>\n<html>"
@@ -231,7 +236,8 @@
               :output-file (or output-file
                                (get-output-filename (.getPath input-file)
                                                     output-dir)))
-       (merge (read/get-file-metadata (.getPath input-file))))))
+       (merge (read/get-file-metadata (.getPath input-file)))
+       (merge (last (read/get-metadata parsed-content))))))
 
 (comment
   (def =>populate-page-meta
@@ -286,8 +292,9 @@
    [:file-extension :string]
    [:unparsed-content :string]
    [:parsed-content [:fn vector?]]
+   [:title {:optional true} :string]
    [:namespace {:optional true}
-    [:orn [:name symbol?]
+    [:orn [:name :symbol]
      [:form [:fn schema/ns-form?]]]]
    [:page-style {:optional true} :string]
    [:output-file {:optional true}
@@ -306,9 +313,10 @@
    [:filename :string]
    [:file-extension :string]
    [:namespace {:optional true}
-    [:orn [:name symbol?]
+    [:orn [:name :symbol]
      [:form [:fn schema/ns-form?]]]]
    [:page-style {:optional true} :string]
+   [:title {:optional true} :string]
    [:output-file {:optional true}
     [:orn
      [:path :string]
@@ -321,9 +329,10 @@
    [:unparsed-content :string]
    [:parsed-content [:fn vector?]]
    [:namespace {:optional true}
-    [:orn [:name symbol?]
+    [:orn [:name :symbol]
      [:form [:fn schema/ns-form?]]]]
    [:page-style {:optional true} :string]
+   [:title {:optional true} :string]
    [:output-file {:optional true}
     [:orn
      [:path :string]

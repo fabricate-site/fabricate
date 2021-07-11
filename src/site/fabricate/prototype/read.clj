@@ -216,14 +216,20 @@
 
 (defn eval-with-errors
   ([parsed-form form-nmspc post-validator]
-   (binding [*ns* (create-ns form-nmspc)]
-     (refer-clojure)
-     ;; (require '[respatialized.render :refer :all])
-     (clojure.walk/postwalk
-      (fn [i] (if (m/validate parsed-expr-model i)
-                (form->hiccup (eval-parsed-expr i false post-validator))
-                i))
-      parsed-form)))
+   (if (symbol? form-nmspc)
+     (binding [*ns* (create-ns form-nmspc)]
+       (refer-clojure)
+       (clojure.walk/postwalk
+        (fn [i] (if (m/validate parsed-expr-model i)
+                  (form->hiccup (eval-parsed-expr i false post-validator))
+                  i))
+        parsed-form))
+     (do (eval form-nmspc)
+         (clojure.walk/postwalk
+        (fn [i] (if (m/validate parsed-expr-model i)
+                  (form->hiccup (eval-parsed-expr i false post-validator))
+                  i))
+        parsed-form))))
   ([parsed-form form-nmspc] (eval-with-errors parsed-form form-nmspc (fn [e] {:result e})))
   ([parsed-form] (eval-with-errors parsed-form (symbol (str *ns*)))))
 
