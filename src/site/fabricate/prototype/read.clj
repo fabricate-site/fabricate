@@ -8,8 +8,8 @@
             [clojure.tools.reader :as r]
             [malli.core :as m]
             [site.fabricate.prototype.schema :as schema]
-            [clojure.spec.alpha :as spec]
-            [clojure.string :as string]))
+            [clojure.string :as string]
+            [clojure.java.io :as io]))
 
 (def delimiters ["✳" "🔚"])
 
@@ -277,3 +277,18 @@
                (conj container (render-fn e))
                (recur source)))))))
   ([sym f] (include-def {} sym f)))
+
+(def file-metadata-schema
+  [:map {:description "File metadata used by fabricate"}
+   [:filename {:description "The title of the file, absent any prefixes"} :string]
+   [:file-extension {:description "The extension of the output format of the file"} :string]
+   [:fabricate/suffix {:description "The suffix following the output file extension"} :string]
+   [:created {:optional true :description "When the file was created"} :string]
+   [:modified {:optional true :description "When the file was modified"}]])
+
+(defn get-file-metadata [file-path]
+  (let [[fname output-extension suffix]
+        (string/split file-path (re-pattern "\\."))]
+    {:filename fname
+     :file-extension output-extension
+     :fabricate/suffix suffix}))

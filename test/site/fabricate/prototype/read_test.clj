@@ -3,7 +3,6 @@
              [site.fabricate.prototype.page :refer [em link code blockquote]]
              [malli.core :as m]
              [hiccup.core :as hiccup]
-             #_[respatialized.document :as doc]
              [site.fabricate.prototype.read :refer :all]))
 
 (defn setup [f]
@@ -195,3 +194,10 @@
 
     (t/is (= "<div><em>text</em>, with a comma following</div>"
              (hiccup/html (parse-eval "✳=[:em\"text\"]🔚, with a comma following" [:div]))))))
+
+(t/deftest file-utils
+  (t/testing "Filename utilities"
+    (t/is (= {:filename "README"
+              :file-extension "md"
+              :fabricate/suffix "fab"}
+             (get-file-metadata "README.md.fab")))))
