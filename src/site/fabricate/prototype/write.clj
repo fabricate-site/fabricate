@@ -224,13 +224,14 @@
     sketch/page-metadata-schema]}
   ([{:keys [namespace parsed-content output-file input-file] :as page-data}
     {:keys [output-dir] :as site-settings}]
-   (assoc page-data
-          :namespace (or (read/yank-ns parsed-content)
-                         namespace
-                         (symbol (str "tmp-ns." (Math/abs (hash parsed-content)))))
-          :output-file (or output-file
-                           (get-output-filename input-file
-                                                output-dir)))))
+   (-> page-data
+       (assoc :namespace (or (read/yank-ns parsed-content)
+                             namespace
+                             (symbol (str "tmp-ns." (Math/abs (hash parsed-content)))))
+              :output-file (or output-file
+                               (get-output-filename (.getPath input-file)
+                                                    output-dir)))
+       (merge (read/get-file-metadata (.getPath input-file))))))
 
 (comment
   (def =>populate-page-meta
@@ -291,7 +292,26 @@
      [:path :string]
      [:file [:fn sketch/file?]]]]])
 
-(def rendered-state
+(def evaluated-state
+  [:map {:closed true
+         :description "Fabricate evaluated under :evaluated-content"}
+   [:input-file [:fn sketch/file?]]
+   [:unparsed-content :string]
+   [:parsed-content [:fn vector?]]
+   [:evaluated-content [:fn vector?]]
+   [:fabricate/suffix [:enum (:template-suffix default-site-settings)]]
+   [:filename :string]
+   [:file-extension :string]
+   [:namespace {:optional true}
+    [:orn [:name symbol?]
+     [:form [:fn schema/ns-form?]]]]
+   [:page-style {:optional true} :string]
+   [:output-file {:optional true}
+    [:orn
+     [:path :string]
+     [:file [:fn sketch/file?]]]]])
+
+(def html-state
   [:map {:closed true
          :description "Fabricate input evaluated as well-formed HTML under :hiccup-content entry"}
    [:input-file [:fn sketch/file?]]
@@ -306,6 +326,14 @@
      [:path :string]
      [:file [:fn sketch/file?]]]]
    [:hiccup-content html/html]])
+
+(def markdown-state
+  (mu/closed-schema
+   (mu/merge
+    evaluated-state
+    [:map {:closed true
+           :description "Fabricate markdown input evaluated as markdown string"}
+     [:file-extension [:enum  "md" "markdown"]]])))
 
 ;; a tagged union type approach could be used to
 ;; represent the above state but for invalid html
@@ -324,12 +352,6 @@
 ;; I also feel like the tagged union approach might overlap
 ;; with stuff in malli already like :multi that I don't
 ;; understand yet.
-;;
-;; another idea: instead of a simple sequence of schemas,
-;; the body of advance-malli-fsm could instead
-;; union them into a malli schema that can be dispatched on
-;; or refined or whatever
-
 
 (def operations
   {input-state (fn [f] {:input-file (io/as-file f)})
@@ -344,9 +366,11 @@
    parsed-state
    (fn [{:keys [parsed-content namespace] :as page-data}]
      (let [evaluated (read/eval-with-errors parsed-content namespace)]
-       (assoc page-data :hiccup-content evaluated)))
-
-   rendered-state
+       (assoc page-data :evaluated-content evaluated)))
+   markdown-state
+   (fn [{:keys [evaluated-content] :as page-data}]
+     (assoc page-data :rendered-content (first evaluated-content)))
+   html-state
    (fn [{:keys [hiccup-content] :as page-data}]
      (assoc page-data
             :rendered-content

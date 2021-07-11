@@ -83,7 +83,7 @@
                 (sketch/advance-finite-schema-machine operations)
                 (sketch/advance-finite-schema-machine operations)
                 (sketch/advance-finite-schema-machine operations))
-           :hiccup-content))
+           :markdown-content))
 
     #_(t/is (contains?
            (->> "./README.md.fab"
