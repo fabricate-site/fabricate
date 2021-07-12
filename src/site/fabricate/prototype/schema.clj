@@ -41,3 +41,19 @@
           [:orn [0 :int] [1 :boolean]])
 
   )
+
+(defn malli?
+  "Returns true if the given form is a valid malli schema"
+  [form]
+  (try (do (m/schema form) true)
+       (catch Exception e
+         #_(prn (Throwable->map e))
+         false)))
+
+(defn unify
+  "A lighter-weight version of malli's own unify/merge that's
+  more compatible with number-based indexing/item access"
+  {:malli/schema [:=> [:cat [:+ [:fn malli?]]]
+                  [:fn malli?]]}
+  [schemas]
+  (into [:orn] (map-indexed vector (keys fsm-map))))

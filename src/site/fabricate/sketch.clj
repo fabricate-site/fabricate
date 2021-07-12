@@ -209,13 +209,7 @@
               (advance-malli-fsm malli-fsm-data-fns)
               ))
 
-(defn malli?
-  "Returns true if the given form is a valid malli schema"
-  [form]
-  (try (do (m/schema form) true)
-       (catch Exception e
-         #_(prn (Throwable->map e))
-         false)))
+
 
 
 
