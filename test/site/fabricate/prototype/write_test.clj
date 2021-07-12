@@ -1,6 +1,7 @@
 (ns site.fabricate.prototype.write-test
   (:require [site.fabricate.prototype.write :refer :all]
             [site.fabricate.prototype.read :as read]
+            [site.fabricate.prototype.fsm :as fsm]
             [site.fabricate.sketch :as sketch]
             [clojure.java.io :as io]
             [clojure.set :as set]
@@ -52,38 +53,38 @@
                last)))
 
     (t/is (=  "./README.md.fab"
-              (-> (sketch/advance-finite-schema-machine operations "./README.md.fab")
+              (-> (fsm/complete
+                   (select-keys operations [input-state])
+                   "./README.md.fab")
                   (get :input-file)
                   .getPath)))
 
     (t/is (= (slurp "./README.md.fab")
              (get
-              (->> "./README.md.fab"
-                   (sketch/advance-finite-schema-machine operations)
-                   (sketch/advance-finite-schema-machine operations))
+              (fsm/complete
+               (select-keys operations [input-state file-state])
+               "./README.md.fab")
               :unparsed-content)))
 
-
-    (comment
-
-      (m/validate (-> sketch/page-metadata-schema
-                      (mu/dissoc :output-file)
-                      (mu/dissoc :title)
-                      (mu/dissoc :namespace)
-                      (mu/dissoc :page-style)
-                      (mu/dissoc :parsed-content)
-                      (mu/dissoc :hiccup-content)
-                      (mu/dissoc :rendered-content))
-
-                  (->> "./README.md.fab"
-                       (sketch/advance-finite-schema-machine operations)
-                       (sketch/advance-finite-schema-machine operations))))
+    (t/is
+     (m/validate
+       (-> sketch/page-metadata-schema
+           (mu/dissoc :output-file)
+           (mu/dissoc :title)
+           (mu/dissoc :namespace)
+           (mu/dissoc :page-style)
+           (mu/dissoc :parsed-content)
+           (mu/dissoc :hiccup-content)
+           (mu/dissoc :rendered-content))
+       (fsm/complete
+        (select-keys operations [input-state file-state])
+        "./README.md.fab")))
 
     (t/is
-     (let [output (->> "./README.md.fab"
-                       (sketch/advance-finite-schema-machine operations)
-                       (sketch/advance-finite-schema-machine operations)
-                       (sketch/advance-finite-schema-machine operations))]
+     (let [output
+           (fsm/complete
+            (select-keys operations [input-state file-state read-state])
+            "./README.md.fab")]
        (and (set/subset?
              #{:parsed-content :namespace}
              (->> output keys (into #{})))
@@ -92,30 +93,17 @@
      "Metadata should be properly populated")
 
 
-
     (t/is (contains?
-           (->> "./README.md.fab"
-                (sketch/advance-finite-schema-machine operations)
-                (sketch/advance-finite-schema-machine operations)
-                (sketch/advance-finite-schema-machine operations)
-                (sketch/advance-finite-schema-machine operations))
+           (fsm/complete (dissoc operations
+                                 markdown-state
+                                 html-state
+                                 rendered-state)
+                         "./README.md.fab")
            :evaluated-content))
 
     (t/is
-     (->> "./README.md.fab"
-          (sketch/advance-finite-schema-machine operations)
-          (sketch/advance-finite-schema-machine operations)
-          (sketch/advance-finite-schema-machine operations)
-          (sketch/advance-finite-schema-machine operations)
-          (sketch/advance-finite-schema-machine operations)
-          (m/validate rendered-state)))
-
-    #_(t/is (contains?
-             (->> "./README.md.fab"
-                  (sketch/advance-finite-schema-machine operations)
-                  (sketch/advance-finite-schema-machine operations)
-                  (sketch/advance-finite-schema-machine operations)
-                  (sketch/advance-finite-schema-machine operations)
-                  (sketch/advance-finite-schema-machine operations)
-                  :value)
-             :rendered-content))))
+     (m/validate rendered-state
+                 (fsm/complete (dissoc operations
+                                       html-state
+                                       rendered-state)
+                               "./README.md.fab")))))
