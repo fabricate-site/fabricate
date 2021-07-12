@@ -16,7 +16,7 @@
 
 
 (def state-action-map
-  "Malli schema for the map where each entry is ⟨s,α⟩ tuple,
+  "Malli schema for the map where each entry is a ⟨s,α⟩ tuple,
   \"where s is a state states and α is an action.\"
   The action performs the transition from s to a target state
   specified by the signature of α.
@@ -54,7 +54,10 @@
   ;; for the FSM to return two successive identical values,
   ;; which works for both non-matching values and for "finished" values.
   ;;
-  ;; this could be extended with custom equality semantics
+  ;; this could be extended with custom equality semantics.
+  ;;
+  ;; In this implementation, any side effects specified in the final
+  ;; action of the FSM will be performed twice.
   (let [fsm-states (iterate #(advance fsm-map %) value)]
     (reduce (fn [current-state next-state]
               (if (= current-state next-state)
