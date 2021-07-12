@@ -56,4 +56,4 @@
   {:malli/schema [:=> [:cat [:+ [:fn malli?]]]
                   [:fn malli?]]}
   [schemas]
-  (into [:orn] (map-indexed vector (keys fsm-map))))
+  (into [:orn] (map-indexed vector schemas)))

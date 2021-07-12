@@ -19,6 +19,7 @@
    [site.fabricate.prototype.read :as read]
    [site.fabricate.prototype.html :as html]
    [site.fabricate.prototype.page :as page]
+   [site.fabricate.prototype.fsm :as fsm]
    [site.fabricate.prototype.schema :as schema]
    [juxt.dirwatch :refer [watch-dir close-watcher]]
    ))
@@ -270,19 +271,6 @@
    [:input-file [:fn sketch/file?]]
    [:unparsed-content :string]])
 
-;; could some kind of ordering among schemas
-;; be established whereby when attempting to validate
-;; a given value against more than one schema, the value
-;; is checked against the closed schemas before the open
-;; ones, thereby avoiding the problem of open schemas
-;; clashing with closed schemas that "fill in" the entries
-;; with more detail?
-;;
-;; the motivation for this is making the metadata for a post open
-;; to arbitrary data specified on a per-post level, which could
-;; alternately be achieved sans that ordering by just adding a
-;; :metadata entry to the post map
-
 (def parsed-state
   [:map {:closed true
          :description "Fabricate input parsed under :parsed-content and metadata associated with page map"}
@@ -384,15 +372,9 @@
        (spit output-file rendered-content)
        page-data))})
 
-(comment (keys operations)
+(comment
+  ;; to update the readme manually, do this:
 
-         (->> "./README.md.fab"
-              (sketch/advance-finite-schema-machine operations)
-              (sketch/advance-finite-schema-machine operations)
-              (sketch/advance-finite-schema-machine operations)
-              (sketch/advance-finite-schema-machine operations)
-              (sketch/advance-finite-schema-machine operations)
-              (sketch/advance-finite-schema-machine operations)
-              )
+  (fsm/complete operations "./README.md.fab")
 
          )
