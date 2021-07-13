@@ -331,7 +331,6 @@
   "Takes the evaluated contents and turns them into a well-formed
    hiccup data structure."
   {:malli/schema [:=> [:cat evaluated-state] :map]}
-
   [{:keys [namespace evaluated-content]
     :as page-data}]
   (let [metadata (ns-resolve namespace 'metadata)
@@ -340,6 +339,7 @@
                            evaluated-content)]
     [:html
      (page/doc-header metadata)
+     [:article body-content]
      [:footer
       [:div [:a {:href "/"} "Home"]]]]))
 
@@ -373,11 +373,10 @@
    (fn [{:keys [evaluated-content] :as page-data}]
      (assoc page-data :rendered-content (apply str evaluated-content)))
    html-state
-   (fn [{:keys [evaluated-content] :as page-data}]
+   (fn [page-data]
      (assoc page-data
-            :rendered-content (-> evaluated-content
-                                  rest
-                                  #_evaluated->hiccup
+            :rendered-content (-> page-data
+                                  evaluated->hiccup
                                   hiccup/html
                                   str)))
    rendered-state
