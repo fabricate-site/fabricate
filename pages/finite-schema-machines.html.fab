@@ -1,0 +1,27 @@
+
+✳(ns site.fabricate.docs.fsm
+                 (:require [site.fabricate.prototype.page :refer :all]
+[site.fabricate.prototype.read :as read]
+[couplet.core :as cp]
+[garden.core :as garden]
+))🔚
+
+✳ (def metadata
+  {:title "Organizing computation with Finite Schema Machines"
+
+  :page-style (garden/css {:max-width "60em"})}) 🔚
+
+✳= [:header [:h1 (:title metadata)]
+   [:h4 "An extensible method of laying out functions executed by a program."]] 🔚
+
+Let's take a tour through Fabricate's ✳= [:code "fsm"] 🔚 namespace. The implementation is extremely simple right now, consisting of two functions:
+
+
+✳= [:code (read/include-def 'advance "./src/site/fabricate/prototype/fsm.clj")] 🔚
+
+
+✳= [:code (read/include-def 'complete "./src/site/fabricate/prototype/fsm.clj")] 🔚
+
+What do these do? They take a given piece of arbitrary Clojure data, move it through a succession of states. This sequence is defined by a map mapping from  ✳= [:code "malli"] 🔚 schemas to functions. If a piece of data matches one of the states in the keys, it is transformed by calling the corresponding function. If it doesn't, it is returned as-is. There's nothing more to it than that.
+
+The challenge lies in precisely describing the succession of states required by Fabricate.

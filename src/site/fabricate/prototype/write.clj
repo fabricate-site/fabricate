@@ -238,7 +238,10 @@
                                (get-output-filename (.getPath input-file)
                                                     output-dir)))
        (merge (read/get-file-metadata (.getPath input-file)))
-       (merge (last (read/get-metadata parsed-content))))))
+       (merge (-> parsed-content
+                  read/get-metadata
+                  last
+                  (select-keys [:namespace :title]))))))
 
 (comment
   (def =>populate-page-meta
@@ -300,9 +303,7 @@
    [:fabricate/suffix [:enum (:template-suffix default-site-settings)]]
    [:filename :string]
    [:file-extension :string]
-   [:namespace {:optional true}
-    [:orn [:name :symbol]
-     [:form [:fn schema/ns-form?]]]]
+   [:namespace :symbol]
    [:page-style {:optional true} :string]
    [:title {:optional true} :string]
    [:output-file {:optional true}
@@ -311,21 +312,12 @@
      [:file [:fn sketch/file?]]]]])
 
 (def html-state
-  [:map {:closed true
-         :description "Fabricate input evaluated as well-formed HTML under :hiccup-content entry"}
-   [:input-file [:fn sketch/file?]]
-   [:unparsed-content :string]
-   [:parsed-content [:fn vector?]]
-   [:namespace {:optional true}
-    [:orn [:name :symbol]
-     [:form [:fn schema/ns-form?]]]]
-   [:page-style {:optional true} :string]
-   [:title {:optional true} :string]
-   [:output-file {:optional true}
-    [:orn
-     [:path :string]
-     [:file [:fn sketch/file?]]]]
-   [:hiccup-content html/html]])
+  (mu/closed-schema
+   (mu/merge
+    evaluated-state
+    [:map {:closed true
+           :description "Fabricate input evaluated as hiccup vector"}
+     [:file-extension [:enum  "html" ]]])))
 
 (def markdown-state
   (mu/closed-schema
@@ -335,13 +327,29 @@
            :description "Fabricate markdown input evaluated as markdown string"}
      [:file-extension [:enum  "md" "markdown"]]])))
 
+(defn evaluated->hiccup
+  "Takes the evaluated contents and turns them into a well-formed
+   hiccup data structure."
+  {:malli/schema [:=> [:cat evaluated-state] :map]}
+
+  [{:keys [namespace evaluated-content]
+    :as page-data}]
+  (let [metadata (ns-resolve namespace 'metadata)
+        body-content (into [:article {:lang "en"}]
+                           page/sectionize-contents
+                           evaluated-content)]
+    [:html
+     (page/doc-header metadata)
+     [:footer
+      [:div [:a {:href "/"} "Home"]]]]))
+
 (def rendered-state
   (mu/merge
    evaluated-state
-    [:map {:description "Fabricate input rendered to output string"
-           :open true
-           :fsm/state :fsm/exit}        ; indicating the exit state
-     [:rendered-content :string]]))
+   [:map {:description "Fabricate input rendered to output string"
+          :open true
+          :fsm/state :fsm/exit}         ; indicating the exit state
+    [:rendered-content :string]]))
 
 (def operations
   {input-state (fn [f] {:input-file (io/as-file f)})
@@ -356,15 +364,22 @@
    parsed-state
    (fn [{:keys [parsed-content namespace] :as page-data}]
      (let [evaluated (read/eval-with-errors parsed-content namespace)]
-       (assoc page-data :evaluated-content evaluated)))
+       (assoc page-data :evaluated-content evaluated
+              :namespace
+              (if (symbol? namespace)
+                namespace
+                (second (second namespace))))))
    markdown-state
    (fn [{:keys [evaluated-content] :as page-data}]
      (assoc page-data :rendered-content (apply str evaluated-content)))
    html-state
-   (fn [{:keys [hiccup-content] :as page-data}]
+   (fn [{:keys [evaluated-content] :as page-data}]
      (assoc page-data
-            :rendered-content
-            (hiccup/html (first hiccup-content))))
+            :rendered-content (-> evaluated-content
+                                  rest
+                                  #_evaluated->hiccup
+                                  hiccup/html
+                                  str)))
    rendered-state
    (fn [{:keys [rendered-content output-file] :as page-data}]
      (do
@@ -373,8 +388,13 @@
        page-data))})
 
 (comment
-  ;; to update the readme manually, do this:
+  ;; to update pages manually, do this:
 
   (fsm/complete operations "./README.md.fab")
+  (fsm/complete operations "./pages/finite-schema-machines.html.fab")
 
-         )
+  (def finite-schema-machines (fsm/complete operations "./pages/finite-schema-machines.html.fab"))
+
+  (malli.error/humanize (m/explain parsed-state finite-schema-machines))
+
+  )

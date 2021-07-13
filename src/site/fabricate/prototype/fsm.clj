@@ -58,7 +58,7 @@
   ;;
   ;; In this implementation, any side effects specified in the final
   ;; action of the FSM will be performed twice.
-  (let [fsm-states (iterate #(advance fsm-map %) value)]
+  (let [fsm-states (iterate (partial advance fsm-map) value)]
     (reduce (fn [current-state next-state]
               (if (= current-state next-state)
                 (reduced current-state)
