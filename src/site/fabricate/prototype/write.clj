@@ -91,7 +91,7 @@
         form-ns (read/yank-ns parsed)
         evaluated  (read/eval-with-errors
                     parsed form-ns html/validate-element)
-        page-meta (ns-resolve form-ns 'metadata)
+        page-meta (var-get (ns-resolve form-ns 'metadata))
         body-content
         (into [:article {:lang "en"}]
               page/sectionize-contents
@@ -333,7 +333,7 @@
   {:malli/schema [:=> [:cat evaluated-state] :map]}
   [{:keys [namespace evaluated-content]
     :as page-data}]
-  (let [metadata (ns-resolve namespace 'metadata)
+  (let [metadata (var-get (ns-resolve namespace 'metadata))
         body-content (into [:article {:lang "en"}]
                            page/sectionize-contents
                            evaluated-content)]
