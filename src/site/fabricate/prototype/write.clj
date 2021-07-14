@@ -377,7 +377,7 @@
      (assoc page-data
             :rendered-content (-> page-data
                                   evaluated->hiccup
-                                  hiccup/html
+                                  hp/html5
                                   str)))
    rendered-state
    (fn [{:keys [rendered-content output-file] :as page-data}]
