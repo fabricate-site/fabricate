@@ -46,7 +46,7 @@
             op (get fsm-map matched-schema)]
         (do
           (println "advancing fsm:" (get (m/properties matched-schema)
-                                         :description))
+                                         :fsm/description))
           (op value))))))
 
 (defn complete [fsm-map value]

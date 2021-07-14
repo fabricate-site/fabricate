@@ -112,116 +112,8 @@
                      (.endsWith (.toString %) suffix)))
        (map #(.toString %))))
 
-(defn render-template-file
-  ([path page-fn out-dir]
-   (let [out-file (get-output-filename path out-dir)]
-     (println "Rendering" (.toString out-file))
-     (-> path
-         slurp
-         page-fn
-         hiccup->html-str
-         (#(spit out-file %))
-         )))
-  ([path page-fn] (render-template-file path page-fn "pages"))
-  ([path]
-   (render-template-file path template->hiccup "pages")))
-
-(defn render-template-files
-  "Writes the given files. Renders all in the content dir when called without args."
-  ([template-files page-fn out-dir]
-   (doseq [f template-files]
-     (render-template-file f page-fn out-dir)))
-  ([template-files page-fn] (render-template-files template-files page-fn "pages"))
-  ([template-files] (render-template-files template-files template->hiccup "pages"))
-  ([] (render-template-files (get-template-files "content" (:template-suffix default-site-settings)))))
 
 
-
-(defn update-page-map [old-map page-name page-contents]
-  (if (= ::read/parse-error page-contents)
-    (do
-      (println "Parse error detected, skipping")
-      old-map)
-    (assoc old-map page-name
-           {:data page-contents
-            :html (hiccup->html-str page-contents)})))
-
-
-
-(defn write-file! [output-path html-content]
-  (if (not
-       (nil? html-content))
-    (do (println "writing file to" output-path)
-        (spit output-path html-content))))
-
-(defn update-and-write! [fp]
-  (do (let [f-contents
-                 (-> fp slurp
-                     (template-str->hiccup {:page-fn template->hiccup
-                                            :path fp}))]
-             (swap! pages #(update-page-map % fp f-contents)))
-           (let [output-path (get-output-filename fp "./pages")
-                 html-content (get-in @pages [fp :html])]
-             (write-file! output-path html-content))))
-
-(defn rerender [{:keys [file count action]}]
-  (if (#{:create :modify} action)
-    (do
-      (println "re-rendering" (.toString file))
-      (update-and-write! (.toString file))
-      (println "rendered"))))
-
-
-
-(defn draft
-  ([]
-   (do
-     ;; (load-deps)
-     (doseq [fp (get-template-files "content" (:template-suffix
-                                               default-site-settings))]
-       (update-and-write! fp))
-     (println "establishing file watch")
-     (let [fw (watch-dir rerender (io/file "./content/"))]
-       (.addShutdownHook (java.lang.Runtime/getRuntime)
-                         (Thread. (fn []
-                                    (do (println "shutting down")
-                                        (close-watcher fw)
-                                        (shutdown-agents)))))
-       (loop [watch fw]
-         (await fw)
-         (recur [fw]))))))
-
-(comment
-  (future (draft)))
-
-(defn publish
-  ([{:keys [files dirs]
-     :as opts}]
-   (let [all-files
-         (apply concat files
-                (map #(get-template-files
-                       %
-                       (:template-suffix default-site-settings)) dirs))]
-     (render-template-files all-files))))
-
-(defn write-page!
-  "Writes the page. Returns a tuple with the resulting state and the page contents."
-  [{:keys [output-file page-content]
-    :as page-data}]
-  (let [state
-        (if
-            (not (string? page-content)) ::write-error
-            (try (do (spit page-content) ::written)
-                 (catch Exception e ::write-error)))]
-    [state page-data]))
-
-(def =>write-page! [:=> [:cat sketch/published-page-metadata-schema]
-                    [:catn [:state [:enum ::write-error ::written]]
-                     [:page-data sketch/published-page-metadata-schema]]])
-
-(comment
-  (m/validate =>write-page! write-page!
-              {::m/function-checker mg/function-checker}))
 
 ;; consider moving this to the page namespace
 (defn populate-page-meta
@@ -258,25 +150,25 @@
 ;; that produce that particular succession of states
 
 (def input-state
-  [:and {:description "Fabricate input path represented as string"}
+  [:and {:fsm/description "Fabricate input path represented as string"}
    :string [:fn #(.endsWith % ".fab")]])
 
 (comment (m/validate input-state "./README.md.fab") )
 
 (def file-state
   [:map {:closed true
-         :description "Fabricate input represented as :input-file java.io.File entry in page map"}
+         :fsm/description "Fabricate input represented as :input-file java.io.File entry in page map"}
    [:input-file [:fn sketch/file?]]])
 
 (def read-state
   [:map {:closed true
-         :description "Fabricate input read in as string under :unparsed-content"}
+         :fsm/description "Fabricate input read in as string under :unparsed-content"}
    [:input-file [:fn sketch/file?]]
    [:unparsed-content :string]])
 
 (def parsed-state
   [:map {:closed true
-         :description "Fabricate input parsed under :parsed-content and metadata associated with page map"}
+         :fsm/description "Fabricate input parsed under :parsed-content and metadata associated with page map"}
    [:input-file [:fn sketch/file?]]
    [:fabricate/suffix [:enum (:template-suffix default-site-settings)]]
    [:filename :string]
@@ -295,7 +187,7 @@
 
 (def evaluated-state
   [:map {:closed true
-         :description "Fabricate evaluated under :evaluated-content"}
+         :fsm/description "Fabricate evaluated under :evaluated-content"}
    [:input-file [:fn sketch/file?]]
    [:unparsed-content :string]
    [:parsed-content [:fn vector?]]
@@ -316,7 +208,7 @@
    (mu/merge
     evaluated-state
     [:map {:closed true
-           :description "Fabricate input evaluated as hiccup vector"}
+           :fsm/description "Fabricate input evaluated as hiccup vector"}
      [:file-extension [:enum  "html" ]]])))
 
 (def markdown-state
@@ -324,7 +216,7 @@
    (mu/merge
     evaluated-state
     [:map {:closed true
-           :description "Fabricate markdown input evaluated as markdown string"}
+           :fsm/description "Fabricate markdown input evaluated as markdown string"}
      [:file-extension [:enum  "md" "markdown"]]])))
 
 (defn evaluated->hiccup
@@ -346,7 +238,7 @@
 (def rendered-state
   (mu/merge
    evaluated-state
-   [:map {:description "Fabricate input rendered to output string"
+   [:map {:fsm/description "Fabricate input rendered to output string"
           :open true
           :fsm/state :fsm/exit}         ; indicating the exit state
     [:rendered-content :string]]))
@@ -385,6 +277,69 @@
        (println "writing page content to" output-file)
        (spit output-file rendered-content)
        page-data))})
+
+(defn update-page-map [old-map page-name]
+  (try (update old-map page-name
+               (fn [_] (fsm/complete operations page-name)))
+       (catch Exception e
+         (println (.getMessage e))
+         (println "Parse error detected, skipping")
+         old-map)))
+
+(defn rerender [{:keys [file count action]}]
+  (if (and (#{:create :modify} action)
+           (.endsWith (.toString file)
+                      (:template-suffix default-site-settings)))
+    (do
+      (println "re-rendering" (.toString file))
+      (swap! pages #(update-page-map % (.toString file)))
+      (println "rendered"))))
+
+(defn draft
+  ([]
+   (do
+     ;; (load-deps)
+     (doseq [fp (get-template-files "pages" (:template-suffix
+                                               default-site-settings))]
+       (fsm/complete operations fp))
+     (println "establishing file watch")
+     (let [fw (watch-dir rerender (io/file "./pages/"))]
+       (.addShutdownHook (java.lang.Runtime/getRuntime)
+                         (Thread. (fn []
+                                    (do (println "shutting down")
+                                        (close-watcher fw)
+                                        (shutdown-agents)))))
+       (loop [_ fw]
+         (await fw)
+         (recur [fw]))))))
+
+(defn render-template-files
+  "Writes the given files. Renders all in the pages dir when called without args."
+  ([template-files page-fn out-dir]
+   (doseq [f template-files]
+     (fsm/complete operations f)))
+  ([template-files page-fn] (render-template-files template-files page-fn "pages"))
+  ([template-files] (render-template-files template-files template->hiccup "pages"))
+  ([] (render-template-files (get-template-files "pages" (:template-suffix default-site-settings)))))
+
+(defn publish
+  ([{:keys [files dirs]
+     :as opts}]
+   (let [all-files
+         (apply concat files
+                (map #(get-template-files
+                       %
+                       (:template-suffix default-site-settings)) dirs))]
+     (render-template-files all-files))))
+
+(comment
+  (publish {:dirs ["./pages"]})
+
+  (future (draft))
+
+  )
+
+
 
 (comment
   ;; to update pages manually, do this:
