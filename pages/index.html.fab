@@ -6,22 +6,23 @@
 
 ✳ (def page-css
    (garden/css
-   (garden.stylesheet/at-import "https://fonts.googleapis.com/css2?family=Manrope:wght@800&family=Mukta+Mahee:wght@400;600&display=swap")
-   [:body {:background-image "linear-gradient(34deg, #9CC0DA, #ECD8D8 45%)"
-           :font-family "Mukta Mahee"}]
-   [:header {:font-family "Manrope"}
-   [:h1 {:font-size "8rem"
-         :color "#dc4032"
-   :line-height "7rem"}]]
-   [:.red {:color "#FF0000"}]
-   [:.scarlet  {:color "#a1010c"}]
-   [:.vermilion {:color "#dc4032"}]
-   [:.1999 {:text-transform "uppercase"}]
-   [:code {:color "#333"}]
-   [:article {:color "#222"
-              :max-width "60rem"}]
-   [:p {:margin-bottom "2rem"}]
-   )) 🔚
+    (garden.stylesheet/at-import  "https://fonts.googleapis.com/css2?family=Inria+Sans:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Inter:wght@900&display=swap")
+    [:body {:background-image "linear-gradient(34deg, #9CC0DA, #ECD8D8 45%)"
+            :font-family "'Inria Sans', sans-serif"
+            :font-size "22px"}]
+    [:header {:font-family "Inter"}
+     [:h1 {:font-size "8rem"
+           :color "#dc4032"
+           :line-height "7rem"}]]
+    [:.red {:color "#FF0000"}]
+    [:.scarlet  {:color "#a1010c"}]
+    [:.vermilion {:color "#dc4032"}]
+    [:.1999 {:text-transform "uppercase"}]
+    [:code {:color "#333"}]
+    [:article {:color "#222"
+               :max-width "60rem"}]
+    [:p {:margin-bottom "2rem"}]
+    )) 🔚
 
 ✳ (def metadata {:title "Introduction"
                   :page-style page-css}) 🔚
