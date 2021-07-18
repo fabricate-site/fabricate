@@ -29,7 +29,8 @@
       [:h2 {:font-size "1.7rem"}]
       [:h3 {:font-size "1.5rem"}]
       [:h4 {:font-size "1.3rem"}]
-      [:pre {:white-space "pre-wrap"}]
+      [:pre {:white-space "pre-wrap"
+             :font-size "0.95rem"}]
       ]
 
      )
@@ -38,14 +39,76 @@
 ✳= [:header [:h1 (:title metadata)]
    [:h4 "An extensible method of laying out functions executed by a program."]] 🔚
 
+✳=[:figure [:blockquote " Computation is a major topic of computer science, and almost every object that computes is naturally viewed as a state machine. Yet computer scientists are so focused on the languages used to describe computation that they are largely unaware that those languages are all describing state machines." ] [:figcaption "Leslie Lamport, " [:cite [:a {:href "https://lamport.azurewebsites.net/pubs/state-machine.pdf"} "Computation and State Machines"]] " [2008]"]] 🔚
+
+
+When I was on my 𝑛th refactor of a thread macro with multiple embedded if expressions, I realized I was trying to handle lots of special cases without really thinking about them. But in the back of my mind, I was trying to dispatch my function calls on the basis of whether the data I was passing through my function matched some predicate or other - another way of saying that the data was in a particular ✳= [:em "state."] 🔚
+
+After some sketches revealed that my understanding of the concepts was muddled and confused, I extensively googled "state machine" with some extra surrounding words, and it helped me discover that Leslie Lamport paper. The math is over my head, but the concept inspired me to figure out a better way of organizing what functions to call and when. A month and a half later, here it is.
+
+✳= [:h2 "State, Action, Function, Data"] 🔚
+
+Before going through the code, it's worth going over the definitions outlined by Lamport early on in the paper.
+
+✳= [:blockquote "I begin by considering what a computation is. There are several ways to define " [:em "computation."] " For now, I take the simplest: a computation is asequence of steps, which I call a " [:em "behavior."] " There are three common choices for what a step is, leading to three different kinds of behavior:"
+ [:dl
+[:dt "Action Behavior" ] [:dd "A step is an " [:em "action,"] " which is just an element of some set of actions. An action behavior is a sequence of actions"]
+[:dt "State Behavior"] [:dd "A step is a pair〈s,t〉of states, where a state is an element of some set of states.  A state behavior is a sequence s1 → s2 → s3 → ··· of states. The step〈si,si+1〉represents a transition from state si to state si+1."]
+[:dt "State-Action Behavior"] [:dd "A step is a triple〈s,α,t〉, where s and t are states and α is an action. A state-action behavior is a sequence s1α1 → s2α2 → s3α3 → ···. The step〈si, αi,si+1〉represents a transition from state si to state si+1 that is performed by action αi."]]] 🔚
+
+This terminology clarified the shaky concept in my head and in my messy sketches. I was attempting to define a state-action behavior: I wanted to call a function (action) on the basis of some property of the data I was currently working with (state). That function would change the properties of that data - in other words, advance it to a new state.
+
+How should those states be defined? Fabricate already ✳=[:a {:href "https://github.com/fabricate-site/fabricate/blob/main/src/site/fabricate/prototype/html.clj"} "extensively"]🔚 uses the ✳= [:code [:a {:href "github.com/metosin/malli"} "malli"]] 🔚 schema library, so that was a natural choice. Its expressivity makes it easy to define states and incrementally refine them to match the data being processed by a program. It also meant that I would have to write my own implementation of a finite state machine, as the existing libraries in the Clojure ecosystem don't really work with
+
+✳= [:h2 "A simple implementation"] 🔚
+
 Let's take a tour through Fabricate's ✳= [:code "fsm"] 🔚 namespace. The implementation is extremely simple right now, consisting of two functions:
 
+✳= [:pre [:code {:class "language-clojure"} (clojure.repl/source-fn 'site.fabricate.prototype.fsm/advance)]] 🔚
 
-✳= [:code (read/include-def 'advance "./src/site/fabricate/prototype/fsm.clj")] 🔚
+✳= [:pre [:code {:class "language-clojure"} (clojure.repl/source-fn 'site.fabricate.prototype.fsm/complete)]] 🔚
 
+What do these do? They take a given piece of arbitrary Clojure data, and move it through a succession of states. This sequence is defined by a map mapping from  ✳= [:code "malli"] 🔚 schemas to functions. Malli schemas are just data, so they are easy to use as map keys. If a piece of data matches one of the states in the keys, it is transformed by calling the corresponding function. If it doesn't, it is returned as-is. Termination is defined as the same successive value getting returned twice, which is a fairly naive way of representing the fact that there's no longer an action to take. While simple, this aspect mirrors one part of the much more formal and rigorous semantics that Lamport describes in that "that there is no fundamental difference between termination and deadlock."
 
-✳= [:code (read/include-def 'complete "./src/site/fabricate/prototype/fsm.clj")] 🔚
+There's nothing more to it than that. The challenge lies in precisely describing the succession of states required by the program.
 
-What do these do? They take a given piece of arbitrary Clojure data, move it through a succession of states. This sequence is defined by a map mapping from  ✳= [:code "malli"] 🔚 schemas to functions. If a piece of data matches one of the states in the keys, it is transformed by calling the corresponding function. If it doesn't, it is returned as-is. There's nothing more to it than that.
+✳= [:h2 "The implementation used by Fabricate"] 🔚
 
-The challenge lies in precisely describing the succession of states required by Fabricate.
+The usage pattern followed by Fabricate is to successively add items to a closed map, such that the state advances when the computation producing that map entry is complete. Starting from a file path, it moves through a read step, a parse step, an evaluation step, and then a render step, after which it writes the file. Because this final function is run only for its side effects, it returns the same value as its input, thus terminating the computation in ✳= [:code "fsm/complete"] 🔚. This map-accumulation strategy is simple enough to test the implementation while still being extensible enough to dispatch on special cases.
+
+One of the motivating concerns for this implementation was the ability to support multiple output types. Fabricate's ✳= [:a {:href "https://github.com/fabricate-site/fabricate/blob/main/README.md"} "README"]🔚 is a markdown file that is still generated by Fabricate, even though Fabricate doesn't include any Markdown parsers in its default dependencies; the library doesn't know anything about markdown, but it can still target it as an output format.
+
+✳= (read/include-def 'markdown-state  "./src/site/fabricate/prototype/write.clj") 🔚
+
+In the read step, data about the input file is appended to the map holding a page's state. This data allows us to dispatch functions on that map entry, running a function (after the evaluation step) that basically just renders the page as a markdown string for any pages that need to have Markdown as an ✳= [:em "output"] 🔚  format.
+
+Similar logic could be used to dispatch on the input filetype. Fabricate doesn't use any markup, but Finite Schema Machines give any users who desire to use Markdown an extensible method for adding it (or asciidoc) to their own rendering pipelines.
+
+Other state machine implementations are possible; one could update an entry in place in the same map, as long as the possible values for that entry were appropriately constrained.
+
+✳= [:h2 "Limitations"] 🔚
+
+This implementation, such as it currently is, will make no attempt to prevent users from doing silly things like an infinite succession of states:
+
+✳= [:pre [:code {:class "language-clojure"}
+     (str '(fsm/complete {[:enum :A] (fn [_] :B)
+             [:enum :B] (fn [_] :A)}))]] 🔚
+
+Or from a succession of states that only terminates when you reach an integer overflow:
+
+✳= [:pre [:code {:class "language-clojure"}
+     (str '(fsm/complete {:int inc} 1))]] 🔚
+
+I have some design concepts for how the really obvious problems could be anticipated through a validation mechanism for the map defining the FSM, but that is a topic for a future expansion of this post.
+
+✳= [:h3 "Why Not Just Use " [:code "cond"] " + Predicate Functions Mapped to Transforming Functions?"] 🔚
+
+That certainly is a way to achieve a similarly lightweight implementation of a lot of this concept. I prefer the schema-based approach because it then becomes possible to unify the schema and identify matching schemas with malli.core/parse, which makes certain types of function dispatch much easier! Malli is also just a really great library, one that I think embodies the idea of declarative programming at its best.
+
+✳= [:h2 "Not Quite Fully Abstract - But Clearer"] 🔚
+
+That said, gushing about how easy Malli and Clojure have made implementing this concept means I must admit that I'm not really following Lamport's main advice in that paper; I'm still fussing about with language details instead of using the formalism of pure mathematics (or TLA+) to achieve true rigor. But I didn't turn to Lamport's paper because I was interested in proving my static website generator correct; I think he might agree that personal experiments in generating static HTML are not a sufficiently complex and high-stakes problem to even warrant the use of proofs. I turned to the paper because I was struggling to think of a way to match states with functions. Thanks to the definitions provided in the second section of the paper, I eventually identified a simple and expressive way of doing so.
+
+✳= [:blockquote ] 🔚
+
+Malli isn't set theory, but it is simple and expressive enough that I am not as bogged down in implementation details, and I at least have become a bit more clear-eyed that I'm working with finite-state machine. Using it has forced me to think harder about just how I'm defining the data states I care about instead of just creating a true/false predicate that falls over on data of a slightly different shape than what it expects. It has forced me to think about how errors and exceptions fit into the state space of a program executing a series of functions on different sources of data. Lamport said the way to get better programs is to teach programmers to think better. For my part, I think implementing and using finite schema machines has done exactly that.
