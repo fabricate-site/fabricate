@@ -14,6 +14,19 @@ Fabricate is at once:
 
 There are many ways of creating HTML with code. Fabricate tries to provide its users with a method that can be modified to suit their own creative process, while still providing correctness guarantees so that the resulting HTML is still structurally valid and well-formatted. A major motivating concern for the library was escaping the expressive constraints of other tools, so Fabricate tries hard to embrace as much of the latent creative potential in HTML as it can, and put that potential in the hands of its users.
 
+## Ok, what?
+
+That sounds pretty complicated, but it's actually not. If you want to add a title to your page, you add the corresponding Hiccup element:
+
+```
+Some basic text
+
+<%=[:h2 "A title"]%>
+
+Some more text
+```
+If you want to use Clojure code to generate a sequence of elements, or otherwise computationally derive the contents of a HTML element, you have all of Clojure at your disposal. Enjoy.
+
 ### Status: sketch/pre-alpha. 
 Do not expect stability from Fabricate at this stage.
 
