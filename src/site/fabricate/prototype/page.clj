@@ -10,23 +10,6 @@
    [malli.core :as m]
    [clojure.string :as string]))
 
-(defn doc-header
-  "Returns a default header from a map with a post's metadata."
-  [{:keys [title page-style scripts]}]
-  (let [page-header
-        (apply conj
-               [:head
-                [:title (str "My website | " title)]
-                [:meta {:charset "utf-8"}]
-                [:meta {:http-equiv "X-UA-Compatible" :content "IE=edge,chrome=1"}]
-                [:meta {:name "viewport" :content "width=device-width, initial-scale=1.0, user-scalable=no"}]
-                [:script {:type "text/javascript" :src "js/prism.js" :async "async"}]
-                [:script {:type "text/javascript" :src "https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/plugins/autoloader/prism-autoloader.min.js"}]
-                [:link {:type "text/css" :href "css/fonts.css" :rel "stylesheet"}]
-                [:link {:type "text/css" :href "css/main.css" :rel "stylesheet"}]]
-               scripts)]
-    (if page-style (conj page-header [:style page-style]) page-header)))
-
 (defn em [& contents]  (apply conj [:em] contents))
 (defn strong [& contents]  (apply conj [:strong] contents))
 
@@ -167,9 +150,10 @@
   (let [page-header
         (apply conj
                [:head
-                [:title (str "Fabricate | " title)]
+                [:title (str site-title " | " title)]
                 [:meta {:charset "utf-8"}]
                 [:meta {:http-equiv "X-UA-Compatible" :content "IE=edge,chrome=1"}]
-                [:meta {:name "viewport" :content "width=device-width, initial-scale=1.0, user-scalable=no"}]]
+                [:meta {:name "viewport" :content "width=device-width, initial-scale=1.0, user-scalable=no"}]
+                [:link {:rel "stylesheet" :href "https://raw.githubusercontent.com/jensimmons/cssremedy/master/css/remedy.css"}]]
                scripts)]
     (if page-style (conj page-header [:style page-style]) page-header)))

@@ -1,6 +1,6 @@
 
                  
-# fabricate.site
+# ` fabricate.site `
 
 
 > "What we need is for every programmer to focus on summarizing their application's purpose and structure in a brief, explanatory, comprehensible fashion -- at the top of anything that might be hard to comprehend -- and to use that summary to drive the actual, operational, implementation through a set of similarly comprehensible intermediate structures -- until the application works, and is modifiable at any of these levels, by any person."
@@ -14,7 +14,10 @@ Fabricate is at once:
 
 There are many ways of creating HTML with code. Fabricate tries to provide its users with a method that can be modified to suit their own creative process, while still providing correctness guarantees so that the resulting HTML is still structurally valid and well-formatted. A major motivating concern for the library was escaping the expressive constraints of other tools, so Fabricate tries hard to embrace as much of the latent creative potential in HTML as it can, and put that potential in the hands of its users.
 
-Fabricate uses [`malli`](https://github.com/metosin/malli) to provide schemas to ensure the structural correctness of the resulting HTML, but the design and technique is influenced more broadly by concepts like [Design by Contract](), the [`dativity`](https://github.com/agentbellnorm/dativity) process engine, and finite-state machines.
+### Status: sketch/pre-alpha. 
+Do not expect stability from Fabricate at this stage.
+
+Fabricate uses [`malli`](https://github.com/metosin/malli) to provide schemas to ensure the structural correctness of the resulting HTML, but the design and technique is influenced more broadly by concepts like [Design by Contract](https://en.wikipedia.org/wiki/Design_by_contract), the [`dativity`](https://github.com/agentbellnorm/dativity) process engine, and finite-state machines.
 
 I hope users of fabricate can move up and down the ladder of complexity as and when they need to. Sometimes you want a simple page with just words, other times you want some code that generates items on the page. 
 

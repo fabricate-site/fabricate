@@ -3,7 +3,7 @@
      :output-file "./README.md"
      :namespace '(ns site.fabricate.docs.readme)}) 🔚
                  
-# ✳= (:title metadata) 🔚
+# ` ✳= (:title metadata) 🔚 `
 
 
 > "What we need is for every programmer to focus on summarizing their application's purpose and structure in a brief, explanatory, comprehensible fashion -- at the top of anything that might be hard to comprehend -- and to use that summary to drive the actual, operational, implementation through a set of similarly comprehensible intermediate structures -- until the application works, and is modifiable at any of these levels, by any person."
