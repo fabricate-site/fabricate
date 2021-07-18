@@ -18,7 +18,7 @@
                 :font-size "22px"
                 :line-height "1.35em"
                 :font-family "'Inria Sans', sans-serif"
-                :border-left-color "#5B2D0D"
+                :border-left-color "#dc4032"
                 :border-left-style "solid"
                 :border-left-width "2em"
                 }
@@ -68,11 +68,15 @@ Let's take a tour through Fabricate's ✳= [:code "fsm"] 🔚 namespace. The imp
 
 ✳= [:pre [:code {:class "language-clojure"} (clojure.repl/source-fn 'site.fabricate.prototype.fsm/complete)]] 🔚
 
-What do these do? They take a given piece of arbitrary Clojure data, and move it through a succession of states. This sequence is defined by a map mapping from  ✳= [:code "malli"] 🔚 schemas to functions. Malli schemas are just data, so they are easy to use as map keys. If a piece of data matches one of the states in the keys, it is transformed by calling the corresponding function. If it doesn't, it is returned as-is. Termination is defined as the same successive value getting returned twice, which is a fairly naive way of representing the fact that there's no longer an action to take. While simple, this aspect mirrors one part of the much more formal and rigorous semantics that Lamport describes in that "that there is no fundamental difference between termination and deadlock."
+What do these do? They take a given piece of arbitrary Clojure data, and move it through a succession of states. This sequence is defined by a map mapping from  ✳= [:code "malli"] 🔚 schemas to functions. Malli schemas are just data, so they are easy to use as map keys. If a piece of data matches one of the states in the keys, it is transformed by calling the corresponding function. If it doesn't, it is returned as-is.
+
+Termination is defined as the same successive value getting returned twice, which is a fairly naive way of representing the fact that there's no longer an action to take. While simple, this aspect mirrors one part of the much more formal and rigorous semantics that Lamport describes in that "that there is no fundamental difference between termination and deadlock."
+
+In Lamport's schema, state t in〈s,α,t〉is derived from the output signature of the function, so it's implicit rather than explicit in the map representation.
 
 There's nothing more to it than that. The challenge lies in precisely describing the succession of states required by the program.
 
-✳= [:h2 "The implementation used by Fabricate"] 🔚
+✳= [:h2 "Fabricate's use of Finite Schema Machines"] 🔚
 
 The usage pattern followed by Fabricate is to successively add items to a closed map, such that the state advances when the computation producing that map entry is complete. Starting from a file path, it moves through a read step, a parse step, an evaluation step, and then a render step, after which it writes the file. Because this final function is run only for its side effects, it returns the same value as its input, thus terminating the computation in ✳= [:code "fsm/complete"] 🔚. This map-accumulation strategy is simple enough to test the implementation while still being extensible enough to dispatch on special cases.
 
@@ -80,11 +84,11 @@ One of the motivating concerns for this implementation was the ability to suppor
 
 ✳= (read/include-def 'markdown-state  "./src/site/fabricate/prototype/write.clj") 🔚
 
-In the read step, data about the input file is appended to the map holding a page's state. This data allows us to dispatch functions on that map entry, running a function (after the evaluation step) that basically just renders the page as a markdown string for any pages that need to have Markdown as an ✳= [:em "output"] 🔚  format.
+In the read step, data about the input file is appended to the map holding a page's state. This data allows us to dispatch functions on that map entry, running a function (after the evaluation step) that basically just renders the page as a markdown string for any pages that need to have Markdown as an ✳= [:em "output"] 🔚  format. This allows for special cases in the rendering pipeline to be handled merely by progressively refining the schema to pick out the parts of data that identify them, and writing functions that are compatible with the remaining states.
 
 Similar logic could be used to dispatch on the input filetype. Fabricate doesn't use any markup, but Finite Schema Machines give any users who desire to use Markdown an extensible method for adding it (or asciidoc) to their own rendering pipelines.
 
-Other state machine implementations are possible; one could update an entry in place in the same map, as long as the possible values for that entry were appropriately constrained.
+Other state machine implementations are possible; one could update an entry in place in the same map, as long as the possible values for that entry were appropriately constrained. Other applications might not need to hold to as many pieces of intermediate information, and so could choose a different representation of the sequence of states.
 
 ✳= [:h2 "Limitations"] 🔚
 
@@ -101,14 +105,12 @@ Or from a succession of states that only terminates when you reach an integer ov
 
 I have some design concepts for how the really obvious problems could be anticipated through a validation mechanism for the map defining the FSM, but that is a topic for a future expansion of this post.
 
-✳= [:h3 "Why Not Just Use " [:code "cond"] " + Predicate Functions Mapped to Transforming Functions?"] 🔚
+✳= [:h3 "Why Not Just Use " [:code "cond/cond->"] " or Predicate Functions Mapped to Transforming Functions?"] 🔚
 
-That certainly is a way to achieve a similarly lightweight implementation of a lot of this concept. I prefer the schema-based approach because it then becomes possible to unify the schema and identify matching schemas with malli.core/parse, which makes certain types of function dispatch much easier! Malli is also just a really great library, one that I think embodies the idea of declarative programming at its best.
+That certainly is a way to achieve a similarly lightweight implementation of a lot of this concept. I prefer the schema-based approach because it then becomes possible to unify the schema and identify matching schemas with ✳=[:code "malli.core/parse"]🔚,  which makes certain types of function dispatch much easier! Malli is also just a really great library, one that I think embodies the idea of declarative programming at its best.
 
 ✳= [:h2 "Not Quite Fully Abstract - But Clearer"] 🔚
 
 That said, gushing about how easy Malli and Clojure have made implementing this concept means I must admit that I'm not really following Lamport's main advice in that paper; I'm still fussing about with language details instead of using the formalism of pure mathematics (or TLA+) to achieve true rigor. But I didn't turn to Lamport's paper because I was interested in proving my static website generator correct; I think he might agree that personal experiments in generating static HTML are not a sufficiently complex and high-stakes problem to even warrant the use of proofs. I turned to the paper because I was struggling to think of a way to match states with functions. Thanks to the definitions provided in the second section of the paper, I eventually identified a simple and expressive way of doing so.
-
-✳= [:blockquote ] 🔚
 
 Malli isn't set theory, but it is simple and expressive enough that I am not as bogged down in implementation details, and I at least have become a bit more clear-eyed that I'm working with finite-state machine. Using it has forced me to think harder about just how I'm defining the data states I care about instead of just creating a true/false predicate that falls over on data of a slightly different shape than what it expects. It has forced me to think about how errors and exceptions fit into the state space of a program executing a series of functions on different sources of data. Lamport said the way to get better programs is to teach programmers to think better. For my part, I think implementing and using finite schema machines has done exactly that.

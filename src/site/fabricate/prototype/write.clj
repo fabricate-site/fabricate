@@ -300,18 +300,24 @@
    (do
      ;; (load-deps)
      (doseq [fp (get-template-files "pages" (:template-suffix
-                                               default-site-settings))]
+                                             default-site-settings))]
        (fsm/complete operations fp))
-     (println "establishing file watch")
      (let [fw (watch-dir rerender (io/file "./pages/"))]
+       (println "establishing file watch")
        (.addShutdownHook (java.lang.Runtime/getRuntime)
                          (Thread. (fn []
                                     (do (println "shutting down")
                                         (close-watcher fw)
                                         (shutdown-agents)))))
-       (loop [_ fw]
-         (await fw)
-         (recur [fw]))))))
+
+       (try
+         (if-not (Thread/interrupted)
+           (await fw)
+           (throw (InterruptedException. "Thread interrupted.")))
+         (catch InterruptedException e
+           (println "shutting down.")
+           (close-watcher fw)
+           (println (.getMessage e))))))))
 
 (defn render-template-files
   "Writes the given files. Renders all in the pages dir when called without args."
@@ -335,7 +341,11 @@
 (comment
   (publish {:dirs ["./pages"]})
 
-  (future (draft))
+  (def draft-thread (Thread. draft))
+
+  (.start draft-thread)
+
+  (.interrupt draft-thread)
 
   )
 
