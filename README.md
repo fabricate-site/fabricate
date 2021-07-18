@@ -1,0 +1,83 @@
+
+                 
+# ` fabricate.site `
+
+
+> "What we need is for every programmer to focus on summarizing their application's purpose and structure in a brief, explanatory, comprehensible fashion -- at the top of anything that might be hard to comprehend -- and to use that summary to drive the actual, operational, implementation through a set of similarly comprehensible intermediate structures -- until the application works, and is modifiable at any of these levels, by any person."
+
+[Greg Bryant](https://computingphilosophy.blogspot.com/2020/01/software-tools-are-lost-in-weeds.html)
+
+Fabricate is at once:
+1. A method of generating HTML pages from plain text and Clojure code.
+2. a software system built atop these principles through comprehensible intermediate structures.
+3. a tool to help Clojure programmers take Bryant's advice by giving them more flexibility in how they choose to document and communicate the context, intent, and history of their programs.
+
+There are many ways of creating HTML with code. Fabricate tries to provide its users with a method that can be modified to suit their own creative process, while still providing correctness guarantees so that the resulting HTML is still structurally valid and well-formatted. A major motivating concern for the library was escaping the expressive constraints of other tools, so Fabricate tries hard to embrace as much of the latent creative potential in HTML as it can, and put that potential in the hands of its users.
+
+## Ok, what?
+
+That sounds pretty complicated, but it's actually not. If you want to add a title to your page, you add the corresponding Hiccup element:
+
+```
+Some basic text
+
+<%=[:h2 "A title"]%>
+
+Some more text
+```
+If you want to use Clojure code to generate a sequence of elements, or otherwise computationally derive the contents of a HTML element, you have all of Clojure at your disposal. Enjoy.
+
+### Status: sketch/pre-alpha. 
+Do not expect stability from Fabricate at this stage.
+
+Fabricate uses [`malli`](https://github.com/metosin/malli) to provide schemas to ensure the structural correctness of the resulting HTML, but the design and technique is influenced more broadly by concepts like [Design by Contract](https://en.wikipedia.org/wiki/Design_by_contract), the [`dativity`](https://github.com/agentbellnorm/dativity) process engine, and finite-state machines.
+
+I hope users of fabricate can move up and down the ladder of complexity as and when they need to. Sometimes you want a simple page with just words, other times you want some code that generates items on the page. 
+
+Experienced Clojure programmers may take interest in fabricate as expressing two concepts: 
+
+### A programmable program architecture
+
+The core sequence of operations fabricate performs when it runs is defined entirely in an ordinary Clojure map. Change this map, and you change the core sequence of operations for fabricate. This map can be changed at runtime to experiment with new operations. The topology of fabricate, as an program, can change at runtime.
+
+##### _Isn't this the worst kind of global mutable state: an_ entire codebase _that may change at runtime?_
+
+There are plenty of contexts in which this general idea is a bad fit or dangerous, and thus should not be put into practice: almost any client-server application would fall into this category. Fabricate is not a web application, and is not designed for use within an untrusted environment. It lets you run any code you want already, and this power should be used with caution and care.
+
+However, Fabricate is still written in Clojure, and immutable data structures will always describe the core of its logic. If a state transition map produces a strange error, you can save that map to reproduce the error. It is not hidden away inside an object (or worse, spread across multiple objects). `malli` schemas describe the state transitions and the contracts that must be respected by any additional state transitions added at runtime, so runtime users continue to get safety guarantees about the modifications they intend to make (because those contracts are themselves ordinary data structures, you of course retain the power to modify these contracts at runtime, in which case I assume you know what you are doing).
+
+I also believe the fact that fabricate produces static HTML pages, means that regardless of runtime changes to the program, it always has a relatively stable target to aim for: reading in templates, running them, and writing the results of that code as ordinary HTML.
+
+`site.fabricate.prototype.write/draft` is not intended to provide you with an always-on application. Fabricate is [more of a program than an application](https://stackoverflow.com/a/4433145). If things get really weird, just restart it and you will fall back to the definition of operations in your (or fabricate's) source code.
+
+### A hylozoic state machine
+
+Fabricate's main loop is what I call a _hylozoic state machine_: a state machine designed to have self-healing properties and boundaries for state transitions that let friendly material pass through while keeping broken material out. 
+
+> ...yet possibly enough in general of human communications is known for a meta-system to be created in which the specialist himself may describe the symbol system necessary to his work. In order for a tool such as this to be useful, several constraints must be true.
+>
+>   The communications device must be as available (in every way) as a slide rule.
+>   The service must not be esoteric to use. (It must be learnable in private.)
+>   The transactions must inspire confidence. (_Kindness_ should be an integral part.)
+
+Alan Kay, ["The Reactive Enginer"](http://www.chilton-computing.org.uk/inf/pdfs/kay.htm)
+
+Living systems have more graceful tolerance for failure that most software systems lack, a quality I believe to be particularly important for something used to create something as personal as a website. An error message in one place will not bring down the whole system. The problem you see will show itself in its original context, not with an oblique reference to a line number.
+
+## Usage
+
+To read in a series of templates contained in the `./docs` folder, evaluate the code in them, and publish the results as pages: 
+
+    $ clojure -X site.fabricate.prototype.write/publish '["./docs"]'
+
+Set up a live-reloading environment in which pages are republished as the templates they originate from get saved:
+
+    $ clojure -X site.fabricate.prototype.write/draft
+
+Run the project's tests:
+
+    $ clojure -M:test:runner
+
+## License
+
+Distributed under the Eclipse Public License version 2.0.
