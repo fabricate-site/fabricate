@@ -1,0 +1,31 @@
+name: Publish
+# This workflow is triggered on pushes to main.
+on:
+  push:
+    branches:
+      - main
+jobs:
+  publish:
+    name: Publish
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - uses: actions/cache@v1
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+      - name: Install clojure tools-deps
+        uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: 1.10.3
+      - name: Publish
+        run: |
+          clojure -X site.fabricate.write/publish :dirs '["./content"]'
+      - name: Deploy
+        uses: JamesIves/github-pages-deploy-action@4.1.4
+        with:
+          publish_dir: ./docs
+          publish_branch: gh-pages
