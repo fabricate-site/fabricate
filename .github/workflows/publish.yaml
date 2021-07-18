@@ -23,7 +23,7 @@ jobs:
           cli: 1.10.1.693
       - name: Publish
         run: |
-          clojure -X site.fabricate.write/publish :dirs '["./content"]'
+          clojure -X site.fabricate.prototype.write/publish :dirs '["./content"]'
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@4.1.4
         with:
