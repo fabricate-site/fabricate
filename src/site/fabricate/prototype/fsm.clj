@@ -50,14 +50,6 @@
           (op value))))))
 
 (defn complete [fsm-map value]
-  ;; the most basic form of defining completeness: wait
-  ;; for the FSM to return two successive identical values,
-  ;; which works for both non-matching values and for "finished" values.
-  ;;
-  ;; this could be extended with custom equality semantics.
-  ;;
-  ;; In this implementation, any side effects specified in the final
-  ;; action of the FSM will be performed twice.
   (let [fsm-states (iterate (partial advance fsm-map) value)]
     (reduce (fn [current-state next-state]
               (if (= current-state next-state)
