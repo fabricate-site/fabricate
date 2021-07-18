@@ -322,15 +322,6 @@
            (close-watcher fw)
            (println (.getMessage e))))))))
 
-(defn render-template-files
-  "Writes the given files. Renders all in the pages dir when called without args."
-  ([template-files page-fn out-dir]
-   (doseq [f template-files]
-     (fsm/complete operations f)))
-  ([template-files page-fn] (render-template-files template-files page-fn "pages"))
-  ([template-files] (render-template-files template-files template->hiccup "pages"))
-  ([] (render-template-files (get-template-files "pages" (:template-suffix default-site-settings)))))
-
 (defn publish
   ([{:keys [files dirs]
      :as opts}]
@@ -339,7 +330,8 @@
                 (map #(get-template-files
                        %
                        (:template-suffix default-site-settings)) dirs))]
-     (render-template-files all-files))))
+     (doseq [fp all-files]
+       (fsm/complete operations fp)))))
 
 (comment
   (publish {:dirs ["./pages"]})
