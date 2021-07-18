@@ -40,7 +40,8 @@
 
 (def default-site-settings
   {:template-suffix ".fab"
-   :output-dir "./pages"})
+   :input-dir "./pages"
+   :output-dir "./docs"})
 
 (def template-suffix-regex
   (let [suffix (:template-suffix default-site-settings)]
@@ -299,10 +300,12 @@
   ([]
    (do
      ;; (load-deps)
-     (doseq [fp (get-template-files "pages" (:template-suffix
-                                             default-site-settings))]
+     (doseq [fp (get-template-files
+                 (:input-dir default-site-settings)
+                 (:template-suffix
+                  default-site-settings))]
        (fsm/complete operations fp))
-     (let [fw (watch-dir rerender (io/file "./pages/"))]
+     (let [fw (watch-dir rerender (io/file (:input-dir default-site-settings)))]
        (println "establishing file watch")
        (.addShutdownHook (java.lang.Runtime/getRuntime)
                          (Thread. (fn []
@@ -319,15 +322,6 @@
            (close-watcher fw)
            (println (.getMessage e))))))))
 
-(defn render-template-files
-  "Writes the given files. Renders all in the pages dir when called without args."
-  ([template-files page-fn out-dir]
-   (doseq [f template-files]
-     (fsm/complete operations f)))
-  ([template-files page-fn] (render-template-files template-files page-fn "pages"))
-  ([template-files] (render-template-files template-files template->hiccup "pages"))
-  ([] (render-template-files (get-template-files "pages" (:template-suffix default-site-settings)))))
-
 (defn publish
   ([{:keys [files dirs]
      :as opts}]
@@ -336,7 +330,8 @@
                 (map #(get-template-files
                        %
                        (:template-suffix default-site-settings)) dirs))]
-     (render-template-files all-files))))
+     (doseq [fp all-files]
+       (fsm/complete operations fp)))))
 
 (comment
   (publish {:dirs ["./pages"]})
@@ -355,6 +350,7 @@
   ;; to update pages manually, do this:
 
   (fsm/complete operations "./README.md.fab")
+
   (fsm/complete operations "./pages/finite-schema-machines.html.fab")
 
   (def finite-schema-machines (fsm/complete operations "./pages/finite-schema-machines.html.fab"))

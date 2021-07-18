@@ -19,4 +19,4 @@
    :main-opts ["-m" "cognitect.test-runner"
                "-d" "test"]}
   :serve {:extra-deps {nasus/nasus {:mvn/version "0.1.7"}}
-          :main-opts ["-m" "http.server" "--dir" "pages"]}}}
+          :main-opts ["-m" "http.server" "--dir" "docs"]}}}
