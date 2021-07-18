@@ -18,9 +18,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
       - name: Install clojure tools-deps
-        uses: DeLaGuardo/setup-clojure@master
+        uses: DeLaGuardo/setup-clojure@3.5
         with:
-          cli: 1.10.3
+          cli: 1.10.1.693
       - name: Publish
         run: |
           clojure -X site.fabricate.write/publish :dirs '["./content"]'
