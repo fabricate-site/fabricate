@@ -15,14 +15,14 @@
    [malli.core :as m]
    [malli.util :as mu]
    [malli.generator :as mg]
+   [mount.core :as mount]
    [site.fabricate.sketch :as sketch]
    [site.fabricate.prototype.read :as read]
    [site.fabricate.prototype.html :as html]
    [site.fabricate.prototype.page :as page]
    [site.fabricate.prototype.fsm :as fsm]
    [site.fabricate.prototype.schema :as schema]
-   [juxt.dirwatch :refer [watch-dir close-watcher]]
-   ))
+   [juxt.dirwatch :refer [watch-dir close-watcher]]))
 
 (def pages
   "This variable holds the current state of all the pages created
@@ -79,11 +79,6 @@
        (hiccup/html {:escape-strings? false} head)
        (hiccup/html body)
        "</html>"))
-
-
-
-
-
 
 (defn template->hiccup
   "Converts a template file to a hiccup data structure for the page."
@@ -312,15 +307,7 @@
                                     (do (println "shutting down")
                                         (close-watcher fw)
                                         (shutdown-agents)))))
-
-       (try
-         (if-not (Thread/interrupted)
-           (await fw)
-           (throw (InterruptedException. "Thread interrupted.")))
-         (catch InterruptedException e
-           (println "shutting down.")
-           (close-watcher fw)
-           (println (.getMessage e))))))))
+       fw))))
 
 (defn publish
   ([{:keys [files dirs]
@@ -336,11 +323,8 @@
 (comment
   (publish {:dirs ["./pages"]})
 
-  (def draft-thread (Thread. draft))
-
-  (.start draft-thread)
-
-  (.interrupt draft-thread)
+  (mount/defstate drafting :start (draft)
+    :stop (close-watcher drafting))
 
   )
 
