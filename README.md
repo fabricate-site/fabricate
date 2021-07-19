@@ -21,7 +21,7 @@ That sounds pretty complicated, but it's actually not. If you want to add a titl
 ```
 Some basic text
 
-✳[:h2 "A title"]🔚
+✳=[:h2 "A title"]🔚
 
 Some more text
 ```
