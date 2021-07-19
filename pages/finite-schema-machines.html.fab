@@ -5,11 +5,11 @@
                            [clojure.repl :as repl]
                            [couplet.core :as cp]
                            [garden.core :as garden]
-                           [garden.stylesheet :refer [at-import]]))🔚
+[garden.stylesheet :refer [at-import]]))🔚
 
 ✳ (def metadata
-  {:title "Organizing computation with Finite Schema Machines"
-
+{:title "Organizing computation with Finite Schema Machines"
+:description "Mapping from data states to functions"
 :page-style
    (garden/css
     (list
