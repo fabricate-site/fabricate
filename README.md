@@ -21,13 +21,13 @@ That sounds pretty complicated, but it's actually not. If you want to add a titl
 ```
 Some basic text
 
-<%=[:h2 "A title"]%>
+✳[:h2 "A title"]🔚
 
 Some more text
 ```
 If you want to use Clojure code to generate a sequence of elements, or otherwise computationally derive the contents of a HTML element, you have all of Clojure at your disposal. Enjoy.
 
-### Status: sketch/pre-alpha. 
+### Status: sketch/pre-alpha.
 Do not expect stability from Fabricate at this stage.
 
 Fabricate uses [`malli`](https://github.com/metosin/malli) to provide schemas to ensure the structural correctness of the resulting HTML, but the design and technique is influenced more broadly by concepts like [Design by Contract](https://en.wikipedia.org/wiki/Design_by_contract), the [`dativity`](https://github.com/agentbellnorm/dativity) process engine, and finite-state machines.
