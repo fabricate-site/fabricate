@@ -68,17 +68,17 @@
 
     (t/is
      (m/validate
-       (-> sketch/page-metadata-schema
-           (mu/dissoc :output-file)
-           (mu/dissoc :title)
-           (mu/dissoc :namespace)
-           (mu/dissoc :page-style)
-           (mu/dissoc :parsed-content)
-           (mu/dissoc :hiccup-content)
-           (mu/dissoc :rendered-content))
-       (fsm/complete
-        (select-keys operations [input-state file-state])
-        "./README.md.fab")))
+      (-> sketch/page-metadata-schema
+          (mu/dissoc :output-file)
+          (mu/dissoc :title)
+          (mu/dissoc :namespace)
+          (mu/dissoc :page-style)
+          (mu/dissoc :parsed-content)
+          (mu/dissoc :hiccup-content)
+          (mu/dissoc :rendered-content))
+      (fsm/complete
+       (select-keys operations [input-state file-state])
+       "./README.md.fab")))
 
     (t/is
      (let [output
@@ -91,6 +91,14 @@
             (= "./README.md" (:output-file output))))
 
      "Metadata should be properly populated")
+
+    (t/is (= "public/test/some-file.txt"
+             (:output-file
+              (populate-page-meta {:input-file (io/file "content/test/some-file.txt.fab")
+                                   :output-file "public/test/some-file.txt"}
+                                  default-site-settings))))
+
+
 
 
     (t/is (contains?

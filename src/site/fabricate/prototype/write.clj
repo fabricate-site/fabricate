@@ -129,7 +129,7 @@
        (merge (-> parsed-content
                   read/get-metadata
                   last
-                  (select-keys [:namespace :title]))))))
+                  (select-keys [:namespace :output-file :title]))))))
 
 (comment
   (def =>populate-page-meta
@@ -248,7 +248,7 @@
      (let [parsed (read/parse unparsed-content)]
        (-> page-data
            (assoc :parsed-content parsed)
-           (populate-page-meta  default-site-settings))))
+           (populate-page-meta default-site-settings))))
    parsed-state
    (fn [{:keys [parsed-content namespace] :as page-data}]
      (let [evaluated (read/eval-with-errors parsed-content namespace)]
