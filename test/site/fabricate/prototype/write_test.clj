@@ -13,8 +13,10 @@
   #_(t/testing "suffix regex"
     (t/is (re-matches template-suffix-regex "test-file.txt.fab")))
   (t/testing "output path fn"
-    (t/is (= "./pages/test-file.txt"
-             (get-output-filename "./pages/test-file.txt.fab")))))
+    (t/is (= "./docs/test-file.txt"
+             (get-output-filename "./pages/test-file.txt"
+                                  "./pages"
+                                  "./docs")))))
 
 (t/deftest page-fsm
   (t/testing "page metadata"
@@ -35,7 +37,8 @@
                                    :err nil
                                    :result nil}]
                  :input-file ex-file}
-                {:output-dir "./pages"})))))
+                {:output-dir "./pages"
+                 :input-dir "./content"})))))
 
   (t/is (m/validate (-> populate-page-meta
                         var
@@ -80,17 +83,21 @@
        (select-keys operations [input-state file-state])
        "./README.md.fab")))
 
-    (t/is
-     (let [output
-           (fsm/complete
-            (select-keys operations [input-state file-state read-state])
-            "./README.md.fab")]
+    (let [output
+          (fsm/complete
+           (select-keys operations [input-state file-state read-state])
+           "./README.md.fab")
+          out-keys  (->> output keys (into #{}))
+          out-file (:output-file output)]
+      (println out-keys)
+      (println out-file)
+      (t/is
        (and (set/subset?
              #{:parsed-content :namespace}
-             (->> output keys (into #{})))
-            (= "./README.md" (:output-file output))))
+             out-keys)
+            (= "./README.md" out-file))
 
-     "Metadata should be properly populated")
+       "Metadata should be properly populated"))
 
     (t/is (= "public/test/some-file.txt"
              (:output-file

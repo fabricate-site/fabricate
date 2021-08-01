@@ -61,17 +61,18 @@
   ([content-str] (template-str->hiccup content-str {})))
 
 (defn get-output-filename
-  ([path out-dir]
-   (-> path
-       io/file
-       (.getName)
-       (.toString)
-       (string/split template-suffix-regex)
-       first
-       (#(str out-dir "/" %))))
-  ([path] (get-output-filename path "./pages")))
+  ([path in-dir out-dir]
+   (clojure.string/replace
+    path (re-pattern (str "^" in-dir))
+    out-dir)))
 
-(comment (get-output-filename "./pages/test-file.txt.fab")
+(comment (get-output-filename "./pages/test-file.txt.fab" "./pages"
+                              "./docs")
+
+         (get-output-filename "./content/test-file.txt.fab"
+                              "./content"
+                              "./docs")
+
          )
 
 (defn hiccup->html-str [[tag head body]]
@@ -117,19 +118,24 @@
    [:=> [:cat sketch/page-metadata-schema [:? :map]]
     sketch/page-metadata-schema]}
   ([{:keys [namespace parsed-content output-file input-file] :as page-data}
-    {:keys [output-dir] :as site-settings}]
+    {:keys [input-dir output-dir] :as site-settings}]
    (-> page-data
        (assoc :namespace (or (read/yank-ns parsed-content)
                              namespace
                              (symbol (str "tmp-ns." (Math/abs (hash parsed-content)))))
-              :output-file (or output-file
-                               (get-output-filename (.getPath input-file)
-                                                    output-dir)))
+              )
        (merge (read/get-file-metadata (.getPath input-file)))
        (merge (-> parsed-content
                   read/get-metadata
                   last
-                  (select-keys [:namespace :output-file :title]))))))
+                  (select-keys [:namespace :output-file :title])))
+       (#(assoc % :output-file
+                (or output-file
+                    (get-output-filename
+                     (str "./" (% :filename)
+                          "." (% :file-extension))
+                     input-dir
+                     output-dir)))))))
 
 (comment
   (def =>populate-page-meta
