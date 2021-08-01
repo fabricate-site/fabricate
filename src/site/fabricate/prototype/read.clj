@@ -293,12 +293,9 @@
    [:modified {:optional true :description "When the file was modified"}]])
 
 (defn get-file-metadata [file-path]
-
-  (let [file-path (if (.startsWith file-path "./")
-                    (subs file-path 2 (count file-path))
-                    file-path)
+  (let [f (.getCanonicalFile (io/file file-path))
         [fname output-extension suffix]
-        (string/split file-path (re-pattern "\\."))]
+        (string/split (.getName f) (re-pattern "\\."))]
     {:filename fname
      :file-extension output-extension
      :fabricate/suffix (str "." suffix)}))
