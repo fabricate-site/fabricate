@@ -210,6 +210,11 @@
     (t/is (= {:filename "content/test"
               :file-extension "md"
               :fabricate/suffix ".fab"}
-             (get-file-metadata "./content/test.md.fab"))))
+             (get-file-metadata "./content/test.md.fab")))
+
+    (t/is (= {:filename "content/test"
+              :file-extension "md"
+              :fabricate/suffix ".fab"}
+             (get-file-metadata "content/test.md.fab"))))
 
   )
