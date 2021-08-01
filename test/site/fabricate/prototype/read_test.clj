@@ -202,7 +202,14 @@
               :fabricate/suffix ".fab"}
              (get-file-metadata "./README.md.fab")))
 
-    (t/is (= {:filename "README"
+    (t/is (= {:filename "some.dir/docs/README"
               :file-extension "md"
               :fabricate/suffix ".fab"}
-             (get-file-metadata "/home/user/some.dir/docs/README.md.fab")))))
+             (get-file-metadata "./some.dir/docs/README.md.fab")))
+
+    (t/is (= {:filename "content/test"
+              :file-extension "md"
+              :fabricate/suffix ".fab"}
+             (get-file-metadata "./content/test.md.fab"))))
+
+  )

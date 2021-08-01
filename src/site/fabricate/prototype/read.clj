@@ -292,10 +292,39 @@
    [:created {:optional true :description "When the file was created"} :string]
    [:modified {:optional true :description "When the file was modified"}]])
 
+(comment
+  (def working-dir
+    (io/file (System/getProperty "user.dir")))
+
+
+
+  (def example-file
+    (io/file "./pages/index.html.fab"))
+
+  (def dir-local-path
+    (.relativize (.toPath (io/file ".")) (.toPath example-file)))
+
+  (.relativize (.toPath (io/file ".")) (.toPath example-file))
+
+  (.relativize (.toPath (io/file ".")) (.toPath (io/file "pages/index.html.fab")))
+
+  )
+
 (defn get-file-metadata [file-path]
-  (let [f (.getCanonicalFile (io/file file-path))
+  (let [wd (-> "."
+               io/file
+               .toPath)
+        local-f (->> file-path io/file
+                     .toPath
+                     (.relativize wd))
+        local-subdir
+        (let [li (string/last-index-of (.toString local-f) "/")]
+          (if (nil? li)
+            ""
+            (subs (.toString local-f) 0
+                  li)))
         [fname output-extension suffix]
-        (string/split (.getName f) (re-pattern "\\."))]
-    {:filename fname
+        (string/split (.toString (.getFileName local-f)) (re-pattern "\\."))]
+    {:filename (if (= "" local-subdir) fname (str local-subdir "/" fname))
      :file-extension output-extension
      :fabricate/suffix (str "." suffix)}))
