@@ -286,10 +286,19 @@
   (if (and (#{:create :modify} action)
            (.endsWith (.toString file)
                       (:template-suffix default-site-settings)))
-    (do
-      (println "re-rendering" (.toString file))
-      (swap! pages #(update-page-map % (.toString file)))
-      (println "rendered"))))
+    (let [local-file
+          (.toString
+           (.relativize
+            (-> (System/getProperty "user.dir")
+                io/file
+                .getCanonicalFile
+                .toPath)
+            (-> file
+                .toPath)))]
+      (do
+        (println "re-rendering" local-file)
+        (swap! pages #(update-page-map % local-file))
+        (println "rendered")))))
 
 (defn draft
   ([]
@@ -325,6 +334,10 @@
 
   (mount/defstate drafting :start (draft)
     :stop (close-watcher drafting))
+
+  (mount/start)
+
+  (mount/stop)
 
   )
 
