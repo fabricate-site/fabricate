@@ -335,6 +335,9 @@
     (-> (System/getProperty "user.dir")
         io/file
         .getCanonicalFile
-                .toPath)
-            (-> file
-                .toPath))))
+        .toPath
+        .toAbsolutePath)
+    (-> file
+        .getCanonicalFile
+        .toPath
+        .toAbsolutePath))))
