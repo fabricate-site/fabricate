@@ -328,3 +328,16 @@
     {:filename (if (= "" local-subdir) fname (str local-subdir "/" fname))
      :file-extension output-extension
      :fabricate/suffix (str "." suffix)}))
+
+(defn ->dir-local-path [file]
+  (.toString
+   (.relativize
+    (-> (System/getProperty "user.dir")
+        io/file
+        .getCanonicalFile
+        .toPath
+        .toAbsolutePath)
+    (-> file
+        .getCanonicalFile
+        .toPath
+        .toAbsolutePath))))

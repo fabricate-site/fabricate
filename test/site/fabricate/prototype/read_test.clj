@@ -3,6 +3,7 @@
              [site.fabricate.prototype.page :refer [em link code blockquote]]
              [malli.core :as m]
              [hiccup.core :as hiccup]
+             [clojure.java.io :as io]
              [site.fabricate.prototype.read :refer :all]))
 
 (defn setup [f]
@@ -215,6 +216,10 @@
     (t/is (= {:filename "content/test"
               :file-extension "md"
               :fabricate/suffix ".fab"}
-             (get-file-metadata "content/test.md.fab"))))
+             (get-file-metadata "content/test.md.fab")))
+
+    (let [fsm-f (io/file "pages/finite-schema-machines.html.fab")]
+      (t/is (= "pages/finite-schema-machines.html.fab"
+               (->dir-local-path fsm-f)))))
 
   )

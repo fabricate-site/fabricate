@@ -288,19 +288,13 @@
          (println "Parse error detected, skipping")
          old-map)))
 
+
+
 (defn rerender [{:keys [file count action]}]
   (if (and (#{:create :modify} action)
            (.endsWith (.toString file)
                       (:template-suffix default-site-settings)))
-    (let [local-file
-          (.toString
-           (.relativize
-            (-> (System/getProperty "user.dir")
-                io/file
-                .getCanonicalFile
-                .toPath)
-            (-> file
-                .toPath)))]
+    (let [local-file (read/->dir-local-path file)]
       (do
         (println "re-rendering" local-file)
         (swap! pages #(update-page-map % local-file))
