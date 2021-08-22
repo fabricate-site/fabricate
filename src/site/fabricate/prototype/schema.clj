@@ -1,5 +1,6 @@
 (ns site.fabricate.prototype.schema
   (:require [malli.core :as m]
+            [malli.registry :as mr]
             [malli.util :as mu]
             [clojure.spec.alpha :as spec]))
 
@@ -61,7 +62,9 @@
 
 (defn -unname-children [schema]
   (let [updater (fn [children]
-                  (map (fn [[name _ cs]] cs)
+                  (map (fn [[name m cs]]
+                         (println cs)
+                         cs)
                        children))
         renames {:catn :cat
                  :orn :or
@@ -79,6 +82,17 @@
 (defn unname-schema
   "Transforms the schema and all subschemas to use unnamed alternation and concatenation"
   [schema]
-  (m/walk
-   schema
-   (m/schema-walker -unname-children)))
+  (-> schema
+      mu/to-map-syntax
+      ((fn [i]
+         (if (get-in i [:properties :registry])
+           (update-in i
+                      [:properties :registry]
+                      #(->> %
+                            (map (fn [[k s]]
+                                   [k (m/walk s (m/schema-walker -unname-children))]))
+                            (into {})))
+           i)))
+      mu/from-map-syntax
+      (m/walk
+       (m/schema-walker -unname-children))))
