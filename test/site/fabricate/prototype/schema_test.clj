@@ -23,5 +23,23 @@
         (mu/to-map-syntax
          (unname-schema
           [:orn [:a [:int {:name "a"}]] [:b :string]
-           [:c [:schema [:+ [:altn [:i :int] [:s :string]]]]]]))))))
-
+           [:c [:schema [:+ [:altn [:i :int] [:s :string]]]]]]))))
+    (t/is
+     (= (mu/to-map-syntax
+         [:schema
+          {:registry
+           {:i :int
+            :s :string
+            :sequence [:or :i :s
+                       [:schema [:+ [:alt :i :s]]]]}}
+          :sequence])
+        (mu/to-map-syntax
+         (unname-schema
+          [:schema
+          {:registry
+           {:i :int
+            :s :string
+            :sequence [:orn [:i :i] [:s :s]
+                       [:schema [:+ [:altn [:i :i] [:s :s]]]]]}}
+           :sequence]))))
+    ))
