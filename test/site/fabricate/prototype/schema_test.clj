@@ -57,20 +57,23 @@
      (mu/equals
       [:schema
        {:registry
-        {:i :int
-         :s :string
-         :sequence [:or :i :s
-                    [:schema [:+ [:alt :i :s]]]]}}
-       :sequence]
+        {::i :int
+         ::s :string
+         ::sequence
+         [:or [:schema [:ref ::i]] [:schema [:ref ::s]]
+          [:schema [:+ [:alt [:schema [:ref ::i]]
+                        [:schema [:ref ::s]]]]]]}}
+       ::sequence]
       (unname-schema
        [:schema
-        {:registry
-         {:i :int
-          :s :string
-          :sequence
-          [:orn [:i :i] [:s :s]
-           [:subsequence [:schema [:+ [:altn [:i :i] [:s :s]]]]]]}}
-        :sequence])))
+    {:registry
+     {::i :int
+      ::s :string
+      ::sequence
+      [:orn [:i [:schema [:ref ::i]]] [:s [:schema [:ref ::s]]]
+       [:subsequence [:schema [:+ [:altn [:i [:schema [:ref ::i]]]
+                                   [:s [:schema [:ref ::s]]]]]]]]}}
+        ::sequence])))
     ))
 
 (comment
@@ -84,13 +87,28 @@
                  [:schema [:+ [:altn [:i :i] [:s :s]]]]]}}
     :sequence])
 
-  (unname-schema
+  (m/validate
+   [:schema
+    {:registry
+     {::i :int
+      ::s :string
+      ::sequence
+      [:orn [:i [:schema [:ref ::i]]] [:s [:schema [:ref ::s]]]
+       [:subsequence [:schema [:+ [:altn [:i [:schema [:ref ::i]]]
+                                   [:s [:schema [:ref ::s]]]]]]]]}}
+    ::sequence]
+   [1])
+
+
+  (mu/subschemas
    [:schema
     {:registry
      {:i :int
       :s :string
-      :sequence [:catn [:i :i] [:s :s]
-                 [:schema [:+ [:altn [:i :i] [:s :s]]]]]}}
+      :sequence
+      [:orn [:i [:schema [:ref :i]]] [:s [:schema [:ref :s]]]
+       [:subsequence [:schema [:+ [:altn [:i [:schema [:ref :i]]]
+                                   [:s [:schema [:ref :s]]]]]]]]}}
     :sequence])
 
   )
