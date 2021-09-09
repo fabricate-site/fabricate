@@ -11,6 +11,17 @@
     (t/is (= "<em>help</em>" (str (hiccup/html (em "help"))))
           "emphasis should be added")))
 
+(t/deftest metadata
+  (t/testing "Metadata transformation"
+    (t/is (= [:meta {:name "meta" :content "something"}]
+             (-> {"meta" "something"} seq first ->meta)))
+
+    (t/is (= [:meta {:name "meta" :content "something"
+                     :property "some-prop"}]
+             (-> {"meta" {:content "something"
+                          :property "some-prop"}}
+                 seq first ->meta)))))
+
 (t/deftest transforms
 
   (t/testing "Paragraph detection"
@@ -23,7 +34,7 @@
                               #"\n\n")))
 
     #_ (t/is (= [:div] (detect-paragraphs [:div " "] #"\n\n"))
-          "Whitespace-only text should not be tokenized into paragraphs")
+             "Whitespace-only text should not be tokenized into paragraphs")
 
     (t/is
      (=

@@ -143,6 +143,10 @@
    (partition-all 2)
    (map process-chunk)))
 
+(defn ->meta [[k v]]
+  (let [attrs (if (map? v) v {:content v})]
+    [:meta (merge {:name k} attrs)]))
+
 (defn doc-header
   "Returns a default header from a map with a post's metadata."
   [{:keys [title page-style scripts site-title description]
