@@ -22,7 +22,8 @@
    [site.fabricate.prototype.page :as page]
    [site.fabricate.prototype.fsm :as fsm]
    [site.fabricate.prototype.schema :as schema]
-   [juxt.dirwatch :refer [watch-dir close-watcher]]))
+   [juxt.dirwatch :refer [watch-dir close-watcher]]
+   [http.server :as server]))
 
 (def pages
   "This variable holds the current state of all the pages created
@@ -61,17 +62,18 @@
   ([content-str] (template-str->hiccup content-str {})))
 
 (defn get-output-filename
-  ([path out-dir]
-   (-> path
-       io/file
-       (.getName)
-       (.toString)
-       (string/split template-suffix-regex)
-       first
-       (#(str out-dir "/" %))))
-  ([path] (get-output-filename path "./pages")))
+  ([path in-dir out-dir]
+   (clojure.string/replace
+    path (re-pattern (str "^" in-dir))
+    out-dir)))
 
-(comment (get-output-filename "./pages/test-file.txt.fab")
+(comment (get-output-filename "./pages/test-file.txt.fab" "./pages"
+                              "./docs")
+
+         (get-output-filename "./content/test-file.txt.fab"
+                              "./content"
+                              "./docs")
+
          )
 
 (defn hiccup->html-str [[tag head body]]
@@ -117,19 +119,24 @@
    [:=> [:cat sketch/page-metadata-schema [:? :map]]
     sketch/page-metadata-schema]}
   ([{:keys [namespace parsed-content output-file input-file] :as page-data}
-    {:keys [output-dir] :as site-settings}]
+    {:keys [input-dir output-dir] :as site-settings}]
    (-> page-data
        (assoc :namespace (or (read/yank-ns parsed-content)
                              namespace
                              (symbol (str "tmp-ns." (Math/abs (hash parsed-content)))))
-              :output-file (or output-file
-                               (get-output-filename (.getPath input-file)
-                                                    output-dir)))
+              )
        (merge (read/get-file-metadata (.getPath input-file)))
        (merge (-> parsed-content
                   read/get-metadata
                   last
-                  (select-keys [:namespace :title]))))))
+                  (select-keys [:namespace :output-file :title])))
+       (#(assoc % :output-file
+                (or output-file
+                    (get-output-filename
+                     (str "./" (% :filename)
+                          "." (% :file-extension))
+                     input-dir
+                     output-dir)))))))
 
 (comment
   (def =>populate-page-meta
@@ -248,7 +255,7 @@
      (let [parsed (read/parse unparsed-content)]
        (-> page-data
            (assoc :parsed-content parsed)
-           (populate-page-meta  default-site-settings))))
+           (populate-page-meta default-site-settings))))
    parsed-state
    (fn [{:keys [parsed-content namespace] :as page-data}]
      (let [evaluated (read/eval-with-errors parsed-content namespace)]
@@ -282,14 +289,23 @@
          (println "Parse error detected, skipping")
          old-map)))
 
+
+
 (defn rerender [{:keys [file count action]}]
   (if (and (#{:create :modify} action)
            (.endsWith (.toString file)
                       (:template-suffix default-site-settings)))
-    (do
-      (println "re-rendering" (.toString file))
-      (swap! pages #(update-page-map % (.toString file)))
-      (println "rendered"))))
+    (let [local-file (read/->dir-local-path file)]
+      (do
+        (println "re-rendering" local-file)
+        (swap! pages #(update-page-map % local-file))
+        (println "rendered")))))
+
+(def default-server-opts
+  {:cors-allow-headers nil,
+   :dir (str (System/getProperty "user.dir") "/docs"),
+   :port 8000,
+   :no-cache true})
 
 (defn draft
   ([]
@@ -299,13 +315,18 @@
                  (:input-dir default-site-settings)
                  (:template-suffix
                   default-site-settings))]
-       (fsm/complete operations fp))
-     (let [fw (watch-dir rerender (io/file (:input-dir default-site-settings)))]
-       (println "establishing file watch")
+       (swap! pages #(update-page-map % fp)))
+     (let [srv (do
+                 (println "launching server")
+                 (server/start default-server-opts))
+           fw (do
+                (println "establishing file watch")
+                (watch-dir rerender (io/file (:input-dir default-site-settings))))]
        (.addShutdownHook (java.lang.Runtime/getRuntime)
                          (Thread. (fn []
                                     (do (println "shutting down")
                                         (close-watcher fw)
+                                        (server/stop srv)
                                         (shutdown-agents)))))
        fw))))
 
@@ -323,10 +344,15 @@
 (comment
   (publish {:dirs ["./pages"]})
 
-  (mount/defstate drafting :start (draft)
-    :stop (close-watcher drafting))
+  (def drafts (draft))
+
+  (close-watcher drafts)
+
+
+
 
   )
+
 
 
 

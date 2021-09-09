@@ -99,10 +99,19 @@ This implementation, such as it currently is, will make no attempt to prevent us
      (str '(fsm/complete {[:enum :A] (fn [_] :B)
              [:enum :B] (fn [_] :A)}))]] 🔚
 
-Or from a succession of states that only terminates when you reach an integer overflow:
+Or from making a succession of states that only terminates when you reach an integer overflow:
 
 ✳= [:pre [:code {:class "language-clojure"}
-     (str '(fsm/complete {:int inc} 1))]] 🔚
+(str '(fsm/complete {:int inc} 1))]] 🔚
+
+It will also advance on the first match, so you have to think carefully about making your states mutually exclusive. Luckily, the fact that map keys have to be distinct in Clojure already forces you to do that for obviously overlapping inputs, but there are many more subtle cases, especially when you're working with maps that may have overlapping keys:
+
+✳=[:pre [:code {:class "language-clojure"}
+(str '(fsm/advance
+{[:map {:closed true} [:a :int]] (fn [m] (update m :a inc))
+[:map {:closed false} [:a :int]] (fn [m] (update m :a dec))}))]]🔚
+
+The value ✳=[:code (str {:a 1})]🔚 will just match against the first entry, even if that's not what you want. Map keys are unordered, so the best way to control this is to make the schemas as specific as possible. Fabricate deals with this by using closed maps and adding new keys to them as data advances through the states.
 
 I have some design concepts for how the really obvious problems could be anticipated through a validation mechanism for the map defining the FSM, but that is a topic for a future expansion of this post.
 

@@ -15,6 +15,8 @@
            :color "#dc4032"
            :line-height "7rem"}]]
     [:.red {:color "#FF0000"}]
+    [:pre {:white-space "pre-wrap"
+           :font-size "0.95rem"}]
     [:.scarlet  {:color "#a1010c"}]
     [:.vermilion {:color "#dc4032"}]
     [:.1999 {:text-transform "uppercase"}]
@@ -63,7 +65,7 @@ Okay, the reason why a lot of this works is because there are some pretty intens
 
 Here's the markup that generated this page:
 
-✳= (read/include-source {:details "look ⬇️"} "./docs/index.html.fab") 🔚
+✳= (read/include-source {:details "look ⬇️"} "./pages/index.html.fab") 🔚
 
 Most of it is just defining the look! The actual basics of creating a page aren't much more complicated than remembering the name of what you want to include and putting it in using fabricate's special ~emoji delimiters~✨: ✳=(first read/delimiters)🔚 ✳=(last read/delimiters)🔚
 ✳= (code {:class "big"} (str (first read/delimiters) "(header {:level :h3} \"some heading text\")" (last read/delimiters))) 🔚

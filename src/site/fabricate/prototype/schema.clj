@@ -18,7 +18,7 @@
 (defn ns-form?
   "Returns true if the given form is a valid Clojure (ns ...) special form"
   [form]
-  (let [form (if (= 'quote (first form)) (last form) form)]
+  (let [form (if (and (sequential? form) (= 'quote (first form))) (last form) form)]
     (not=
      :clojure.spec.alpha/invalid
      (spec/conform
