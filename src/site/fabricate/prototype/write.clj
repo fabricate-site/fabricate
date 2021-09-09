@@ -22,7 +22,8 @@
    [site.fabricate.prototype.page :as page]
    [site.fabricate.prototype.fsm :as fsm]
    [site.fabricate.prototype.schema :as schema]
-   [juxt.dirwatch :refer [watch-dir close-watcher]]))
+   [juxt.dirwatch :refer [watch-dir close-watcher]]
+   [http.server :as server]))
 
 (def pages
   "This variable holds the current state of all the pages created
@@ -300,6 +301,12 @@
         (swap! pages #(update-page-map % local-file))
         (println "rendered")))))
 
+(def default-server-opts
+  {:cors-allow-headers nil,
+   :dir (str (System/getProperty "user.dir") "/docs"),
+   :port 8000,
+   :no-cache true})
+
 (defn draft
   ([]
    (do
@@ -308,13 +315,18 @@
                  (:input-dir default-site-settings)
                  (:template-suffix
                   default-site-settings))]
-       (fsm/complete operations fp))
-     (let [fw (watch-dir rerender (io/file (:input-dir default-site-settings)))]
-       (println "establishing file watch")
+       (swap! pages #(update-page-map % fp)))
+     (let [srv (do
+                 (println "launching server")
+                 (server/start default-server-opts))
+           fw (do
+                (println "establishing file watch")
+                (watch-dir rerender (io/file (:input-dir default-site-settings))))]
        (.addShutdownHook (java.lang.Runtime/getRuntime)
                          (Thread. (fn []
                                     (do (println "shutting down")
                                         (close-watcher fw)
+                                        (server/stop srv)
                                         (shutdown-agents)))))
        fw))))
 
@@ -332,14 +344,15 @@
 (comment
   (publish {:dirs ["./pages"]})
 
-  (mount/defstate drafting :start (draft)
-    :stop (close-watcher drafting))
+  (def drafts (draft))
 
-  (mount/start)
+  (close-watcher drafts)
 
-  (mount/stop)
+
+
 
   )
+
 
 
 
