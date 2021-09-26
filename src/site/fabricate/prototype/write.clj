@@ -15,7 +15,6 @@
    [malli.core :as m]
    [malli.util :as mu]
    [malli.generator :as mg]
-   [mount.core :as mount]
    [site.fabricate.sketch :as sketch]
    [site.fabricate.prototype.read :as read]
    [site.fabricate.prototype.html :as html]
