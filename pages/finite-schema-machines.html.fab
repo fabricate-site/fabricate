@@ -9,7 +9,7 @@
 
 ✳ (def metadata
 {:title "Organizing computation with Finite Schema Machines"
-:description "Mapping from data states to functions"
+:description "Using precise schemas to map from data states to functions in Clojure."
 :page-style
    (garden/css
     (list
@@ -43,7 +43,7 @@
 ✳=[:figure [:blockquote " Computation is a major topic of computer science, and almost every object that computes is naturally viewed as a state machine. Yet computer scientists are so focused on the languages used to describe computation that they are largely unaware that those languages are all describing state machines." ] [:figcaption "Leslie Lamport, " [:cite [:a {:href "https://lamport.azurewebsites.net/pubs/state-machine.pdf"} "Computation and State Machines"]] " [2008]"]] 🔚
 
 
-When I was on my 𝑛th refactor of a thread macro with multiple embedded if expressions, I realized I was trying to handle lots of special cases without really thinking about them. But in the back of my mind, I was trying to dispatch my function calls on the basis of whether the data I was passing through my function matched some predicate or other - another way of saying that the data was in a particular ✳= [:em "state."] 🔚
+When I was on my 𝑛th refactor of a thread macro with multiple embedded if expressions, I realized I was trying to handle lots of special cases without really thinking about them. But in the back of my mind, I knew I was trying to dispatch my function calls on the basis of whether the data I was passing through my function matched some predicate or other - another way of saying that the data was in a particular ✳= [:em "state."] 🔚
 
 After some sketches revealed that my understanding of the concepts was muddled and confused, I extensively googled "state machine" with some extra surrounding words, and it helped me discover that Leslie Lamport paper. The math is over my head, but the concept inspired me to figure out a better way of organizing what functions to call and when. A month and a half later, here it is.
 
@@ -51,7 +51,7 @@ After some sketches revealed that my understanding of the concepts was muddled a
 
 Before going through the code, it's worth going over the definitions outlined by Lamport early on in the paper.
 
-✳= [:blockquote "I begin by considering what a computation is. There are several ways to define " [:em "computation."] " For now, I take the simplest: a computation is asequence of steps, which I call a " [:em "behavior."] " There are three common choices for what a step is, leading to three different kinds of behavior:"
+✳= [:blockquote "I begin by considering what a computation is. There are several ways to define " [:em "computation."] " For now, I take the simplest: a computation is a sequence of steps, which I call a " [:em "behavior."] " There are three common choices for what a step is, leading to three different kinds of behavior:"
  [:dl
 [:dt "Action Behavior" ] [:dd "A step is an " [:em "action,"] " which is just an element of some set of actions. An action behavior is a sequence of actions"]
 [:dt "State Behavior"] [:dd "A step is a pair〈s,t〉of states, where a state is an element of some set of states.  A state behavior is a sequence s1 → s2 → s3 → ··· of states. The step〈si,si+1〉represents a transition from state si to state si+1."]
@@ -59,7 +59,7 @@ Before going through the code, it's worth going over the definitions outlined by
 
 This terminology clarified the shaky concept in my head and in my messy sketches. I was attempting to define a state-action behavior: I wanted to call a function (action) on the basis of some property of the data I was currently working with (state). That function would change the properties of that data - in other words, advance it to a new state.
 
-How should those states be defined? Fabricate already ✳=[:a {:href "https://github.com/fabricate-site/fabricate/blob/main/src/site/fabricate/prototype/html.clj"} "extensively"]🔚 uses the ✳= [:code [:a {:href "github.com/metosin/malli"} "malli"]] 🔚 schema library, so that was a natural choice. Its expressivity makes it easy to define states and incrementally refine them to match the data being processed by a program. It also meant that I would have to write my own implementation of a finite state machine, as the existing libraries in the Clojure ecosystem don't really work with Malli. The closest library to this concept that I currently know of is ✳=[:code [:a {:href "https://github.com/agentbellnorm/dativity"} "Dativity"]]🔚, which describes itself as a "stateless process engine." Fabricate's implementation, relying as it does on Malli, is different than Dativity's; it was a conceptual rather than implementational reference point.
+How should those states be defined? Fabricate already ✳=[:a {:href "https://github.com/fabricate-site/fabricate/blob/main/src/site/fabricate/prototype/html.clj"} "extensively"]🔚 uses the ✳= [:code [:a {:href "https://github.com/metosin/malli"} "malli"]] 🔚 schema library, so that was a natural choice. Its expressivity makes it easy to define states and incrementally refine them to match the data being processed by a program. It also meant that I would have to write my own implementation of a finite state machine, as the existing libraries in the Clojure ecosystem don't really work with Malli. The closest library to this concept that I currently know of is ✳=[:code [:a {:href "https://github.com/agentbellnorm/dativity"} "Dativity"]]🔚, which describes itself as a "stateless process engine." Fabricate's implementation, relying as it does on Malli, is different than Dativity's; it was a conceptual rather than implementational reference point.
 
 ✳= [:h2 "A simple implementation"] 🔚
 
@@ -123,4 +123,4 @@ That certainly is a way to achieve a similarly lightweight implementation of a l
 
 That said, gushing about how easy Malli and Clojure have made implementing this concept means I must admit that I'm not really following Lamport's main advice in that paper; I'm still fussing about with language details instead of using the formalism of pure mathematics (or TLA+) to achieve true rigor. But I didn't turn to Lamport's paper because I was interested in proving my static website generator correct; I think he might agree that personal experiments in generating static HTML are not a sufficiently complex and high-stakes problem to even warrant the use of proofs. I turned to the paper because I was struggling to think of a way to match states with functions. Thanks to the definitions provided in the second section of the paper, I eventually identified a simple and expressive way of doing so.
 
-Malli isn't set theory, but it is simple and expressive enough that I am not as bogged down in implementation details, and I at least have become a bit more clear-eyed that I'm working with finite-state machine. Using it has forced me to think harder about just how I'm defining the data states I care about instead of just creating a true/false predicate that falls over on data of a slightly different shape than what it expects. It has forced me to think about how errors and exceptions fit into the state space of a program executing a series of functions on different sources of data. Lamport said the way to get better programs is to teach programmers to think better. For my part, I think implementing and using finite schema machines has done exactly that.
+Malli isn't set theory, but it is simple and expressive enough that I am not as bogged down in implementation details, and I at least have become a bit more clear-eyed that I'm working with finite-state machines. Using it has forced me to think harder about just how I'm defining the data states I care about instead of just creating a true/false predicate that falls over on data of a slightly different shape than what it expects. It has forced me to think about how errors and exceptions fit into the state space of a program executing a series of functions on different sources of data. Lamport said the way to get better programs is to teach programmers to think better. For my part, I think implementing and using finite schema machines has done exactly that.

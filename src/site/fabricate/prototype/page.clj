@@ -8,7 +8,8 @@
    [clojure.data.finger-tree :as ftree :refer
     [counted-double-list ft-split-at ft-concat]]
    [malli.core :as m]
-   [clojure.string :as string]))
+   [clojure.string :as string]
+   [site.fabricate.prototype.read :as read]))
 
 (defn em [& contents]  (apply conj [:em] contents))
 (defn strong [& contents]  (apply conj [:strong] contents))
@@ -147,19 +148,79 @@
   (let [attrs (if (map? v) v {:content v})]
     [:meta (merge {:name k} attrs)]))
 
+(defn metadata-map->head-elements
+  "Return the contents of the metadata map as a sequence of Hiccup elements"
+  [{:keys [page-style scripts title]          ; some keys are special
+    :as metadata}]
+  (let [rest (dissoc metadata :page-style :scripts)]
+    []
+    (apply read/conj-non-nil
+           (map ->meta rest)
+           page-style
+           scripts)))
+
+(defn opengraph-enhance
+  "Enriches the metadata items given by mapping from metadata names to opengraph properties.
+
+  See https://stackoverflow.com/a/22984013 for more context on combining these attributes in
+  a single HTML <meta> element."
+  [prop-names items]
+  (map (fn [[t attr]]
+         (let [meta-name (:name attr)]
+           (if (and (= :meta t) (prop-names meta-name))
+             [t (assoc attr :property (prop-names meta-name))]
+             [t attr])))
+       items))
+
+(def default-metadata
+  {:title "Fabricate"
+   :description "Fabricate: static website generation for Clojure"
+   "viewport" "width=device-width, initial-scale=1.0, user-scalable=no"
+   "HTTP Attributes"
+   {:charset "utf-8" :http-equiv "X-UA-Compatible"
+    :content "IE=edge,chrome=1"}
+   :locale "en_US"
+   :site-name "fabricate.site"
+   :site-title "Fabricate"}
+  )
+
+(def opengraph-property-map
+  {:title "og:title"
+   :description "og:description"
+   :locale "og:locale"
+   :site-name "og:site_name"})
+
+(comment
+  (map ->meta default-metadata)
+
+  (opengraph-enhance {"description" "og:description"}
+                     [[:meta {:name "description" :content "demo desc"}]
+                      [:meta {:name "title" :content "demo"}]])
+
+  (opengraph-enhance {"description" "og:description"}
+                     (map ->meta default-metadata))
+
+  )
+
+(def ogp-properties
+  {:title "og:title"
+   :description "og:description"
+   :site-title "og:site_name"})
+
 (defn doc-header
   "Returns a default header from a map with a post's metadata."
-  [{:keys [title page-style scripts site-title description]
-    :or {site-title "Fabricate"}}]
-  (let [page-header
-        (apply conj
-               [:head
-                [:title (str site-title " | " title)]
-                [:meta {:property "og:title" :content title}]
-                [:meta {:charset "utf-8"}]
-                [:meta {:http-equiv "X-UA-Compatible" :content "IE=edge,chrome=1"}]
-                [:meta {:name "viewport" :content "width=device-width, initial-scale=1.0, user-scalable=no"}]
-                [:meta {:name "description" :content description}]
-                [:link {:rel "stylesheet" :href "https://raw.githubusercontent.com/jensimmons/cssremedy/master/css/remedy.css"}]]
-               scripts)]
-    (if page-style (conj page-header [:style page-style]) page-header)))
+  [{:keys [title page-style scripts]
+    :as metadata}]
+  (let [page-meta
+        (-> metadata
+            (dissoc :title :page-style :scripts)
+            (#(merge default-metadata %)))]
+    (apply read/conj-non-nil
+           [:head
+            [:title (str (:site-title page-meta) " | " title)]
+            [:link {:rel "stylesheet" :href "https://raw.githubusercontent.com/jensimmons/cssremedy/master/css/remedy.css"}]]
+           (concat (opengraph-enhance
+                    ogp-properties
+                    (map ->meta page-meta))
+                   (if scripts scripts)
+                   (if page-style [[:style page-style]])))))

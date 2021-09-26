@@ -20,7 +20,16 @@
                      :property "some-prop"}]
              (-> {"meta" {:content "something"
                           :property "some-prop"}}
-                 seq first ->meta)))))
+                 seq first ->meta)))
+    (t/is
+     (= '([:meta {:name "title", :content "Fabricate"}]
+          [:meta {:name "description", :content "Fabricate: static website generation for Clojure", :property "og:description"}]
+          [:meta {:name "viewport", :content "width=device-width, initial-scale=1.0, user-scalable=no"}]
+          [:meta {:name "HTTP Attributes", :charset "utf-8", :http-equiv "X-UA-Compatible", :content "IE=edge,chrome=1"}])
+      (opengraph-enhance {"description" "og:description"}
+                         (map ->meta default-metadata))))
+
+    ))
 
 (t/deftest transforms
 
