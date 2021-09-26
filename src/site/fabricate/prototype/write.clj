@@ -11,11 +11,11 @@
    [clojure.java.io :as io]
    [clojure.string :as string]
    [hiccup2.core :as hiccup]
+   [hiccup.core :as h]
    [hiccup.page :as hp]
    [malli.core :as m]
    [malli.util :as mu]
    [malli.generator :as mg]
-   [mount.core :as mount]
    [site.fabricate.sketch :as sketch]
    [site.fabricate.prototype.read :as read]
    [site.fabricate.prototype.html :as html]
@@ -232,11 +232,11 @@
         body-content (into [:article {:lang "en"}]
                            page/sectionize-contents
                            evaluated-content)]
-    [:html
+    (list
      (page/doc-header metadata)
      [:article body-content]
      [:footer
-      [:div [:a {:href "/"} "Home"]]]]))
+      [:div [:a {:href "/"} "Home"]]])))
 
 (def rendered-state
   (mu/merge
@@ -270,10 +270,10 @@
    html-state
    (fn [page-data]
      (assoc page-data
-            :rendered-content (-> page-data
-                                  evaluated->hiccup
-                                  hp/html5
-                                  str)))
+            :rendered-content
+            (-> page-data
+                evaluated->hiccup
+                hp/html5)))
    rendered-state
    (fn [{:keys [rendered-content output-file] :as page-data}]
      (do
@@ -366,5 +366,12 @@
   (def finite-schema-machines (fsm/complete operations "./pages/finite-schema-machines.html.fab"))
 
   (malli.error/humanize (m/explain parsed-state finite-schema-machines))
+
+  (def fsm-post-data (get @pages "pages/finite-schema-machines.html.fab"))
+
+  (keys fsm-post-data)
+
+  (:evaluated-content fsm-post-data)
+  (hp/html5 (list [:head [:title "something"] [:body "something else"]]))
 
   )
