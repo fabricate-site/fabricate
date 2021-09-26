@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html><head><title>Fabricate | Introduction</title><link href="https://raw.githubusercontent.com/jensimmons/cssremedy/master/css/remedy.css" rel="stylesheet"><meta content="Fabricate" name="title" property="og:title"><meta content="Fabricate: static website generation for Clojure" name="description" property="og:description"><meta content="width=device-width, initial-scale=1.0, user-scalable=no" name="viewport"><meta content="en_US" name="locale"><meta content="fabricate.site" name="site-name"><meta content="Fabricate" name="site-title" property="og:site_name"><meta charset="utf-8"><meta content="IE=edge" http-equiv="X-UA-Compatible"><style>@import "https://fonts.googleapis.com/css2?family=Inria+Sans:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Inter:wght@900&display=swap";
+<html lang="en"><head><title>Fabricate | Introduction</title><link href="https://raw.githubusercontent.com/jensimmons/cssremedy/master/css/remedy.css" rel="stylesheet"><meta content="Fabricate" name="title" property="og:title"><meta content="Fabricate: static website generation for Clojure" name="description" property="og:description"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="en_US" name="locale"><meta content="fabricate.site" name="site-name"><meta content="Fabricate" name="site-title" property="og:site_name"><meta charset="utf-8"><meta content="IE=edge" http-equiv="X-UA-Compatible"><style>@import "https://fonts.googleapis.com/css2?family=Inria+Sans:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Inter:wght@900&display=swap";
 
 body {
   background-image: linear-gradient(34deg, #9CC0DA, #ECD8D8 45%);
@@ -34,7 +34,7 @@ pre {
   color: #dc4032;
 }
 
-.1999 {
+.txt-1999 {
   text-transform: uppercase;
 }
 
@@ -50,12 +50,12 @@ article {
 p {
   margin-bottom: 2rem;
 }</style></head><article><article lang="en"><section><p></p><p>
-</p><header><h1>fab<br>ri<br>cate</h1></header><p>Introducing a new kind of static website generator.</p><header><h2 class="big">🦩 it starts and ends with .fab</h2></header><p>Your thoughts start in a file that's mostly plain text, with some code thrown in to add headers (or also, literally anything else code can make). You can go up and down the ladder from "mostly words" to "computational artwork" at your own pace.</p><p>This page started its life as <code>index.html.fab</code>. Along the way, Fabricate gave it some help to make sure it looks the way a webpage should look.</p><header><h2 class="big">🎓 learn HTML, not how a markdown parser works</h2></header><p>Do you have time to remember whether your markdown parser lets you put a linebreak inside a table cell? Or whether your parser will let you fall back to inline HTML correctly? Yeah, me either. But sometimes you want to make something just a little more nested than what 'flat' markup formats easily allow. Why not just do it with a format that doesn't try to hide HTML, but is easier than writing a bunch of opening and closing tags by hand?</p><header><h2 class="big">🐣 CSS for amateurs</h2></header><p>The CSS on this page was written by hand at the top, using an inline stylesheet. Is it "best practice" to do this for every page? Does it "scale?" Maybe not. But here's another question:</p><header><h4>Was it fun to create? 😀</h4></header><p>Writing this page, for me, the answer was "yes!" I'm not very knowledgable about CSS. A static website is a perfect low-stakes place to "do it wrong." I didn't have to jump back and forth between this file and "main.css" and "main.scss" and remember what variable I used to define the colors I want. I just iterated on the one file until I had the nice soothing background gradient you see here and some decent proportions.</p><header><h2 class="1999">📟 making websites like it's 1999 </h2></header><p>
-</p><header><h4 class="1999">(but maybe with webfonts? I like those)</h4></header><p>You really shouldn't need to learn what a CSS preprocessor is and its special syntax to get started with picking the right shade of <s class="red">red</s> <s class="scarlet">scarlet</s> <b class="vermilion">vermilion</b> you want for your headers and banners.</p><p>speaking of which:</p><header><h2>A gentler environment for learning Hiccup  + Clojure</h2></header><p>Okay, the reason why a lot of this works is because there are some pretty intense schemas for HTML backing it all up. But I promise you don't really need to worry about it to make a page like this, honest!</p><p>Here's the markup that generated this page:</p><details><summary>look ⬇️</summary><pre><code>✳ (ns site.fabricate.docs.intro
+</p><header><h1>fab<br>ri<br>cate</h1></header><p>Introducing a new kind of static website generator.</p><header><h2 class="big">🦩 it starts and ends with .fab</h2></header><p>Your thoughts start in a file that's mostly plain text, with some code thrown in to add headers (or also, literally anything else code can make). You can go up and down the ladder from "mostly words" to "computational artwork" at your own pace.</p><p>This page started its life as <code>index.html.fab</code>. Along the way, Fabricate gave it some help to make sure it looks the way a webpage should look.</p><header><h2 class="big">🎓 learn HTML, not how a markdown parser works</h2></header><p>Do you have time to remember whether your markdown parser lets you put a linebreak inside a table cell? Or whether your parser will let you fall back to inline HTML correctly? Yeah, me either. But sometimes you want to make something just a little more nested than what 'flat' markup formats easily allow. Why not just do it with a format that doesn't try to hide HTML, but is easier than writing a bunch of opening and closing tags by hand?</p><header><h2 class="big">🐣 CSS for amateurs</h2></header><p>The CSS on this page was written by hand at the top, using an inline stylesheet. Is it "best practice" to do this for every page? Does it "scale?" Maybe not. But here's another question:</p><header><h4>Was it fun to create? 😀</h4></header><p>Writing this page, for me, the answer was "yes!" I'm not very knowledgable about CSS. A static website is a perfect low-stakes place to "do it wrong." I didn't have to jump back and forth between this file and "main.css" and "main.scss" and remember what variable I used to define the colors I want. I just iterated on the one file until I had the nice soothing background gradient you see here and some decent proportions.</p><header><h2 class="txt-1999">📟 making websites like it's 1999 </h2></header><p>
+</p><header><h4 class="txt-1999">(but maybe with webfonts? I like those)</h4></header><p>You really shouldn't need to learn what a CSS preprocessor is and its special syntax to get started with picking the right shade of <s class="red">red</s> <s class="scarlet">scarlet</s> <b class="vermilion">vermilion</b> you want for your headers and banners.</p><p>speaking of which:</p><header><h2>A gentler environment for learning Hiccup  + Clojure</h2></header><p>Okay, the reason why a lot of this works is because there are some pretty intense schemas for HTML backing it all up. But I promise you don't really need to worry about it to make a page like this, honest!</p><p>Here's the markup that generated this page:</p><details><summary>look ⬇️</summary><pre><code>✳ (ns site.fabricate.docs.intro
 (:require [garden.core :as garden]
 [site.fabricate.prototype.read :as read]
 [site.fabricate.prototype.page :refer :all]
-          [garden.stylesheet :as stylesheet])) 🔚
+[garden.stylesheet :as stylesheet])) 🔚
 
 ✳ (def page-css
    (garden/css
@@ -72,7 +72,7 @@ p {
            :font-size "0.95rem"}]
     [:.scarlet  {:color "#a1010c"}]
     [:.vermilion {:color "#dc4032"}]
-    [:.1999 {:text-transform "uppercase"}]
+    [:.txt-1999 {:text-transform "uppercase"}]
     [:code {:color "#333"}]
     [:article {:color "#222"
                :max-width "60rem"}]
@@ -105,8 +105,8 @@ The CSS on this page was written by hand at the top, using an inline stylesheet.
 
 Writing this page, for me, the answer was "yes!" I'm not very knowledgable about CSS. A static website is a perfect low-stakes place to "do it wrong." I didn't have to jump back and forth between this file and "main.css" and "main.scss" and remember what variable I used to define the colors I want. I just iterated on the one file until I had the nice soothing background gradient you see here and some decent proportions.
 
-✳= [:header [:h2 {:class "1999"} "📟 making websites like it's 1999 "]] 🔚
-✳=[:header  [:h4 {:class "1999"} "(but maybe with webfonts? I like those)"]]🔚
+✳= [:header [:h2 {:class "txt-1999"} "📟 making websites like it's 1999 "]] 🔚
+✳=[:header  [:h4 {:class "txt-1999"} "(but maybe with webfonts? I like those)"]]🔚
 
 You really shouldn't need to learn what a CSS preprocessor is and its special syntax to get started with picking the right shade of ✳=[:s {:class "red"} "red"]🔚 ✳=[:s {:class "scarlet"} "scarlet"]🔚 ✳=[:b {:class "vermilion"} "vermilion"]🔚 you want for your headers and banners.
 
