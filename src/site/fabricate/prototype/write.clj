@@ -273,7 +273,7 @@
             :rendered-content
             (-> page-data
                 evaluated->hiccup
-                hp/html5)))
+                (#(hp/html5 {:lang "en"} %)))))
    rendered-state
    (fn [{:keys [rendered-content output-file] :as page-data}]
      (do

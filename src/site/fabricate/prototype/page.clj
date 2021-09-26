@@ -175,7 +175,7 @@
 (def default-metadata-map
   {:title "Fabricate"
    :description "Fabricate: static website generation for Clojure"
-   "viewport" "width=device-width, initial-scale=1.0, user-scalable=no"
+   "viewport" "width=device-width, initial-scale=1.0"
    :locale "en_US"
    :site-name "fabricate.site"
    :site-title "Fabricate"}
