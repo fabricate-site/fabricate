@@ -172,17 +172,19 @@
              [t attr])))
        items))
 
-(def default-metadata
+(def default-metadata-map
   {:title "Fabricate"
    :description "Fabricate: static website generation for Clojure"
    "viewport" "width=device-width, initial-scale=1.0, user-scalable=no"
-   "HTTP Attributes"
-   {:charset "utf-8" :http-equiv "X-UA-Compatible"
-    :content "IE=edge,chrome=1"}
    :locale "en_US"
    :site-name "fabricate.site"
    :site-title "Fabricate"}
   )
+
+(def default-metadata
+  (list [:meta {:charset "utf-8"}]
+        [:meta {:http-equiv "X-UA-Compatible" :content "IE=edge"}]))
+
 
 (def opengraph-property-map
   {:title "og:title"
@@ -214,7 +216,7 @@
   (let [page-meta
         (-> metadata
             (dissoc :title :page-style :scripts)
-            (#(merge default-metadata %)))]
+            (#(merge default-metadata-map %)))]
     (apply read/conj-non-nil
            [:head
             [:title (str (:site-title page-meta) " | " title)]
@@ -222,5 +224,6 @@
            (concat (opengraph-enhance
                     ogp-properties
                     (map ->meta page-meta))
+                   default-metadata
                    (if scripts scripts)
                    (if page-style [[:style page-style]])))))
