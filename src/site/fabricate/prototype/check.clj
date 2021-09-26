@@ -33,13 +33,9 @@
    (io/file "/home/andrew/repos_main/fabricate/docs/index.html"))
 
   (.checkHtmlFile validator
-   (io/file "/home/andrew/repos_main/fabricate/docs/index.html") false)
+                  (io/file "/home/andrew/repos_main/fabricate/docs/index.html") false)
 
-  (.checkHttpURL validator
-                 "https://fabricate-site.github.io/fabricate"
-                 "default"
-                 sax-error
-                 )
+
   (html {:dirs ["docs/"]})
 
   )
