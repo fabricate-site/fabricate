@@ -1,0 +1,125 @@
+[:html {:lang "en"}
+ [:head
+  [:meta {:charset "utf-8"}]
+  [:meta {:http-equiv "X-UA-Compatible" :content "IE=edge,chrome=1"}]
+  [:title " HTML Patterns "]
+  [:meta {:name "author" :content "mrmrs"}]
+  [:meta {:name "description" :content "Common HTML patterns"}]
+  [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]]
+ [:body [:header [:h1 "HTML"] [:h2 "Every html element in one place. Just waiting to be styled."]]
+  [:header [:a {:href "" :title "Site title"} [:h1 "Site title"]] [:nav [:ul [:li [:a {:href "#" :title "Home"} "Home"]] [:li [:a {:href "#" :title "About"} "About"]] [:li [:a {:href "#" :title "Sign Up"} "Sign Up"]] [:li [:a {:href "#" :title "Contact"} "Contact"]] [:li [:a {:href "#" :title "Careers"} "Careers"]]]]] [:section [:h1 "Headings & Copy"] [:h1 "First Header h1"] [:p "
+        At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis
+        praesentium voluptatum deleniti atque corrupti quos.
+      "] [:h2 "Second header h2"] [:p "
+        Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
+        tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+        quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
+        consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
+        cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat
+        non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+      "] [:h3 "Third header h3"] [:p "
+        At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis
+        praesentium voluptatum deleniti atque corrupti quos dolores et quas
+        molestias excepturi sint occaecati cupiditate non provident, similique sunt
+        in culpa qui officia deserunt mollitia animi, id est laborum et dolorum
+        fuga. Et harum quidem rerum facilis est et expedita distinctio.
+      "] [:h4 "Fourth header h4"] [:p "
+        Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet,
+        consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt
+        ut labore et dolore magnam aliquam quaerat voluptatem. Ut enim ad minima
+        veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam, nisi
+        ut aliquid ex ea commodi consequatur? Quis autem vel eum iure reprehenderit
+        qui in ea voluptate velit esse quam nihil molestiae consequatur, vel illum
+        qui dolorem eum fugiat quo voluptas nulla pariatur?\"
+      "] [:h5 "Fifth header h5"] [:p "
+        Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium
+        doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore
+        veritatis et quasi architecto beatae vitae dicta sunt explicabo. Nemo enim
+        ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia
+        consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.
+      "] [:h6 "Sixth header h6"] [:p "
+        At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis
+        praesentium voluptatum deleniti atque corrupti quos.
+      "]] [:hr] [:section [:h1 "Links"] [:a {:href "#"} "Sample text link"] [:a {:href "#"} "Sample button link"]]
+  [:hr]
+  [:section [:h1 "Lists"]
+   [:h2 "Unordered list"]
+   [:ul [:li "Orange"] [:li "Apple"] [:li "Rhubarb"] [:li "Rasberry"] [:li "Blueberry"] [:li "Cherry"]] [:h2 "Ordered list"] [:ol [:li "First"] [:li "Second"] [:li "Third"] [:li "Fourth"] [:li "Fifth"] [:li "Sixth"]]
+   [:h2 "Definition list"]
+   [:dl [:dt "
+        Kick
+        "] [:dd "
+        808
+        "] [:dt "
+        Snare
+        "] [:dd "
+        909
+        "]]
+   [:dl [:dt " Maine "] [:dd " Augusta "] [:dt " California "] [:dd " Sacremento "] [:dt " Oregon "] [:dd " Salem "] [:dt " New York "] [:dd " Albany "]]
+   [:dl [:dt " Ascender "] [:dd " The part of certain lowercase letters that extends above the x-height of a font.  "]
+    [:dt " Font "]
+    [:dd " Traditionally, a complete set of characters for one typeface at
+        one particular type size. Often used more loosely as a synonym for
+        \"typeface\".
+        "] [:dt " Golden Section "] [:dd "
+        The ideal proportion according to the ancient Greeks. It is visualized as the
+        division of a line into two unequal segments in such a way that the ratio of the
+        smaller segment to the larger segment is equal to the ratio of the larger to the
+        whole. It is usually defined as 21:34, that is, 21/34 and 34/(21+34) both equal
+        approximately 0.618. A rectangle whose sides are of this proportion is called a
+        \"golden rectangle\". Golden rectangles can be found in the proportions of the
+        Parthenon and many medieval manuscripts.
+        "]]]
+  [:hr] [:section [:h1 "An Example Article"] [:article [:h1 "Title"] [:p "
+          Lorem ipsum dolor sit amet, " [:b "consectetur adipisicing elit"] ", sed do eiusmod
+          tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+          quis nostrud " [:em "exercitation ullamco laboris nisi ut aliquip ex ea commodo
+            consequat"] ". Duis aute irure dolor in reprehenderit in voluptate velit esse
+          cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat
+          non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+        "] [:blockquote [:p "
+            This is a GREAT pull quote.
+          "] [:a {:href "#"} "- Author"]] [:p "
+          Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet,
+          consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt
+          ut labore et dolore magnam aliquam quaerat voluptatem. Ut enim ad minima
+          veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam, nisi
+          ut aliquid ex ea commodi consequatur? Quis autem vel eum iure reprehenderit
+          qui in ea voluptate velit esse quam nihil molestiae consequatur, vel illum
+          qui dolorem eum fugiat quo voluptas nulla pariatur?\"
+        "] [:p "
+          At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis
+          praesentium voluptatum deleniti atque corrupti quos dolores et quas
+          molestias excepturi sint occaecati cupiditate non provident, similique sunt
+          in culpa qui officia deserunt mollitia animi, id est laborum et dolorum
+          fuga. Et harum quidem rerum facilis est et expedita distinctio.
+        "]]] [:hr] [:section [:h1 "Code examples"] [:code [:pre "
+      sudo ipfw pipe 1 config bw 256KByte/s
+      sudo ipfw add 1 pipe 1 src-port 3000
+    "]]] [:hr] [:section [:h1 "Footer"] [:footer [:p "Copyright 2013. Made with love by " [:a {:href "http://mrmrs.cc" :title "MRMRS - Designer"} "mrmrs"] "."] [:ul [:li [:a {:href "#"} "Home"]] [:li [:a {:href "#"} "Contact"]] [:li [:a {:href "#"} "Jobs"]]] [:ul [:li [:a {:href "http://twitter.com" :title " on Twitter"} "Twitter"]] [:li [:a {:href "http://pinterest.com" :title " on Pinterest"} "Pinterest"]] [:li [:a {:href "http://instagram.com" :title " on Instagram"} "Instagram"]] [:li [:a {:href "http://dribbbble.com" :title " on Dribbble"} "Dribbble"]] [:li [:a {:href "http://github.com" :title " on Github"} "Github"]]]]] [:section [:h1 "New hawtness"] [:progress {:value "80" :max "100"} "80 %"] [:p "We are this close to the goal: " [:meter {:min "0" :max "1000" :value "824"} "$824"] "."]] [:section [:header [:h1 "Random Stuff"]] [:small "This is for things like copyright info"] [:s "Content that isn't accurate or relevant anymore."] [:span "Generic span wrapper"] [:abbr "HTML How to meet ladies"] [:p "This is inline text with " [:sub "subscript"] " and " [:sup "superscript"] " elements."] [:p [:var "f"] "(" [:var "x"] ") = " [:var "a"] [:sub "0"] " + " [:var "a"] [:sub "1"] [:var "x"] " +
+      " [:var "a"] [:sub "2"] [:var "x"] [:sup "2"] ", where " [:var "a"] [:sup "2"] " ≠ 0
+    "] [:time {:datetime "2013-09-07"} "07 September 2013"]] [:section [:figure [:img {:src "http://placekitten.com/g/960/320" :alt "Figure Example"}] [:figcaption "
+        Photo of the sky at night. Original by " [:a {:href "http://flickr.com/photos/heyitsadam/"} "@mrmrs"]]]]
+  [:section  [:samp [:pre "
+          /Sites/html master  ☠ ☢
+          $  " [:kbd "ls -gto"] "
+
+          total 104
+          -rw-r--r--   1   10779 Jun  5 16:24 index.html
+          -rw-r--r--   1    1255 Jun  5 16:00 _config.yml
+          drwxr-xr-x  11     374 Jun  5 15:57 _site
+          -rw-r--r--   1    1597 Jun  5 14:16 README.md
+          drwxr-xr-x   5     170 Jun  5 14:15 _sass
+          -rw-r--r--   1     564 Jun  4 15:59 Rakefile
+          drwxr-xr-x   6     204 Jun  4 15:59 _includes
+          drwxr-xr-x   4     136 Jun  4 15:59 _layouts
+          drwxr-xr-x   3     102 Jun  4 15:59 _resources
+          drwxr-xr-x   3     102 Jun  4 15:59 css
+          -rw-r--r--   1    1977 Jun  4 15:59 favicon.icns
+          -rw-r--r--   1    6518 Jun  4 15:59 favicon.ico
+          -rw-r--r--   1    1250 Jun  4 15:59 touch-icon-ipad-precomposed.png
+          -rw-r--r--   1    2203 Jun  4 15:59 touch-icon-ipad-retina-precomposed.png
+          -rw-r--r--   1    1046 Jun  4 15:59 touch-icon-iphone-precomposed.png
+          -rw-r--r--   1    1779 Jun  4 15:59 touch-icon-iphone-retina-precomposed.png
+        "]]] [:section [:h1 "Tables"]
+              [:table [:caption "This is a caption for a table"] [:thead [:tr [:th "ID"] [:th "Name"] [:th "Date"] [:th "Address"]]] [:tfoot [:tr [:td "Table footer info"]]] [:tbody [:tr [:td "#999-32ac"] [:td "First Name"] [:td "13 May, 2013"] [:td "999 Spruce Lane, Somewhere, CA 94101"]] [:tr [:td "#888-32dd"] [:td "Sample Name"] [:td "17 May, 1984"] [:td "999 Spruce Lane, Somewhere, CA 94101"]]]]] [:section [:h1 "Footer"] [:footer [:small "© 2014 Some company name"] [:address "email@email.com"]]]]]

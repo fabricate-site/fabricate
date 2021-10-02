@@ -157,3 +157,13 @@
                                          :href "http://google.com"}))
     (t/is (m/validate global-attributes {:title "some page"
                                          :href "/relative-page.html"}))))
+
+(def ex-page (clojure.edn/read-string (slurp "resources/html.edn")))
+
+(t/deftest examples
+  (t/testing "example page with non-interactive content"
+    (t/is (m/validate html ex-page))))
+
+(comment  (m/explain html ex-page)
+
+         )
