@@ -734,23 +734,6 @@
 (def parse-element (m/parser element))
 (def explain-element (m/explainer element))
 
-(def element-flat
-  (let [elems
-        (->> (dissoc (get (m/properties html) :registry)
-                     ::flow-content ::heading-content
-                     ::phrasing-content ::metadata-content
-                     "ins-phrasing" "a-phrasing" "del-phrasing"
-                     "link-phrasing")
-             seq
-             (filter (fn [[k s]] (keyword? k)))
-             (into {}))]
-    (m/schema
-     (apply conj [:orn {:registry (get (m/properties html) :registry)}
-                  [:atomic-element atomic-element]]
-            (seq elems)))))
-(def element-flat-explainer (m/explainer element-flat))
-(def parse-element-flat (m/parser element-flat))
-
 (def element-validators
   (let [kws (filter keyword? (keys (get (second html) :registry)))]
     (into {:atomic-element (m/validator atomic-element)}
