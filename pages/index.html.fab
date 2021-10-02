@@ -2,7 +2,7 @@
 (:require [garden.core :as garden]
 [site.fabricate.prototype.read :as read]
 [site.fabricate.prototype.page :refer :all]
-          [garden.stylesheet :as stylesheet])) 🔚
+[garden.stylesheet :as stylesheet])) 🔚
 
 ✳ (def page-css
    (garden/css
@@ -19,7 +19,7 @@
            :font-size "0.95rem"}]
     [:.scarlet  {:color "#a1010c"}]
     [:.vermilion {:color "#dc4032"}]
-    [:.1999 {:text-transform "uppercase"}]
+    [:.txt-1999 {:text-transform "uppercase"}]
     [:code {:color "#333"}]
     [:article {:color "#222"
                :max-width "60rem"}]
@@ -52,8 +52,8 @@ The CSS on this page was written by hand at the top, using an inline stylesheet.
 
 Writing this page, for me, the answer was "yes!" I'm not very knowledgable about CSS. A static website is a perfect low-stakes place to "do it wrong." I didn't have to jump back and forth between this file and "main.css" and "main.scss" and remember what variable I used to define the colors I want. I just iterated on the one file until I had the nice soothing background gradient you see here and some decent proportions.
 
-✳= [:header [:h2 {:class "1999"} "📟 making websites like it's 1999 "]] 🔚
-✳=[:header  [:h4 {:class "1999"} "(but maybe with webfonts? I like those)"]]🔚
+✳= [:header [:h2 {:class "txt-1999"} "📟 making websites like it's 1999 "]] 🔚
+✳=[:header  [:h4 {:class "txt-1999"} "(but maybe with webfonts? I like those)"]]🔚
 
 You really shouldn't need to learn what a CSS preprocessor is and its special syntax to get started with picking the right shade of ✳=[:s {:class "red"} "red"]🔚 ✳=[:s {:class "scarlet"} "scarlet"]🔚 ✳=[:b {:class "vermilion"} "vermilion"]🔚 you want for your headers and banners.
 

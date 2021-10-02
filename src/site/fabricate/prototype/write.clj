@@ -11,18 +11,19 @@
    [clojure.java.io :as io]
    [clojure.string :as string]
    [hiccup2.core :as hiccup]
+   [hiccup.core :as h]
    [hiccup.page :as hp]
    [malli.core :as m]
    [malli.util :as mu]
    [malli.generator :as mg]
-   [mount.core :as mount]
    [site.fabricate.sketch :as sketch]
    [site.fabricate.prototype.read :as read]
    [site.fabricate.prototype.html :as html]
    [site.fabricate.prototype.page :as page]
    [site.fabricate.prototype.fsm :as fsm]
    [site.fabricate.prototype.schema :as schema]
-   [juxt.dirwatch :refer [watch-dir close-watcher]]))
+   [juxt.dirwatch :refer [watch-dir close-watcher]]
+   [http.server :as server]))
 
 (def pages
   "This variable holds the current state of all the pages created
@@ -231,11 +232,11 @@
         body-content (into [:article {:lang "en"}]
                            page/sectionize-contents
                            evaluated-content)]
-    [:html
+    (list
      (page/doc-header metadata)
      [:article body-content]
      [:footer
-      [:div [:a {:href "/"} "Home"]]]]))
+      [:div [:a {:href "/"} "Home"]]])))
 
 (def rendered-state
   (mu/merge
@@ -269,10 +270,10 @@
    html-state
    (fn [page-data]
      (assoc page-data
-            :rendered-content (-> page-data
-                                  evaluated->hiccup
-                                  hp/html5
-                                  str)))
+            :rendered-content
+            (-> page-data
+                evaluated->hiccup
+                (#(hp/html5 {:lang "en"} %)))))
    rendered-state
    (fn [{:keys [rendered-content output-file] :as page-data}]
      (do
@@ -300,6 +301,12 @@
         (swap! pages #(update-page-map % local-file))
         (println "rendered")))))
 
+(def default-server-opts
+  {:cors-allow-headers nil,
+   :dir (str (System/getProperty "user.dir") "/docs"),
+   :port 8000,
+   :no-cache true})
+
 (defn draft
   ([]
    (do
@@ -308,13 +315,18 @@
                  (:input-dir default-site-settings)
                  (:template-suffix
                   default-site-settings))]
-       (fsm/complete operations fp))
-     (let [fw (watch-dir rerender (io/file (:input-dir default-site-settings)))]
-       (println "establishing file watch")
+       (swap! pages #(update-page-map % fp)))
+     (let [srv (do
+                 (println "launching server")
+                 (server/start default-server-opts))
+           fw (do
+                (println "establishing file watch")
+                (watch-dir rerender (io/file (:input-dir default-site-settings))))]
        (.addShutdownHook (java.lang.Runtime/getRuntime)
                          (Thread. (fn []
                                     (do (println "shutting down")
                                         (close-watcher fw)
+                                        (server/stop srv)
                                         (shutdown-agents)))))
        fw))))
 
@@ -332,14 +344,15 @@
 (comment
   (publish {:dirs ["./pages"]})
 
-  (mount/defstate drafting :start (draft)
-    :stop (close-watcher drafting))
+  (def drafts (draft))
 
-  (mount/start)
+  (close-watcher drafts)
 
-  (mount/stop)
+
+
 
   )
+
 
 
 
@@ -353,5 +366,12 @@
   (def finite-schema-machines (fsm/complete operations "./pages/finite-schema-machines.html.fab"))
 
   (malli.error/humanize (m/explain parsed-state finite-schema-machines))
+
+  (def fsm-post-data (get @pages "pages/finite-schema-machines.html.fab"))
+
+  (keys fsm-post-data)
+
+  (:evaluated-content fsm-post-data)
+  (hp/html5 (list [:head [:title "something"] [:body "something else"]]))
 
   )
