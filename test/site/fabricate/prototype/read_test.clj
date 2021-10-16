@@ -66,14 +66,23 @@
                   :result nil})))
 
   (t/testing "expression parsing"
+    (t/is (= {:expr '(do (def something 23) nil),
+              :src "✳+(def something 23)🔚",
+              :err nil,
+              :result nil,
+              :display true}
+             (yield-expr "+(def something 23)")))
+
     (t/is (= ["text " {:expr '(+ 2 3)
                        :src "✳=(+ 2 3)🔚"
                        :err nil
+                       :display false
                        :result nil}]
              (parse "text ✳=(+ 2 3)🔚")))
 
     (t/is (= [{:expr nil,
-               :src "✳((+ 2 3)🔚",
+               :src "✳((+ 2 3)🔚"
+               :display false
                :err
                {:type clojure.lang.ExceptionInfo,
                 :phase nil,
@@ -83,20 +92,33 @@
              (parse "✳((+ 2 3)🔚")))
     (t/is (= [{:expr '(do (+ 2 3) nil)
                :src "✳(+ 2 3)🔚"
+               :display false
                :err nil
                :result nil}]
              (parse "✳(+ 2 3)🔚"))))
 
   (t/testing "evaluation of parsed expressions"
     (t/is (= 5 (eval-parsed-expr (first (parse "✳=(+ 2 3)🔚")) true)))
-    (t/is (= {:expr '(+ 2 3), :src "✳=(+ 2 3)🔚", :err nil, :result 5}
+    (t/is (= {:expr '(+ 2 3), :src "✳=(+ 2 3)🔚", :err nil, :result 5
+              :display false}
              (eval-parsed-expr (first (parse "✳=(+ 2 3)🔚")) false)))
     (t/is (= nil
              (eval-parsed-expr {:expr '(do (def myvar 3) nil), :src "✳(def myvar 3)🔚", :err nil, :result nil}
                                true)))
 
+    (t/is (= {:expr '(do (def something 23) nil)
+              :src "✳+(def something 23)🔚"
+              :result nil
+              :err nil
+              :display true}
+             (-> "✳+(def something 23)🔚"
+                 parse
+                 first
+                 eval-parsed-expr)))
+
     (t/is (= {:expr nil,
               :src "✳=((+ 2 3)🔚",
+              :display false
               :err {:type clojure.lang.ExceptionInfo,
                     :cause "Unexpected EOF while reading item 1 of list.",
                     :phase nil,
@@ -194,7 +216,33 @@
              (parse-eval "✳=[:em \"text\"]🔚, with a comma following")))
 
     (t/is (= "<div><em>text</em>, with a comma following</div>"
-             (hiccup/html (parse-eval "✳=[:em\"text\"]🔚, with a comma following" [:div]))))))
+             (hiccup/html (parse-eval "✳=[:em\"text\"]🔚, with a comma following" [:div])))))
+
+  (t/testing "source printing"
+    (t/is (=
+           "(def something &quot;abc&quot;)\n"
+           (render-src '(do (def something "abc"))
+                       true)))
+
+    (t/is (=
+           "(def ex-form &quot;a form evaluated but displayed without its output&quot;)\n"
+           (render-src '(do (def ex-form "a form evaluated but displayed without its output") nil) true)
+           (-> "✳+(def ex-form \"a form evaluated but displayed without its output\")🔚"
+               parse
+               first
+               :expr
+               (render-src true))))
+
+    (t/is (=
+           (list [:pre [:code "(def ex-form &quot;a form evaluated but displayed without its output&quot;)\n"]] nil)
+           (-> "✳+(def ex-form \"a form evaluated but displayed without its output\")🔚"
+               parse
+               first
+               eval-with-errors)))
+
+    )
+
+  )
 
 (t/deftest file-utils
   (t/testing "Filename utilities"
