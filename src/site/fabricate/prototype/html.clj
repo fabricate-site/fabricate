@@ -1,6 +1,7 @@
 (ns site.fabricate.prototype.html
   "Namespace for creating HTML forms using Hiccup data structures and
-   for verifying their structural correctness using malli schemas."
+   for verifying their structural correctness using malli schemas.
+  The schemas in this namespace implement a non-interactive subset of the MDN HTML spec."
   (:require
    [clojure.string :as str]
    [clojure.set :as set]

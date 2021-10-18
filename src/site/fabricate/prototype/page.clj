@@ -1,5 +1,5 @@
 (ns site.fabricate.prototype.page
-  "Utility functions for working with HTML page elements."
+  "Utility functions for working with Hiccup elements."
   (:require
    [site.fabricate.prototype.html :as html]
    [hiccup2.core :as hiccup]
@@ -220,7 +220,8 @@
     (apply read/conj-non-nil
            [:head
             [:title (str (:site-title page-meta) " | " title)]
-            [:link {:rel "stylesheet" :href "https://raw.githubusercontent.com/jensimmons/cssremedy/master/css/remedy.css"}]]
+            [:link {:rel "stylesheet" :href "https://raw.githubusercontent.com/jensimmons/cssremedy/master/css/remedy.css"}]
+            [:link {:rel "stylesheet" :href "css/extras.css"}]]
            (concat (opengraph-enhance
                     ogp-properties
                     (map ->meta page-meta))

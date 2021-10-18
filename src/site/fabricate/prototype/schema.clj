@@ -1,4 +1,6 @@
 (ns site.fabricate.prototype.schema
+  "Utility namespace for working with malli schemas."
+  {:reference "https://github.com/metosin/malli"}
   (:require [malli.core :as m]
             [clojure.spec.alpha :as spec]))
 

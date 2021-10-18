@@ -1,5 +1,8 @@
 (ns site.fabricate.prototype.read
-  "Parsing utilities for embedded clojure forms."
+  "Parsing + evaluation utilities for embedded clojure forms.
+  The functions in this namespace split the text into a sequence of Hiccup forms and embedded expressions,
+  which is then traversed again to evaluate it, embedding (or not) the results
+  of those expressions within the Hiccup document."
   {:license {:source "https://github.com/weavejester/comb"
              :type "Eclipse Public License, v1.0"}}
   (:require [clojure.edn :as edn]
