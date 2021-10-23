@@ -28,7 +28,7 @@
     [:nil [:fn {:gen/gen (gen/return nil)} nil?]]]))
 
 (def global-attributes-bounded
-  (-> global-attributes
+  (-> html/global-attributes
       (mu/update :class
                  #(mu/update-properties % assoc :gen/elements nouns))
       (mu/update :id
@@ -47,45 +47,50 @@
 
 (defn hiccup-base-elems
   "Generates a hiccup element with one of the given tags with no nested sequences."
-  ([tags]
+  ([{:keys [tags contents-gen]
+     :or {tags (concat html/flow-tags
+                       html/phrasing-tags
+                       html/heading-tags)
+          ;; an error in the rose tree generator for numeric
+          ;; values means we have to use only strings as
+          ;; child elements
+          contents-gen (gen/vector #_(mg/generator atomic-bounded)
+                                   (gen/elements nouns)
+                                   0 10)}}]
    (gen/let [elem
              (gen/one-of
               [(gen/tuple (gen/elements tags)
                           (mg/generator global-attributes-bounded))
-               (gen/vector (gen/elements flow-tags) 1)])
-             contents
-             ;; an error in the rose tree generator for numeric
-             ;; values means we have to use only strings as
-             ;; child elements
-             (gen/vector #_(mg/generator atomic-bounded)
-                         (gen/elements nouns)
-                         0 10)]
-     (apply conj elem contents))))
+               (gen/vector (gen/elements html/flow-tags) 1)])
+             contents contents-gen]
+     (apply conj elem contents)))
+  ([] (hiccup-base-elems {})))
 
 (def hiccup-base
-  (hiccup-base-elems
-       (concat html/flow-tags
-               html/phrasing-tags
-               html/heading-tags)))
+  (hiccup-base-elems))
 
 (defn hiccup-recursive-elems
   "Recursive version of hiccup generator using bounded-recursive-gen from test.chuck."
-  ([{:keys [outer-tags inner-tags
+  ([{:keys [outer-tags inner-tags contents-gen
             max-breadth max-height]
      :or {outer-tags (concat html/flow-tags
                              html/phrasing-tags html/heading-tags)
           inner-tags (concat html/flow-tags
                              html/phrasing-tags html/heading-tags)
+          contents-gen (gen/vector (gen/elements nouns) 0 10)
           max-breadth 5 max-height 5}}]
    (gen'/bounded-recursive-gen
     (fn [inner]
       (gen/one-of
        [inner
         (gen/let [i inner
-                  outer (hiccup-base-elems outer-tags)]
+                  outer (hiccup-base-elems
+                         {:tags outer-tags
+                          :contents-gen contents-gen})]
           (conj outer i))]))
     (gen/one-of [(mg/generator atomic-bounded)
-                 (hiccup-base-elems inner-tags)])
+                 (hiccup-base-elems {:tags inner-tags
+                                     :contents-gen contents-gen})])
     max-breadth
     max-height))
   ([] (hiccup-recursive-elems {})))
@@ -101,4 +106,6 @@
 
   (gen/sample
    element
-   20))
+   20)
+
+  )

@@ -9,7 +9,8 @@
     [counted-double-list ft-split-at ft-concat]]
    [malli.core :as m]
    [clojure.string :as string]
-   [site.fabricate.prototype.read :as read]))
+   [site.fabricate.prototype.read :as read]
+   [site.fabricate.prototype.schema :as schema]))
 
 (defn em [& contents]  (apply conj [:em] contents))
 (defn strong [& contents]  (apply conj [:strong] contents))
@@ -62,33 +63,36 @@
 
 (defn detect-paragraphs
   "For each string in the element split it by the given regex, and insert the result into the original element. Leaves sub-elements as is and inserts them into the preceding paragraph."
+  {:malli/schema [:=> [:cat [:? [:fn seq?]]
+                       [:? schema/regex]]
+                  html/element]}
   ([seq re]
    (let [v? (vector? seq)
          r (loop [s (apply ftree/counted-double-list seq)
-                  final (ftree/counted-double-list)]
-             (if (empty? s) final       ; base case
-                 (let [h (first s) t (rest s)
-                       current-elem (last final)]
-                   (cond
-                     (and (string? h)
-                          (some? (re-find re h)))
-                     (let [[hh & tt] (string/split h re)
-                           rest (map (fn [i] [:p i]) tt)]
-                       (cond
-                         (or (empty? hh) (re-matches (re-pattern "\\s+") hh)) (recur (concat rest t) final)
-                         ((get html/element-validators ::html/p) current-elem)
-                         (recur (concat rest t)
-                                (conj (first (ft-split-at final (- (count final) 1)))
-                                      (conj current-elem hh)))
-                         :else (recur (concat rest t) (conj final [:p hh]))))
-                     (html/phrasing? h)
-                     (if ((get html/element-validators ::html/p) current-elem)
-                       (recur t
+                final (ftree/counted-double-list)]
+           (if (empty? s) final         ; base case
+               (let [h (first s) t (rest s)
+                     current-elem (last final)]
+                 (cond
+                   (and (string? h)
+                        (some? (re-find re h)))
+                   (let [[hh & tt] (string/split h re)
+                         rest (map (fn [i] [:p i]) tt)]
+                     (cond
+                       (or (empty? hh) (re-matches (re-pattern "\\s+") hh)) (recur (concat rest t) final)
+                       ((get html/element-validators ::html/p) current-elem)
+                       (recur (concat rest t)
                               (conj (first (ft-split-at final (- (count final) 1)))
-                                    (conj current-elem h)))
-                       (recur t (conj final [:p h])))
-                     :else
-                     (recur t (conj final h))))))]
+                                    (conj current-elem hh)))
+                       :else (recur (concat rest t) (conj final [:p hh]))))
+                   (html/phrasing? h)
+                   (if ((get html/element-validators ::html/p) current-elem)
+                     (recur t
+                            (conj (first (ft-split-at final (- (count final) 1)))
+                                  (conj current-elem h)))
+                     (recur t (conj final [:p h])))
+                   :else
+                   (recur t (conj final h))))))]
      (if v? (apply vector r)  r)))
   ([re] (fn [seq] (detect-paragraphs seq re)))
   ([] (detect-paragraphs (re-pattern "\n\n"))))

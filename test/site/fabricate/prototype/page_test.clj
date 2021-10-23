@@ -1,6 +1,13 @@
 (ns site.fabricate.prototype.page-test
   (:require [site.fabricate.prototype.page :refer :all ]
+            [site.fabricate.prototype.html :as html]
+            [site.fabricate.prototype.html-test.generators :as html-gen]
             [hiccup2.core :as hiccup]
+            [clojure.test.check.properties :as prop]
+            [clojure.test.check.generators :as gen]
+            [clojure.test.check :as check]
+            [clojure.test.check.clojure-test :refer [defspec]]
+            [malli.core :as m]
             [clojure.test :as t]))
 
 (t/deftest page-creation
@@ -30,6 +37,50 @@
                          (map ->meta default-metadata))))
 
     ))
+
+(def html-newline-gen
+  (let [newline-gen
+        (gen/vector
+         (gen/let
+             [a (gen/vector
+                 (gen/one-of
+                  [(gen/elements ["\n"]) gen/string-alphanumeric])
+                 5)
+              b (gen/vector
+                 (gen/one-of
+                  [(gen/elements ["\n\n" "\n"]) gen/string-alphanumeric])
+                 5)
+              c (gen/vector
+                 (gen/one-of
+                  [(gen/elements ["\n\n" "\n" "\n\n\n"]) gen/string-alphanumeric])
+                 5)]
+             (apply str (interleave a b c)))
+         2 5)]
+    (html-gen/hiccup-recursive-elems
+     {:outer-tags html/flow-tags
+      :inner-tags html/phrasing-tags
+      :contents-gen newline-gen})))
+
+(defspec paragraph-detection-output
+  (prop/for-all
+       [html-elem html-newline-gen]
+       (or (m/validate html/atomic-element html-elem)
+           (html/element? (detect-paragraphs html-elem #"\n\n")))))
+
+(comment
+  (detect-paragraphs
+   (first
+    (get-in
+     (check/quick-check
+      10
+      (prop/for-all
+       [html-elem html-newline-gen]
+       (or (m/validate html/atomic-element html-elem)
+           (html/element? (detect-paragraphs html-elem #"\n\n")))))
+     [:shrunk :smallest]))
+   #"\n\n")
+
+  )
 
 (t/deftest transforms
 
@@ -76,7 +127,12 @@
         {:class "row"}
         "orphan text"
         [:em "with emphasis added"]
-        "and\n\nlinebreak"] #"\n\n"))))
+        "and\n\nlinebreak"] #"\n\n")))
+
+
+
+    )
+
 
 
   (t/testing "Sectionizer"

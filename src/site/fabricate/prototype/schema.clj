@@ -17,6 +17,8 @@
 (defn subschema [[_ meta-map orig-ref] new-ref]
   [:schema meta-map new-ref])
 
+(def regex [:fn #(.isInstance java.util.regex.Pattern %)])
+
 (defn ns-form?
   "Returns true if the given form is a valid Clojure (ns ...) special form"
   [form]
