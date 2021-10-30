@@ -97,6 +97,66 @@
   ([re] (fn [seq] (detect-paragraphs seq re)))
   ([] (detect-paragraphs (re-pattern "\n\n"))))
 
+(defn split-paragraphs
+  ([s re]
+   (if (and (string? s) (re-find #"\n\n" s))
+     (clojure.string/split s #"\n\n")
+     s)))
+
+(defn- non-hiccup-seq? [form]
+  (and (seq? form)
+       (not (string? form))
+       (or (not (vector? form))
+           (not (keyword? (first form))))))
+
+(defn parse-paragraphs
+  "Detects the paragraphs within the form"
+  ([form {:keys [paragraph-pattern
+                 default-form]
+          :or {paragraph-pattern #"\n\n"
+               default-form [:p]}
+          :as opts}]
+   (cond (html/phrasing? form) form
+         (non-hiccup-seq? form)
+         ;; recurse into default paragraph
+         (parse-paragraphs (apply conj default-form form)
+                           opts)
+         :else
+         (reduce
+          (fn [acc next]
+            (cond (seq? next) (conj acc (parse-paragraphs next opts))
+                  (and (string? next) (re-find paragraph-pattern next))
+                  ;; paragraphs are special, they need <br> elements
+                  (if
+                      (= :p (first acc))
+                      (apply conj acc
+                             (interpose [:br] (clojure.string/split next paragraph-pattern)))
+                      (apply conj acc
+                             (map #(conj default-form %)
+                                  (clojure.string/split next paragraph-pattern))))
+                  :else (conj acc next)))
+          []
+          form)))
+  ([form] (parse-paragraphs form {})))
+
+(comment
+  (non-hiccup-seq? [:p "some text\n\nwith newlines"])
+
+  (=  [:p "some text" [:br] "with newlines"]
+      (parse-paragraphs [:p "some text\n\nwith newlines"]))
+
+  (=  [:section [:p "some text"] [:p "with newlines"]]
+      (parse-paragraphs [:section "some text\n\nwith newlines"]))
+
+  (parse-paragraphs [:section "some text\n\nwith newlines"])
+
+
+  (parse-paragraphs [:p "some text\n\nwith newlines"])
+
+  (split-paragraphs "some text\n\nwith linebreak")
+
+  )
+
 (comment
   (detect-paragraphs [:section "some\n\ntext" [:em "with emphasis"]]
                      #"\n\n")

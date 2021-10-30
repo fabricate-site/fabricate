@@ -130,9 +130,13 @@
         "and\n\nlinebreak"] #"\n\n")))
 
 
+    (t/is
+     (=  [:p "some text" [:br] "with newlines"]
+         (parse-paragraphs [:p "some text\n\nwith newlines"])))
 
-    )
-
+    (t/is
+     (=  [:section [:p "some text"] [:p "with newlines"]]
+         (parse-paragraphs [:section "some text\n\nwith newlines"]))))
 
 
   (t/testing "Sectionizer"
