@@ -28,7 +28,7 @@
              (-> {"meta" {:content "something"
                           :property "some-prop"}}
                  seq first ->meta)))
-    (t/is
+    #_(t/is
      (= '([:meta {:name "title", :content "Fabricate"}]
           [:meta {:name "description", :content "Fabricate: static website generation for Clojure", :property "og:description"}]
           [:meta {:name "viewport", :content "width=device-width, initial-scale=1.0, user-scalable=no"}]
@@ -138,6 +138,10 @@
         (parse-paragraphs
          [:bdi "a bdi\n\nwith linebreak"]))
      "Paragraph detection should not introduce invalid child elements")
+
+    (t/is (= [:h4 "a heading" [:br] "with linebreak and number" 24]
+             (parse-paragraphs
+              [:h4 "a heading\n\nwith linebreak and number" 24])))
 
     (t/is
      (= [:p "text" [:br] "newline" [:del "more text"]]

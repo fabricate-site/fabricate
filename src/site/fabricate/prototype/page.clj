@@ -187,7 +187,9 @@
                 ;; add to previous paragraph
                 previous-paragraph? (conj r-acc (conj previous next))
                 ;; start paragraph for orphan strings
-                (and (not current-paragraph?) (html/phrasing? next))
+                (and (not current-paragraph?)
+                     (= ::html/flow-content permitted-contents)
+                     (html/phrasing? next))
                 (conj acc (conj default-form next))
                 :else (conj acc next))))
           []
