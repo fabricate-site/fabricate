@@ -785,7 +785,7 @@
 
 (def phrasing? (m/validator (schema/subschema html ::phrasing-content)))
 (def heading? (m/validator (schema/subschema html ::heading-content)))
-(def heading? (m/validator (schema/subschema html ::flow-content)))
+(def flow? (m/validator (schema/subschema html ::flow-content)))
 
 (defn validate-element [elem]
   (if (and (vector? elem)
@@ -798,3 +798,12 @@
                        :message (str "Invalid <" (name form-kw) "> form")
                        :cause ((get element-explainers (ns-kw form-kw)) elem)}}))
     elem))
+
+(defn permitted-contents
+  "Gets the permitted contents of the given tag"
+  [tag]
+  (if (nil? tag) tag
+      (let [tag (if (qualified-keyword? tag) tag
+                    (ns-kw 'site.fabricate.prototype.html tag))]
+        (last
+         (flatten (last (get-in (m/properties html) [:registry tag])))))))

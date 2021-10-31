@@ -127,6 +127,18 @@
          [:p "some text" true 24 [:div "a div"]]))
      "Flow tags should break out of the prior paragraph")
 
+    (t/is
+     (= [:h3 "a heading" [:br] "with linebreak"]
+        (parse-paragraphs
+         [:h3 "a heading\n\nwith linebreak"]))
+     "Paragraph detection should not introduce invalid child elements")
+
+    (t/is
+     (= [:bdi "a bdi" [:br] "with linebreak"]
+        (parse-paragraphs
+         [:bdi "a bdi\n\nwith linebreak"]))
+     "Paragraph detection should not introduce invalid child elements")
+
 
 
     (t/is
@@ -177,7 +189,9 @@
 
     (t/is
      (=  [:section [:p "some text"] [:p "with newlines"]]
-         (parse-paragraphs [:section "some text\n\nwith newlines"]))))
+         (parse-paragraphs [:section "some text\n\nwith newlines"])))
+
+    )
 
 
   (t/testing "Sectionizer"
@@ -290,3 +304,9 @@
      (=
       [:div]
       (process-nexts [:div])))))
+
+(defspec paragraph-detection-output
+  (prop/for-all
+       [html-elem html-newline-gen]
+       (or (m/validate html/atomic-element html-elem)
+           (html/element? (parse-paragraphs html-elem)))))

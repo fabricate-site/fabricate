@@ -140,7 +140,9 @@
                   r-acc (if (not (empty? acc)) (pop acc) acc)
                   previous-paragraph?
                   (and (vector? previous) (= :p (first previous)))
-                  current-paragraph? (= :p (first acc))]
+                  current-paragraph? (= :p (first acc))
+                  permitted-contents
+                  (html/permitted-contents (first acc))]
               (cond
                 ;; flow content needs to break out of a paragraph
                 (and current-paragraph? (sequential? next) (html/flow? next))
@@ -153,8 +155,10 @@
                 (sequential? next)
                 (conj acc (parse-paragraphs next opts))
                 ;; in-paragraph linebreaks are special, they get replaced with <br> elements
+                ;; we can't split text into paragraphs inside
+                ;; elements that can't contain paragraphs
                 (and (string? next) (re-find paragraph-pattern next)
-                     current-paragraph?)
+                     (not (= ::html/flow-content permitted-contents)))
                 (apply conj acc
                        (interpose [:br] (clojure.string/split next paragraph-pattern)))
                 ;; if there's a previous paragraph, do a head/tail split of the string
