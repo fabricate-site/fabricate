@@ -139,7 +139,17 @@
          [:bdi "a bdi\n\nwith linebreak"]))
      "Paragraph detection should not introduce invalid child elements")
 
+    (t/is
+     (= [:p "text" [:br] "newline" [:del "more text"]]
+        (parse-paragraphs
+         [:p "text\n\nnewline" [:del "more text"]]))
+     "Phrasing subtags should persist in enclosing elements")
 
+    (t/is
+     (= [:p "text" [:br] "newline" [:del "more text"]]
+        (parse-paragraphs
+         [:p "text\n\n" "newline" [:del "more text"]]))
+     "Trailing newlines should still yield <br> elements")
 
     (t/is
      (= [:p {:class "steel"} false]

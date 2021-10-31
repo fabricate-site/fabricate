@@ -144,8 +144,10 @@
                   permitted-contents
                   (html/permitted-contents (first acc))]
               (cond
-                ;; flow content needs to break out of a paragraph
-                (and current-paragraph? (sequential? next) (html/flow? next))
+                ;; flow + heading content needs to break out of a paragraph
+                (and current-paragraph? (sequential? next)
+                     (or (html/flow? next) (html/heading? next))
+                     (not (html/phrasing? next)))
                 (list acc (parse-paragraphs next))
                 ;; if previous element is a paragraph,
                 ;; conj phrasing elements on to it
@@ -160,7 +162,8 @@
                 (and (string? next) (re-find paragraph-pattern next)
                      (not (= ::html/flow-content permitted-contents)))
                 (apply conj acc
-                       (interpose [:br] (clojure.string/split next paragraph-pattern)))
+                       (let [r (interpose [:br] (clojure.string/split next paragraph-pattern))]
+                         (if (= 1 (count r)) (conj (into [] r) [:br]) r)))
                 ;; if there's a previous paragraph, do a head/tail split of the string
                 (and (string? next) (re-find paragraph-pattern next)
                      previous-paragraph?)
