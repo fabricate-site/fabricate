@@ -130,6 +130,9 @@
   [:text :string]
   [:nil nil?]])
 
+(def atomic-element?
+  (m/validator atomic-element))
+
 (defn ->hiccup-schema [tag attr-model content-model]
   (let [head
         [:catn
@@ -138,11 +141,11 @@
                    attr-model
                    [:? attr-model])]]]
     ;; [:and vector?
-      (if (nil? content-model)
-        head
-        (conj head [:contents content-model]))
+    (if (nil? content-model)
+      head
+      (conj head [:contents content-model]))
     ;;  ]
-      ))
+    ))
 
 (defn ns-kw
   ([ns kw] (keyword (str ns) (str (name kw))))
@@ -781,6 +784,8 @@
           (tree-seq #(and (vector? %) (keyword? (first %))) rest c))))
 
 (def phrasing? (m/validator (schema/subschema html ::phrasing-content)))
+(def heading? (m/validator (schema/subschema html ::heading-content)))
+(def heading? (m/validator (schema/subschema html ::flow-content)))
 
 (defn validate-element [elem]
   (if (and (vector? elem)

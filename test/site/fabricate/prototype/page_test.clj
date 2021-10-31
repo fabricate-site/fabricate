@@ -56,19 +56,33 @@
                  5)]
              (apply str (interleave a b c)))
          2 5)]
-    (html-gen/hiccup-recursive-elems
-     {:outer-tags html/flow-tags
-      :inner-tags html/phrasing-tags
-      :contents-gen newline-gen})))
+    (gen/such-that
+     html/element?
+     (html-gen/hiccup-recursive-elems
+      {:outer-tags html/flow-tags
+       :inner-tags html/phrasing-tags
+       :contents-gen newline-gen})
+     250)))
 
-(defspec paragraph-detection-output
-  (prop/for-all
-       [html-elem html-newline-gen]
-       (or (m/validate html/atomic-element html-elem)
-           (html/element? (detect-paragraphs html-elem #"\n\n")))))
+
 
 (comment
-  (detect-paragraphs
+
+  (hiccup/html [:em "some text\n\nwith double linebreak"])
+
+  (parse-paragraphs [:em "some text\n\nwith newlines"] #"\n\n")
+
+
+  (parse-paragraphs
+   [:p {:class "steel"} false]
+   #"\n\n")
+
+  (html/phrasing?
+   [:p {:class "steel"} false])
+
+
+
+  (parse-paragraphs
    (first
     (get-in
      (check/quick-check
@@ -76,9 +90,13 @@
       (prop/for-all
        [html-elem html-newline-gen]
        (or (m/validate html/atomic-element html-elem)
-           (html/element? (detect-paragraphs html-elem #"\n\n")))))
-     [:shrunk :smallest]))
-   #"\n\n")
+           (html/element? (parse-paragraphs html-elem #"\n\n")))))
+     [:shrunk :smallest])))
+
+  )
+
+(comment
+  (html/phrasing? false)
 
   )
 
@@ -86,15 +104,39 @@
 
   (t/testing "Paragraph detection"
     (t/is (= [:div [:p "some"] [:p "text"]]
-             (detect-paragraphs [:div "some\n\ntext"] #"\n\n")))
+             (parse-paragraphs [:div "some\n\ntext"])))
 
     (t/is (=
            [:div [:p "some"] [:p "text" [:em "with emphasis"]]]
-           (detect-paragraphs [:div "some\n\ntext" [:em "with emphasis"]]
-                              #"\n\n")))
+           (parse-paragraphs [:div "some\n\ntext" [:em "with emphasis"]]
+                             {:paragraph-pattern #"\n\n"})))
 
-    #_ (t/is (= [:div] (detect-paragraphs [:div " "] #"\n\n"))
-             "Whitespace-only text should not be tokenized into paragraphs")
+    (t/is (= [:p "some text" true 24]
+             (parse-paragraphs
+              (list "some text" true 24))))
+
+    (t/is
+     (= (list [:p "some text" true 24] [:p "second paragraph"])
+        (parse-paragraphs
+         (list "some text" true 24 [:p "second paragraph"])))
+     "Flow tags should break out of the prior paragraph")
+
+    (t/is
+     (= (list [:p "some text" true 24] [:div [:p "a div"]])
+        (parse-paragraphs
+         [:p "some text" true 24 [:div "a div"]]))
+     "Flow tags should break out of the prior paragraph")
+
+
+
+    (t/is
+     (= [:p {:class "steel"} false]
+        (parse-paragraphs
+         [:p {:class "steel"} false]
+         #"\n\n")))
+
+    (t/is (= [:div] (parse-paragraphs [:div " "]))
+          "Whitespace-only text should not be tokenized into paragraphs")
 
     (t/is
      (=
@@ -105,15 +147,14 @@
         ", a database directly inspired by Git's decentralized and immutable data model, but designed from the ground up to have a better query model and more flexible schema. Unfortunately, it seems to be unmaintained and not ready for prime time. Additionally, for the use case I'm describing, it's unclear how to effectively distribute the configuration data stored in a "
         [:code {:class "ws-normal navy"} "noms"]
         " DB alongside the code that is affected by that configuration in a way that reliably links the two."]]
-      (detect-paragraphs
+      (parse-paragraphs
        [:div
         {:class "1col"}
         "\n\nLinked in the comments on Truyers' post was "
         [:code {:class "ws-normal navy"} "noms"]
         ", a database directly inspired by Git's decentralized and immutable data model, but designed from the ground up to have a better query model and more flexible schema. Unfortunately, it seems to be unmaintained and not ready for prime time. Additionally, for the use case I'm describing, it's unclear how to effectively distribute the configuration data stored in a "
         [:code {:class "ws-normal navy"} "noms"]
-        " DB alongside the code that is affected by that configuration in a way that reliably links the two."]
-       #"\n\n")))
+        " DB alongside the code that is affected by that configuration in a way that reliably links the two."])))
 
 
     (t/is
@@ -122,12 +163,12 @@
        {:class "row"}
        [:p "orphan text" [:em "with emphasis added"] "and"]
        [:p "linebreak"]]
-      (detect-paragraphs
+      (parse-paragraphs
        [:div
         {:class "row"}
         "orphan text"
         [:em "with emphasis added"]
-        "and\n\nlinebreak"] #"\n\n")))
+        "and\n\nlinebreak"])))
 
 
     (t/is
