@@ -103,8 +103,28 @@
 (t/deftest transforms
 
   (t/testing "Paragraph detection"
+
+
     (t/is (= [:div [:p "some"] [:p "text"]]
              (parse-paragraphs [:div "some\n\ntext"])))
+
+    (t/is (= [:section]
+             (parse-paragraphs [:section])))
+
+    (t/is (= [[:section]]
+             (parse-paragraphs [[:section]])))
+
+    (t/is (= [:em "text" [:br] "line"]
+             (parse-paragraphs [:em "text\n\nline"])))
+
+    (t/is (=
+           [[:section] [:p "text" [:q "a quote"]] [:section]
+            [:p "more text"]]
+           (parse-paragraphs [[:section]
+                              [:p "text"]
+                              [:q "a quote"]
+                              [:section]
+                              [:p "more text"]])))
 
     (t/is (=
            [:div [:p "some"] [:p "text" [:em "with emphasis"]]]
@@ -114,6 +134,11 @@
     (t/is (= [:p "some text" true 24]
              (parse-paragraphs
               (list "some text" true 24))))
+
+    (t/is (= [:p [:del [:em [:u "text" [:br] "more text"]]]]
+             (parse-paragraphs
+              [:p [:del [:em [:u "text\n\nmore text"]]]]))
+          "Paragraphs should be detected at arbitrary levels of nesting")
 
     (t/is
      (= (list [:p "some text" true 24] [:p "second paragraph"])
@@ -150,10 +175,30 @@
      "Phrasing subtags should persist in enclosing elements")
 
     (t/is
+     (= [:div [:p [:em "emphasized text"]]]
+        (parse-paragraphs [:div [:em "emphasized text"]]))
+     "Orphan phrasing elements should be inserted into paragraphs")
+
+    (t/is
      (= [:p "text" [:br] "newline" [:del "more text"]]
         (parse-paragraphs
          [:p "text\n\n" "newline" [:del "more text"]]))
      "Trailing newlines should still yield <br> elements")
+
+    (t/is (=
+           (list [:p "paragraph"] [:div [:p "with div" "and following"]])
+           (parse-paragraphs
+            [:p "paragraph" [:div "with div"] "and following"])))
+
+    (t/is
+     (= [:p "text" [:br] "newline" [:del "more text"]]
+        (parse-paragraphs
+         (list "text\n\n" "newline" [:del "more text"]))))
+
+    (t/is
+     (= [:p "text" [:br] "newline" [:del "more text"]]
+        (parse-paragraphs
+         ["text\n\n" "newline" [:del "more text"]])))
 
     (t/is
      (= [:p {:class "steel"} false]

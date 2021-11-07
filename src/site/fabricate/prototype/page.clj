@@ -124,11 +124,13 @@
 (defn parse-paragraphs
   "Detects the paragraphs within the form"
   ([form {:keys [paragraph-pattern
-                 default-form]
+                 default-form
+                 current-paragraph?]
           :or {paragraph-pattern #"\n\n"
-               default-form [:p]}
+               default-form [:p]
+               current-paragraph? false}
           :as opts}]
-   (cond (html/phrasing? form) form
+   (cond  ;; (html/phrasing? form) form
          (non-hiccup-seq? form)
          ;; recurse?
          (parse-paragraphs (apply conj default-form form) opts)
@@ -141,22 +143,22 @@
                   r-acc (if (not (empty? acc)) (pop acc) acc)
                   previous-paragraph?
                   (and (vector? previous) (= :p (first previous)))
-                  current-paragraph? (= :p (first acc))
+                  current-paragraph? (or current-paragraph? (= :p (first acc)))
                   permitted-contents
-                  (html/permitted-contents (first acc))]
+                  (html/permitted-contents
+                   (let [f (first acc)]
+                     (if (keyword? f) f :div)))]
               (cond
                 ;; flow + heading content needs to break out of a paragraph
                 (and current-paragraph? (sequential? next)
                      (or (html/flow? next) (html/heading? next))
                      (not (html/phrasing? next)))
-                (list acc (parse-paragraphs next))
+                (list acc (parse-paragraphs next opts))
                 ;; if previous element is a paragraph,
                 ;; conj phrasing elements on to it
                 (and (sequential? next) previous-paragraph?
                      (html/phrasing? next))
                 (conj r-acc (conj previous (parse-paragraphs next opts)))
-                (sequential? next)
-                (conj acc (parse-paragraphs next opts))
                 ;; in-paragraph linebreaks are special, they get replaced with <br> elements
                 ;; we can't split text into paragraphs inside
                 ;; elements that can't contain paragraphs
@@ -186,12 +188,18 @@
                      (or (empty? next)
                          (re-matches #"\s+" next))) acc
                 ;; add to previous paragraph
-                previous-paragraph? (conj r-acc (conj previous next))
-                ;; start paragraph for orphan strings
+                (and previous-paragraph? (html/phrasing? next))
+                (conj r-acc (conj previous next))
+                ;; start paragraph for orphan strings/elements
                 (and (not current-paragraph?)
+                     (not previous-paragraph?)
                      (= ::html/flow-content permitted-contents)
                      (html/phrasing? next))
                 (conj acc (conj default-form next))
+                (sequential? next)
+                (conj acc (parse-paragraphs
+                           next
+                           (assoc opts :current-paragraph? current-paragraph?)))
                 :else (conj acc next))))
           []
           form)))
