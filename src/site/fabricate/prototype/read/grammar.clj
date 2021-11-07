@@ -3,8 +3,21 @@
 
 (def form
   (insta/parser
-   "form = EPSILON | ( expr | #'([a-zA-Z]|\\s)*' | form)*
-    expr = ('✳=' | '✳') #'[a-z]*' '🔚'"))
+   "form = EPSILON | ( expr | #'(?:[^✳.*🔚]*)' | form)*
+    expr = ('✳=' | '✳') #'(?:[^✳=?.*🔚]*)' '🔚'"))
+
 
 (comment
-  (form "✳=abcd🔚 some text"))
+
+
+  (re-matches  #"(?:[^✳.*🔚]*)"
+               "abc")
+
+  (re-matches  #"(?:[^✳.*🔚]*)"
+               "✳abc🔚")
+
+  (form "✳=abcd🔚 some text")
+
+  (form "✳=(+ 3 4 5)🔚 some text")
+
+  )
