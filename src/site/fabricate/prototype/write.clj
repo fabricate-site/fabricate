@@ -363,6 +363,8 @@
 
   (fsm/complete operations "./pages/finite-schema-machines.html.fab")
 
+  (fsm/complete operations "./pages/fabricate.html.fab")
+
   (def finite-schema-machines (fsm/complete operations "./pages/finite-schema-machines.html.fab"))
 
   (malli.error/humanize (m/explain parsed-state finite-schema-machines))

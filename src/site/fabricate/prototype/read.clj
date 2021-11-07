@@ -1,5 +1,8 @@
 (ns site.fabricate.prototype.read
-  "Parsing utilities for embedded clojure forms."
+  "Parsing + evaluation utilities for embedded clojure forms.
+  The functions in this namespace split the text into a sequence of Hiccup forms and embedded expressions,
+  which is then traversed again to evaluate it, embedding (or not) the results
+  of those expressions within the Hiccup document."
   {:license {:source "https://github.com/weavejester/comb"
              :type "Eclipse Public License, v1.0"}}
   (:require [clojure.edn :as edn]
@@ -13,9 +16,12 @@
 
 (def delimiters ["✳" "🔚"])
 
-(def delimiters-2 {:add "➕"
-                   :run "▶"
-                   :end "⏹"})
+(def delimiters-2
+  "Compositional delimiters: the :display emoji can be added to either add or run so that the input is displayed"
+  {:add "➕"
+   :run "▶"
+   :display "👁️"
+   :end "⏹"})
 
 ;; regex adapted from comb; licensed under EPLv2
 (def parser-regex
@@ -55,20 +61,24 @@
         nil))))
 
 (defn yield-expr [expr]
-  (let [attempt
-        (try {:success (if (.startsWith expr "=")
-                         (r/read-string (subs expr 1))
-                         `(do ~(r/read-string expr) nil))}
-             (catch Exception e
-               (let [{:keys [cause phase]} (Throwable->map e)]
-                 {:error {:type (.getClass e)
+  (let [display? (.startsWith expr "+")
+        e (if display? (subs expr 1) expr)
+        attempt
+        (try {:success
+              (cond
+                (.startsWith e "=") (r/read-string (subs e 1))
+                :else `(do ~(r/read-string e) nil))}
+             (catch Exception ex
+               (let [{:keys [cause phase]} (Throwable->map ex)]
+                 {:error {:type (.getClass ex)
                           :cause cause
                           :phase phase
-                          :message (.getMessage e)}})))]
+                          :message (.getMessage ex)}})))]
     {:expr (:success attempt)
      :src (str (first delimiters) expr (last delimiters))
      :err (:error attempt)
-     :result nil}))
+     :result nil
+     :display display?}))
 
 (defn nil-or-empty? [v]
   (if (seqable? v) (empty? v)
@@ -120,7 +130,7 @@
 ;; if it doesn't, return a map describing the error
 
 (defn eval-parsed-expr
-  ([{:keys [src expr err result]
+  ([{:keys [src expr err result display]
      :as expr-map} simplify? post-validator]
    (cond err expr-map
          result result
@@ -134,6 +144,8 @@
                                                  [:cause :phase]))}))
                validated (post-validator res)]
            (cond
+             display
+             (merge expr-map res)
              (and simplify? (:result res)) ; nil is overloaded here
              (:result res)
              (and (nil? (:result res)) (nil? (:err res)))
@@ -196,23 +208,33 @@
         parsed-form))))
   ([parsed-form] (eval-all parsed-form true)))
 
+(defn render-src
+  ([src-expr rm-do?]
+   (let [exp (if (and rm-do?
+                      (seq? src-expr)
+                      (= (first src-expr) 'do))
+               (second src-expr) src-expr)]
+     (util/escape-html (with-out-str (pprint exp)))))
+  ([src-expr] (render-src src-expr false)))
+
 (defn form->hiccup
   "If the form has no errors, return its results.
   Otherwise, create a hiccup form describing the error."
-[{:keys [:src :expr :err :result]
-     :as parsed-expr}]
-  (if err
-    [:div [:h6 "Error"]
-     [:dl
-      [:dt "Error type"]
-      [:dd [:code (str (:type err))]]
-      [:dt "Error message"]
-      [:dd [:code (str (:cause err))]]
-      [:dt "Error phase"]
-      [:dd [:code (str (:phase err))]]]
-     [:details [:summary "Source expression"]
-      [:pre [:code src]]]]
-    result))
+  [{:keys [src expr err result display]
+    :as parsed-expr}]
+  (cond
+    err [:div [:h6 "Error"]
+         [:dl
+          [:dt "Error type"]
+          [:dd [:code (str (:type err))]]
+          [:dt "Error message"]
+          [:dd [:code (str (:cause err))]]
+          [:dt "Error phase"]
+          [:dd [:code (str (:phase err))]]]
+         [:details [:summary "Source expression"]
+          [:pre [:code src]]]]
+    display (list [:pre [:code (render-src expr true)]] result)
+    :else result))
 
 (defn eval-with-errors
   ([parsed-form form-nmspc post-validator]
@@ -266,10 +288,11 @@
         [:pre [:code source-code]])))
   ([file-path] (include-source {} file-path)))
 
+
 (defn include-def
   "Excerpts the source code of the given symbol in the given file."
   ([{:keys [render-fn def-syms container]
-     :or {render-fn #(util/escape-html (with-out-str (pprint %)))
+     :or {render-fn render-src
           def-syms #{'def 'defn}
           container [:pre [:code {:class "language-clojure"}]]}} sym f]
    (with-open [r (clojure.java.io/reader f)]

@@ -13,3 +13,5 @@
 /.socket-repl-port
 .hgignore
 .hg/
+docs/**/*.html
+docs/*.html

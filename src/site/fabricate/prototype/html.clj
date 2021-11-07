@@ -1,6 +1,7 @@
 (ns site.fabricate.prototype.html
   "Namespace for creating HTML forms using Hiccup data structures and
-   for verifying their structural correctness using malli schemas."
+   for verifying their structural correctness using malli schemas.
+  The schemas in this namespace implement a non-interactive subset of the MDN HTML spec."
   (:require
    [clojure.string :as str]
    [clojure.set :as set]
@@ -129,6 +130,9 @@
   [:text :string]
   [:nil nil?]])
 
+(def atomic-element?
+  (m/validator atomic-element))
+
 (defn ->hiccup-schema [tag attr-model content-model]
   (let [head
         [:catn
@@ -137,11 +141,11 @@
                    attr-model
                    [:? attr-model])]]]
     ;; [:and vector?
-      (if (nil? content-model)
-        head
-        (conj head [:contents content-model]))
+    (if (nil? content-model)
+      head
+      (conj head [:contents content-model]))
     ;;  ]
-      ))
+    ))
 
 (defn ns-kw
   ([ns kw] (keyword (str ns) (str (name kw))))
@@ -780,6 +784,8 @@
           (tree-seq #(and (vector? %) (keyword? (first %))) rest c))))
 
 (def phrasing? (m/validator (schema/subschema html ::phrasing-content)))
+(def heading? (m/validator (schema/subschema html ::heading-content)))
+(def flow? (m/validator (schema/subschema html ::flow-content)))
 
 (defn validate-element [elem]
   (if (and (vector? elem)
@@ -792,3 +798,12 @@
                        :message (str "Invalid <" (name form-kw) "> form")
                        :cause ((get element-explainers (ns-kw form-kw)) elem)}}))
     elem))
+
+(defn permitted-contents
+  "Gets the permitted contents of the given tag"
+  [tag]
+  (if (nil? tag) tag
+      (let [tag (if (qualified-keyword? tag) tag
+                    (ns-kw 'site.fabricate.prototype.html tag))]
+        (last
+         (flatten (last (get-in (m/properties html) [:registry tag])))))))

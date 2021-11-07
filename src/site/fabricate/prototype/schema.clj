@@ -1,4 +1,6 @@
 (ns site.fabricate.prototype.schema
+  "Utility namespace for working with malli schemas."
+  {:reference "https://github.com/metosin/malli"}
   (:require [malli.core :as m]
             [clojure.spec.alpha :as spec]))
 
@@ -14,6 +16,8 @@
 
 (defn subschema [[_ meta-map orig-ref] new-ref]
   [:schema meta-map new-ref])
+
+(def regex [:fn #(.isInstance java.util.regex.Pattern %)])
 
 (defn ns-form?
   "Returns true if the given form is a valid Clojure (ns ...) special form"
