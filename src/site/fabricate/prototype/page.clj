@@ -145,15 +145,16 @@
                   (and (vector? previous) (= :p (first previous)))
                   current-paragraph? (or current-paragraph? (= :p (first acc)))
                   permitted-contents
-                  (html/permitted-contents
-                   (let [f (first acc)]
-                     (if (keyword? f) f :div)))]
+                  (if (html/phrasing? acc) ::html/phrasing-content
+                      (html/permitted-contents
+                       (let [f (first acc)]
+                         (if (keyword? f) f :div))))]
               (cond
                 ;; flow + heading content needs to break out of a paragraph
                 (and current-paragraph? (sequential? next)
                      (or (html/flow? next) (html/heading? next))
                      (not (html/phrasing? next)))
-                (list acc (parse-paragraphs next opts))
+                [acc (parse-paragraphs next opts)]
                 ;; if previous element is a paragraph,
                 ;; conj phrasing elements on to it
                 (and (sequential? next) previous-paragraph?
@@ -218,9 +219,18 @@
   )
 
 (comment
-  (detect-paragraphs [:section "some\n\ntext" [:em "with emphasis"]]
-                     #"\n\n")
+  
 
+
+  (parse-paragraphs
+   [:b [:dfn [:del "some\n\n"] "text"]])
+
+  (parse-paragraphs
+   [:b [:dfn "some\n\n"]])
+
+  (html/element? (parse-paragraphs [:del "some\n\n"]))
+
+  ()
   )
 
 (defn process-nexts [nexts]
