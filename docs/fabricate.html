@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en"><head><title>Fabricate | Fabricate</title><link href="https://raw.githubusercontent.com/jensimmons/cssremedy/master/css/remedy.css" rel="stylesheet"><link href="css/extras.css" rel="stylesheet"><meta content="Fabricate" name="title" property="og:title"><meta content="Fabricate: static website generation for Clojure" name="description" property="og:description"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="en_US" name="locale"><meta content="fabricate.site" name="site-name"><meta content="Fabricate" name="site-title" property="og:site_name"><meta charset="utf-8"><meta content="IE=edge" http-equiv="X-UA-Compatible"><style>@import "https://fonts.googleapis.com/css2?family=Epilogue:ital@0..1,wght@100..900";
+
+@import "https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap";
+
+@import "https://fonts.googleapis.com/css2?family=Overpass+Mono&display=swap";
+
+:root {
+  font-family: 'Atkinson Hyperlegible', sans-serif;
+  font-size: 1rem;
+  line-height: 1.25;
+  max-width: 60ch;
+  box-sizing: border-box;
+  background-color: #7DA4B4;
+}
+
+:root h1, :root h2, :root h3, :root h4, :root h5, :root h6 {
+  font-family: Epilogue;
+  text-transform: uppercase;
+}
+
+:root h1 code, :root h2 code, :root h3 code, :root h4 code, :root h5 code, :root h6 code {
+  text-transform: none;
+}
+
+:root html, :root body, :root div, :root header, :root article, :root nav, :root main, :root footer {
+  max-width: none;
+}
+
+:root h1 {
+  font-size: 4.236060211762043em;
+  margin-bottom: 0em;
+  margin-top: 0em;
+  line-height: 1.25;
+  font-weight: 850;
+}
+
+:root h2 {
+  font-size: 2.618030789089em;
+  margin-top: 0.3819664780749089em;
+  margin-bottom: 0em;
+}
+
+:root h3, :root h4, :root h5, :root h6 {
+  margin-bottom: 0em;
+}
+
+:root hr {
+  border: 0.25em solid black;
+}
+
+:root dt {
+  margin-top: 0em;
+}
+
+:root dd {
+  margin-top: 0em;
+}
+
+:root code {
+  font-family: Overpass Mono;
+}
+
+:root pre {
+  white-space: pre-wrap;
+  font-family: Overpass Mono;
+  font-size: 0.95rem;
+}</style></head><article><article lang="en"><section><p></p><h1>Fabricate</h1><h4>form by art and labor</h4><p>
+Introducing fabricate, a Clojure library for making static websites, using Clojure.</p><p>Fabricate takes a different approach than markdown and notebook-based tools, which frequently assume a one-size fits all approach to displaying code: if there's code in a markdown block, it's included in the output. I made Fabricate so that I could program more of my layout, and so that I could choose when and where to display both Clojure expressions and their results.</p><p>Rather than deriving the layout from a generic approach that treats "code blocks" and "text" as distinct entities, Fabricate lets you embed the results of any expression right in the text, eschewing markup formats in favor of inline Hiccup elements.</p><p>Because Fabricate is a compositional and creative medium, it expects its users to take an active role in thinking about how their code and its results ought to be displayed.</p><p>This may not suit your use case; you may prefer to just generate some HTML from the library you need to document and get back to triaging GitHub issues.</p><hr><h2>Namespaces</h2><p>The namespace descriptions, automatically generated from the namespace definitions, introduce the functionality that fabricate assembles to create pages.</p><div class="stack"><ul><li><h4><code>site.fabricate.prototype.schema</code></h4><dl><dt><code>:doc</code></dt><dd>Utility namespace for working with malli schemas.</dd></dl></li><li><h4><code>site.fabricate.prototype.html</code></h4><dl><dt><code>:doc</code></dt><dd>Namespace for creating HTML forms using Hiccup data structures and for verifying their structural correctness using malli schemas. The schemas in this namespace implement a non-interactive subset of the MDN HTML spec.</dd></dl></li><li><h4><code>site.fabricate.prototype.read</code></h4><dl><dt><code>:doc</code></dt><dd>Parsing + evaluation utilities for embedded clojure forms. The functions in this namespace split the text into a sequence of Hiccup forms and embedded expressions, which is then traversed again to evaluate it, embedding (or not) the results of those expressions within the Hiccup document.</dd></dl></li><li><h4><code>site.fabricate.prototype.page</code></h4><dl><dt><code>:doc</code></dt><dd>Utility functions for working with Hiccup elements.</dd></dl></li><li><h4><code>site.fabricate.prototype.fsm</code></h4><dl><dt><code>:doc</code></dt><dd>Namespace for defining finite schema machines. A finite schema machine is a method of organizing the functions to be called in a program by the state of the data passing through the program. Those states are defined using malli schemas. It is similar in concept to the idea of a state-action behavior in Leslie Lamport's 2008 paper 'Computation and State Machines', but the formalism is not as rigorous.</dd></dl></li><li><h4><code>site.fabricate.prototype.write</code></h4><dl><dt><code>:doc</code></dt><dd>Fabricate's namespace for writing HTML pages. This file combines fabricate's other namespaces for reading source files, parsing & restructuring their contents, and generating HTML pages with additional functions for input and output in order to achieve the purpose of the library: create HTML documents. The central method that it uses to combine these functions from other namespaces is a finite-state-machine.</dd></dl></li></ul></div><hr><h2>Examples</h2><p>
+</p><p></p><p></p><pre><code>(def ex-form &quot;a form evaluated but displayed without its output&quot;)
+</code></pre><p>a form evaluated and displayed with its output</p><p></p><pre><code>(let
+ [s &quot;output&quot;]
+ (format &quot;a form evaluated and displayed with its %s&quot; s))
+</code></pre><p>
+Block starts here: it should contain the quote "The web is a conduit for primarily textual information supplemented by media such as images and videos, often referred to collectively as content.", a basic example of fabricate's syntax (input above, output below)
+</p></section></article></article><footer><div><a href="/">Home</a></div></footer></html>

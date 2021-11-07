@@ -1,6 +1,13 @@
 (ns site.fabricate.prototype.page-test
   (:require [site.fabricate.prototype.page :refer :all ]
+            [site.fabricate.prototype.html :as html]
+            [site.fabricate.prototype.html-test.generators :as html-gen]
             [hiccup2.core :as hiccup]
+            [clojure.test.check.properties :as prop]
+            [clojure.test.check.generators :as gen]
+            [clojure.test.check :as check]
+            [clojure.test.check.clojure-test :refer [defspec]]
+            [malli.core :as m]
             [clojure.test :as t]))
 
 (t/deftest page-creation
@@ -21,7 +28,7 @@
              (-> {"meta" {:content "something"
                           :property "some-prop"}}
                  seq first ->meta)))
-    (t/is
+    #_(t/is
      (= '([:meta {:name "title", :content "Fabricate"}]
           [:meta {:name "description", :content "Fabricate: static website generation for Clojure", :property "og:description"}]
           [:meta {:name "viewport", :content "width=device-width, initial-scale=1.0, user-scalable=no"}]
@@ -31,19 +38,178 @@
 
     ))
 
+(def html-newline-gen
+  (let [newline-gen
+        (gen/vector
+         (gen/let
+             [a (gen/vector
+                 (gen/one-of
+                  [(gen/elements ["\n"]) gen/string-alphanumeric])
+                 5)
+              b (gen/vector
+                 (gen/one-of
+                  [(gen/elements ["\n\n" "\n"]) gen/string-alphanumeric])
+                 5)
+              c (gen/vector
+                 (gen/one-of
+                  [(gen/elements ["\n\n" "\n" "\n\n\n"]) gen/string-alphanumeric])
+                 5)]
+             (apply str (interleave a b c)))
+         2 5)]
+    (gen/such-that
+     html/element?
+     (html-gen/hiccup-recursive-elems
+      {:outer-tags html/flow-tags
+       :inner-tags html/phrasing-tags
+       :contents-gen newline-gen})
+     250)))
+
+
+
+(comment
+
+  (hiccup/html [:em "some text\n\nwith double linebreak"])
+
+  (parse-paragraphs [:em "some text\n\nwith newlines"] #"\n\n")
+
+
+  (parse-paragraphs
+   [:p {:class "steel"} false]
+   #"\n\n")
+
+  (html/phrasing?
+   [:p {:class "steel"} false])
+
+
+
+  (parse-paragraphs
+   (first
+    (get-in
+     (check/quick-check
+      10
+      (prop/for-all
+       [html-elem html-newline-gen]
+       (or (m/validate html/atomic-element html-elem)
+           (html/element? (parse-paragraphs html-elem #"\n\n")))))
+     [:shrunk :smallest])))
+
+  )
+
+(comment
+  (html/phrasing? false)
+
+  )
+
 (t/deftest transforms
 
   (t/testing "Paragraph detection"
+
+
     (t/is (= [:div [:p "some"] [:p "text"]]
-             (detect-paragraphs [:div "some\n\ntext"] #"\n\n")))
+             (parse-paragraphs [:div "some\n\ntext"])))
+
+    (t/is (= [:section]
+             (parse-paragraphs [:section])))
+
+    (t/is (= [[:section]]
+             (parse-paragraphs [[:section]])))
+
+    (t/is (= [:em "text" [:br] "line"]
+             (parse-paragraphs [:em "text\n\nline"])))
+
+    (t/is (=
+           [[:section] [:p "text" [:q "a quote"]] [:section]
+            [:p "more text"]]
+           (parse-paragraphs [[:section]
+                              [:p "text"]
+                              [:q "a quote"]
+                              [:section]
+                              [:p "more text"]])))
 
     (t/is (=
            [:div [:p "some"] [:p "text" [:em "with emphasis"]]]
-           (detect-paragraphs [:div "some\n\ntext" [:em "with emphasis"]]
-                              #"\n\n")))
+           (parse-paragraphs [:div "some\n\ntext" [:em "with emphasis"]]
+                             {:paragraph-pattern #"\n\n"})))
 
-    #_ (t/is (= [:div] (detect-paragraphs [:div " "] #"\n\n"))
-             "Whitespace-only text should not be tokenized into paragraphs")
+    (t/is (= [:p "some text" true 24]
+             (parse-paragraphs
+              (list "some text" true 24))))
+
+    (t/is (= [:p [:del [:em [:u "text" [:br] "more text"]]]]
+             (parse-paragraphs
+              [:p [:del [:em [:u "text\n\nmore text"]]]]))
+          "Paragraphs should be detected at arbitrary levels of nesting")
+
+    (t/is
+     (= (list [:p "some text" true 24] [:p "second paragraph"])
+        (parse-paragraphs
+         (list "some text" true 24 [:p "second paragraph"])))
+     "Flow tags should break out of the prior paragraph")
+
+    (t/is
+     (= (list [:p "some text" true 24] [:div [:p "a div"]])
+        (parse-paragraphs
+         [:p "some text" true 24 [:div "a div"]]))
+     "Flow tags should break out of the prior paragraph")
+
+    (t/is
+     (= [:h3 "a heading" [:br] "with linebreak"]
+        (parse-paragraphs
+         [:h3 "a heading\n\nwith linebreak"]))
+     "Paragraph detection should not introduce invalid child elements")
+
+    (t/is
+     (= [:bdi "a bdi" [:br] "with linebreak"]
+        (parse-paragraphs
+         [:bdi "a bdi\n\nwith linebreak"]))
+     "Paragraph detection should not introduce invalid child elements")
+
+    (t/is (= [:h4 "a heading" [:br] "with linebreak and number" 24]
+             (parse-paragraphs
+              [:h4 "a heading\n\nwith linebreak and number" 24])))
+
+    (t/is
+     (= [:p "text" [:br] "newline" [:del "more text"]]
+        (parse-paragraphs
+         [:p "text\n\nnewline" [:del "more text"]]))
+     "Phrasing subtags should persist in enclosing elements")
+
+    (t/is
+     (= [:div [:p [:em "emphasized text"]]]
+        (parse-paragraphs [:div [:em "emphasized text"]]))
+     "Orphan phrasing elements should be inserted into paragraphs")
+
+    (t/is
+     (= [:p "text" [:br] "newline" [:del "more text"]]
+        (parse-paragraphs
+         [:p "text\n\n" "newline" [:del "more text"]]))
+     "Trailing newlines should still yield <br> elements")
+
+    ;; skip this extreme corner case for now
+    #_(t/is (=
+             [[:p] [:div [:p "with div" "and following"]]]
+             (parse-paragraphs
+              [:p [:div "with div"] "and following"])))
+
+    (t/is
+     (= [:p "text" [:br] "newline" [:del "more text"]]
+        (parse-paragraphs
+         (list "text\n\n" "newline" [:del "more text"]))))
+
+    (t/is
+     (=
+      [[:p "text" "newline" [:del "more text"]]]
+      (parse-paragraphs
+       ["text\n\n" "newline" [:del "more text"]])))
+
+    (t/is
+     (= [:p {:class "steel"} false]
+        (parse-paragraphs
+         [:p {:class "steel"} false]
+         #"\n\n")))
+
+    (t/is (= [:div] (parse-paragraphs [:div " "]))
+          "Whitespace-only text should not be tokenized into paragraphs")
 
     (t/is
      (=
@@ -54,15 +220,14 @@
         ", a database directly inspired by Git's decentralized and immutable data model, but designed from the ground up to have a better query model and more flexible schema. Unfortunately, it seems to be unmaintained and not ready for prime time. Additionally, for the use case I'm describing, it's unclear how to effectively distribute the configuration data stored in a "
         [:code {:class "ws-normal navy"} "noms"]
         " DB alongside the code that is affected by that configuration in a way that reliably links the two."]]
-      (detect-paragraphs
+      (parse-paragraphs
        [:div
         {:class "1col"}
         "\n\nLinked in the comments on Truyers' post was "
         [:code {:class "ws-normal navy"} "noms"]
         ", a database directly inspired by Git's decentralized and immutable data model, but designed from the ground up to have a better query model and more flexible schema. Unfortunately, it seems to be unmaintained and not ready for prime time. Additionally, for the use case I'm describing, it's unclear how to effectively distribute the configuration data stored in a "
         [:code {:class "ws-normal navy"} "noms"]
-        " DB alongside the code that is affected by that configuration in a way that reliably links the two."]
-       #"\n\n")))
+        " DB alongside the code that is affected by that configuration in a way that reliably links the two."])))
 
 
     (t/is
@@ -71,12 +236,23 @@
        {:class "row"}
        [:p "orphan text" [:em "with emphasis added"] "and"]
        [:p "linebreak"]]
-      (detect-paragraphs
+      (parse-paragraphs
        [:div
         {:class "row"}
         "orphan text"
         [:em "with emphasis added"]
-        "and\n\nlinebreak"] #"\n\n"))))
+        "and\n\nlinebreak"])))
+
+
+    (t/is
+     (=  [:p "some text" [:br] "with newlines"]
+         (parse-paragraphs [:p "some text\n\nwith newlines"])))
+
+    (t/is
+     (=  [:section [:p "some text"] [:p "with newlines"]]
+         (parse-paragraphs [:section "some text\n\nwith newlines"])))
+
+    )
 
 
   (t/testing "Sectionizer"
@@ -189,3 +365,9 @@
      (=
       [:div]
       (process-nexts [:div])))))
+
+(defspec paragraph-detection-output
+  (prop/for-all
+       [html-elem html-newline-gen]
+       (or (m/validate html/atomic-element html-elem)
+           (html/element? (parse-paragraphs html-elem)))))

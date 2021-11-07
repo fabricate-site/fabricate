@@ -64,7 +64,7 @@ Fabricate's main loop is what I call a _hylozoic state machine_: a state machine
 >   The service must not be esoteric to use. (It must be learnable in private.)
 >   The transactions must inspire confidence. (_Kindness_ should be an integral part.)
 
-Alan Kay, ["The Reactive Enginer"](http://www.chilton-computing.org.uk/inf/pdfs/kay.htm)
+Alan Kay, ["The Reactive Engine"](http://www.chilton-computing.org.uk/inf/pdfs/kay.htm)
 
 Living systems have more graceful tolerance for failure that most software systems lack, a quality I believe to be particularly important for something used to create something as personal as a website. An error message in one place will not bring down the whole system. The problem you see will show itself in its original context, not with an oblique reference to a line number.
 

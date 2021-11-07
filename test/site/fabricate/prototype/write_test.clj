@@ -121,4 +121,27 @@
                  (fsm/complete (dissoc operations
                                        html-state
                                        rendered-state)
-                               "./README.md.fab")))))
+                               "./README.md.fab"))))
+
+  (t/testing "existing pages"
+    (let [operations
+          (assoc operations
+                 rendered-state
+                 (fn [{:keys [rendered-content]
+                       :as page-data}]
+                   (do
+                     (t/is (any? rendered-content))
+                     page-data)))]
+      (doseq [page-path (get-template-files "./pages" ".fab")]
+        (println "testing" page-path)
+        (fsm/complete operations page-path)))))
+
+(comment
+  (let [operations
+        (dissoc operations
+                rendered-state
+                html-state)]
+
+    (evaluated->hiccup
+     (fsm/complete operations
+                   "./pages/fabricate.html.fab"))))

@@ -35,6 +35,9 @@
   (.checkHtmlFile validator
                   (io/file "/home/andrew/repos_main/fabricate/docs/index.html") false)
 
+  (.checkHtmlFile validator
+                  (io/file "/home/andrew/repos_main/fabricate/docs/fabricate.html") false)
+
 
   (html {:dirs ["docs/"]})
 

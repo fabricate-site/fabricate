@@ -1,0 +1,103 @@
+✳ (ns site.fabricate.docs.fabricate
+  (:require [garden.core :as garden]
+            [garden.selectors :refer [root]]
+            [garden.stylesheet :as stylesheet]
+            [site.fabricate.prototype.check]
+            [site.fabricate.prototype.read]
+            [site.fabricate.prototype.schema]
+            [site.fabricate.prototype.fsm]
+            [site.fabricate.prototype.write]
+            [site.fabricate.prototype.page])) 🔚
+
+✳ (def page-css
+   (garden/css
+    (garden.stylesheet/at-import "https://fonts.googleapis.com/css2?family=Epilogue:ital@0..1,wght@100..900" )
+    (garden.stylesheet/at-import "https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap")
+    (garden.stylesheet/at-import  "https://fonts.googleapis.com/css2?family=Overpass+Mono&display=swap")
+    (apply conj
+           (list
+            [root {:font-family "'Atkinson Hyperlegible', sans-serif"
+                   :font-size "1rem"
+                   :line-height "1.25"
+                   :max-width "60ch"
+                   :box-sizing "border-box"
+                   :background-color "#7DA4B4"}]
+            [:h1 :h2 :h3 :h4 :h5 :h6 {:font-family "Epilogue"
+                                      :text-transform "uppercase"}
+             [:code {:text-transform "none"}]]
+            [:html :body :div :header :article :nav :main :footer
+             {:max-width "none"}]
+            [:h1 {:font-size (str (Math/pow 1.618033 3) "em")
+                  :margin-bottom "0em"
+                  :margin-top "0em"
+                  :line-height "1.25"
+                  :font-weight "850"}]
+            [:h2 {:font-size (str (Math/pow 1.618033 2) "em")
+                  :margin-top (str (Math/pow 1.618033 -2) "em")
+                  :margin-bottom "0em"}]
+            [:h3 :h4 :h5 :h6 {:margin-bottom "0em"}]
+            [:hr {:border "0.25em solid black"}]
+            [:dt {:margin-top "0em"}]
+            [:dd {:margin-top "0em"}]
+            [:code {:font-family "Overpass Mono"}]
+            [:pre {:white-space "pre-wrap"
+                   :font-family "Overpass Mono"
+                   :font-size "0.95rem"}])
+           )
+    )) 🔚
+
+✳(def metadata {:title "Fabricate"
+               :page-style page-css} )🔚
+
+✳=[:h1 (:title metadata)]🔚
+
+✳=[:h4 "form by art and labor"]🔚
+
+
+Introducing fabricate, a Clojure library for making static websites, using Clojure.
+
+Fabricate takes a different approach than markdown and notebook-based tools, which frequently assume a one-size fits all approach to displaying code: if there's code in a markdown block, it's included in the output. I made Fabricate so that I could program more of my layout, and so that I could choose when and where to display both Clojure expressions and their results.
+
+Rather than deriving the layout from a generic approach that treats "code blocks" and "text" as distinct entities, Fabricate lets you embed the results of any expression right in the text, eschewing markup formats in favor of inline Hiccup elements.
+
+Because Fabricate is a compositional and creative medium, it expects its users to take an active role in thinking about how their code and its results ought to be displayed.
+
+This may not suit your use case; you may prefer to just generate some HTML from the library you need to document and get back to triaging GitHub issues.
+
+✳=[:hr]🔚
+✳=[:h2 "Namespaces"]🔚
+
+The namespace descriptions, automatically generated from the namespace definitions, introduce the functionality that fabricate assembles to create pages.
+
+✳(defn ns->hiccup [ns form]
+  (let [ns-var (find-ns ns)
+        metadata (meta ns-var)]
+    (apply conj form [:h4 #_{:class "stack-small"} [:code (str ns)]]
+           (into [:dl]
+                 (apply concat
+                        (for [[k v] (select-keys (meta ns-var) [:doc])]
+                          [[:dt #_ {:class "stack-small"} [:code (str k)]] [:dd (clojure.string/replace v (re-pattern "\n\\s+") " ")]])))
+           [])))🔚
+
+✳= [:div {:class "stack"}
+    (apply conj [:ul #_{:class "stack"}]
+           (map #(ns->hiccup % [:li #_{:class "stack-large"}])
+                ['site.fabricate.prototype.schema
+                 'site.fabricate.prototype.html
+                 'site.fabricate.prototype.read
+                 'site.fabricate.prototype.page
+                 'site.fabricate.prototype.fsm
+                 'site.fabricate.prototype.write]))]
+🔚
+
+✳=[:hr]🔚
+✳=[:h2 "Examples"]🔚
+
+
+✳+(def ex-form "a form evaluated but displayed without its output")🔚
+
+✳+=(let [s "output"]
+    (format "a form evaluated and displayed with its %s" s)) 🔚
+
+
+Block starts here: it should contain the quote "The web is a conduit for primarily textual information supplemented by media such as images and videos, often referred to collectively as content.", a basic example of fabricate's syntax (input above, output below)
