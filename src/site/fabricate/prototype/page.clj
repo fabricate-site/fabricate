@@ -62,19 +62,20 @@
       (and (vector? i) (html/phrasing-tags (first i)))))
 
 (defn detect-paragraphs
-  "For each string in the element split it by the given regex, and insert the result into the original element. Leaves sub-elements as is and inserts them into the preceding paragraph."
-  {:malli/schema [:=> [:cat [:? [:fn seq?]]
-                       [:? schema/regex]]
+  {:doc "For each string in the element split it by the given regex, and insert the result into the original element. Leaves sub-elements as is and inserts them into the preceding paragraph."
+   :deprecated true
+   :malli/schema [:=> [:cat [:? [:fn seq?]]
+                        [:? schema/regex]]
                   html/element]}
   ([seq re]
    (let [v? (vector? seq)
          r (loop [s (apply ftree/counted-double-list seq)
                   final (ftree/counted-double-list)]
              (cond
-               ; skip paragraph detection on phrasing elements
+                                        ; skip paragraph detection on phrasing elements
                (or (html/phrasing? seq)
                    (html/heading? seq)) seq
-               ; terminating case
+                                        ; terminating case
                (empty? s) final
                :else
                (let [h (first s) t (rest s)
@@ -246,12 +247,12 @@
     (section? (first (first chunk)))
     (let [[[s] content] chunk]
       (apply conj s
-             (detect-paragraphs (process-nexts content) #"\n\n")))
+             (parse-paragraphs (process-nexts content))))
     :else
     (let [[content] chunk]
       (apply conj
              [:section]
-             (detect-paragraphs (process-nexts content) #"\n\n")))))
+             (parse-paragraphs (process-nexts content))))))
 
 (def sectionize-contents
   (comp
