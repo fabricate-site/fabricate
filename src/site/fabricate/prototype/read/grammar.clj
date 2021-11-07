@@ -20,4 +20,8 @@
 
   (form "✳=(+ 3 4 5)🔚 some text")
 
+  (form "✳=(my.ns/fn  22)🔚 some text")
+
+  (form (slurp "./pages/finite-schema-machines.html.fab"))
+
   )
