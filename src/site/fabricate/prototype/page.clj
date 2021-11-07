@@ -139,7 +139,7 @@
           (fn [acc next]
             ;; peek the contents of acc to determine whether to
             ;; conj on to an extant paragraph
-            (let [previous (peek acc)
+            (let [previous (if (vector? acc) (peek acc) (last acc))
                   r-acc (if (not (empty? acc)) (pop acc) acc)
                   previous-paragraph?
                   (and (vector? previous) (= :p (first previous)))
@@ -154,7 +154,7 @@
                 (and current-paragraph? (sequential? next)
                      (or (html/flow? next) (html/heading? next))
                      (not (html/phrasing? next)))
-                [acc (parse-paragraphs next opts)]
+                (list acc (parse-paragraphs next opts))
                 ;; if previous element is a paragraph,
                 ;; conj phrasing elements on to it
                 (and (sequential? next) previous-paragraph?
