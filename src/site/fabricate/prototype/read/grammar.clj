@@ -23,4 +23,13 @@
 
   (template "✳=(+ 3 4 5)🔚 some text")
 
-  (template "✳=(my.ns/fn  22)🔚 some text"))
+  (template "✳=(my.ns/fn  22)🔚 some text")
+
+  (let [post (slurp "./pages/finite-schema-machines.html.fab")
+        post-with-meta (insta/add-line-and-column-info-to-metadata
+     post
+     (template post))]
+    (meta (last post-with-meta)))
+
+
+  )
