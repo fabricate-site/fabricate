@@ -3,7 +3,6 @@
             [instaparse.core :as insta]
             [clojure.test :as t]))
 
-
 (t/deftest parser
 
   (t/testing "simple forms"
@@ -15,4 +14,4 @@
     (doseq [f ["./pages/finite-schema-machines.html.fab"
                "./pages/fabricate.html.fab"
                "./README.md.fab"]]
-      (t/is (= 1 (count (insta/parses template (slurp f))))))))
+      (t/is (= 1 (count (insta/parses template f)))))))

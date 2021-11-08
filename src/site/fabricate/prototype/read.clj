@@ -127,11 +127,6 @@
            (conj-non-nil form after)))))
     ([src] (parse src []))))
 
-(comment
-  (yield-expr   "=(+ 3 4 5)" )
-
-  )
-
 (defn parse
   ([src start-seq]
    (let [parsed (template src)]
@@ -147,10 +142,6 @@
       start-seq
       parsed)))
   ([src] (parse src [])))
-
-(comment
-
-  )
 
 ;; post-validator should have the following signature
 ;; if it validates, return the input in a map: {:result input}
