@@ -11,6 +11,7 @@
             [clojure.tools.reader :as r]
             [malli.core :as m]
             [site.fabricate.prototype.schema :as schema]
+            [site.fabricate.prototype.read.grammar :refer [template]]
             [clojure.string :as string]
             [clojure.java.io :as io]))
 
@@ -114,16 +115,42 @@
    [:src expr-model]
    [:expr ]])
 
+(comment
+  (defn parse
+    ([src start-seq]
+     (loop [src src form start-seq]
+       (let [[_ before expr after] (re-matches parser-regex src)]
+         (if expr
+           (recur
+            after
+            (conj-non-nil form before (yield-expr expr)))
+           (conj-non-nil form after)))))
+    ([src] (parse src []))))
+
+(comment
+  (yield-expr   "=(+ 3 4 5)" )
+
+  )
+
 (defn parse
   ([src start-seq]
-   (loop [src src form start-seq]
-     (let [[_ before expr after] (re-matches parser-regex src)]
-       (if expr
-         (recur
-          after
-          (conj-non-nil form before (yield-expr expr)))
-         (conj-non-nil form after)))))
+   (let [parsed (template src)]
+     (reduce
+      (fn [acc n]
+        (cond
+          (keyword? n) acc
+          (and (not (keyword? n)) (= :expr (first n)))
+          (conj acc (yield-expr (nth n 2)))
+          (and (not (keyword? n)) (= :txt (first n)))
+          (conj acc (peek n))
+          :else acc))
+      start-seq
+      parsed)))
   ([src] (parse src [])))
+
+(comment
+
+  )
 
 ;; post-validator should have the following signature
 ;; if it validates, return the input in a map: {:result input}

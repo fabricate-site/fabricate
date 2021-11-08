@@ -5,7 +5,7 @@
   (insta/parser
    "template = EPSILON | ( expr | txt )*
     txt = #'(?:[^✳🔚]*)'
-    expr = #'✳=?' #'[^🔚]*' '🔚'"))
+    expr = #'✳' #'=?[^🔚]*' '🔚'"))
 
 (comment
 
