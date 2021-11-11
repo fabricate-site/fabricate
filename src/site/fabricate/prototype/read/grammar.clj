@@ -5,11 +5,10 @@
   (insta/parser
    "template = EPSILON | ( expr | txt | extended-form )*
     expr = '✳' #'=?[^🔚]*' '🔚'
-    txt = #'[^✳|🔚]*'
-    form-open = #'✳//'
-    form-close = #'//🔚'
-    extended-form = form-open ( expr | txt )* form-close "
-   ))
+    txt = #'[^✳|✳//|🔚|//🔚]*'
+    form-open = '✳//'
+    form-close = '//🔚'
+    extended-form = form-open ( expr | txt )* form-close "))
 
 (comment
 
