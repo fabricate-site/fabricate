@@ -9,7 +9,8 @@
   (t/testing "simple forms"
     (t/is (not (insta/failure? (template "✳=abcd🔚 some text"))))
     (t/is (not (insta/failure? (template "text (with parens) and an expr ✳=(+ 3 4 5)🔚"))))
-    (t/is (not (insta/failure? (template "text/text and an expr ✳=(+ 3 4 5)🔚"))))
+    (t/is (not (insta/failure? (template "text/text and an expr ✳=(+ 3 4 5)🔚")))
+          "Grammar should recognize plaintext with common usage of special characters")
     (t/is (not (insta/failure? (template "✳=(+ 3 4 5)🔚 some text"))))
     (t/is (not (insta/failure? (template "✳=(my.ns/fn  22)🔚 some text"))))
     (t/is (not (insta/failure? (template "✳(def something 2)🔚 some text"))))
@@ -31,9 +32,10 @@ text
                "./README.md.fab"]]
       (let [c (slurp f)]
         (t/testing (str "in input file: " f)
-          (t/is (not (insta/failure? (template c))))
+          (t/is (not (insta/failure? (template c)))
+                "Each template should successfully parse")
           (t/is (= 1 (count (insta/parses template c)))
-                "Each parser should parse only once and exactly once"))))))
+                "Each template should parse only once and exactly once"))))))
 
 
 (comment

@@ -5,7 +5,7 @@
   (insta/parser
    "template = EPSILON | ( expr | txt | extended-form )*
     expr = '✳' #'=?[^🔚]*' '🔚'
-    txt = #'[^✳|✳//|🔚|//🔚]*'
+    txt = #'[^✳]*'
     form-open = '✳//'
     form-close = '//🔚'
     extended-form = form-open ( expr | txt )* form-close "))
@@ -22,8 +22,8 @@
 
   (template "✳// text, followed by expr ✳(+ 3 4)🔚 and text //🔚 ✳(+ 3 4)🔚")
 
-  (insta/parses template
-                "✳// some text //🔚" )
+  (insta/parse template "some/text" :trace true)
+
 
 
   )
