@@ -3,33 +3,28 @@
 
 (def template
   (insta/parser
-   "template = EPSILON | ( expr | txt )*
-    txt = #'(?:[^✳🔚]*)'
-    expr = #'✳' #'=?[^🔚]*' '🔚'"))
+   "template = EPSILON | ( expr | txt | extended-form )*
+    expr = '✳' #'=?[^🔚]*' '🔚'
+    txt = #'[^✳|🔚]*'
+    form-open = #'✳//'
+    form-close = #'//🔚'
+    extended-form = form-open ( expr | txt )* form-close "
+   ))
 
 (comment
 
+  (re-matches #"//" "//")
 
-  (re-matches  #"(?:[^✳🔚]*)"
-               "abc")
+  (template "✳// text more text //🔚 ✳nil🔚")
 
-  (re-matches  #"(?:[^✳🔚]*)"
-               "✳abc🔚")
+  (template "text (with parens)")
 
-  (re-matches  #"(?:[^✳🔚]*)"
-               "something.")
+  (template "✳// text more text //🔚 ✳(+ 3 4)🔚")
 
-  (template "✳=abcd🔚 some text")
+  (template "✳// text, followed by expr ✳(+ 3 4)🔚 and text //🔚 ✳(+ 3 4)🔚")
 
-  (template "✳=(+ 3 4 5)🔚 some text")
-
-  (template "✳=(my.ns/fn  22)🔚 some text")
-
-  (let [post "./pages/finite-schema-machines.html.fab"
-        post-with-meta (insta/add-line-and-column-info-to-metadata
-     post
-     (template post))]
-    (meta (last post-with-meta)))
+  (insta/parses template
+                "✳// some text //🔚" )
 
 
   )
