@@ -11,11 +11,16 @@
          ;; first branch of the conditional - match without capturing
          ;; with terminal pattern present
 
-         (let [re #"(.*?)(?:(?:\*)?)"]
-           (println "regex" (.toString re))
-           (println "matches?" (re-matches re "text with ending*"))
-           (println "matches?" (re-matches re "text without ending"))
-           )
+         ;; same regex matching on both, no char included
+         (re-seq #"^.*?(?=🔚|$)" "text with ending🔚")
+
+         (re-seq #"^.*?(?=🔚|$)" "text ")
+
+         (insta/parse
+          (insta/parser "rule = ( text | terminal) *
+                         text = #'^.*?(?=🔚|$)'
+                         terminal = '🔚'")
+          "text with ending🔚")
 
          )
 
