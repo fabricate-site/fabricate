@@ -8,13 +8,18 @@
          ;; (match without capturing)
          ;; if it is not present, match all the text
 
-         ;; first branch of the conditional - match without capturing
-         ;; with terminal pattern present
-
          ;; same regex matching on both, no char included
          (re-seq #"^.*?(?=🔚|$)" "text with ending🔚")
 
          (re-seq #"^.*?(?=🔚|$)" "text ")
+
+         ;; reluctant quantifiers are the key here
+
+         (re-seq #"^.*?(?=(?:🔚)|$)" "text with ending🔚")
+         (re-seq #"^.*?(?=(?:/{2}?🔚)|$)" "text with ending//🔚")
+
+         (re-seq #"^.*?(?=(?:🔚)|$)" "text ")
+         (re-seq #"^.*?(?=(?:/?/?🔚)|$)" "text ")
 
          (insta/parse
           (insta/parser "rule = ( text | terminal) *
