@@ -25,8 +25,7 @@
 
 
          ((insta/parser "r = EPSILON
-w = #'\\s?$'") "\n")
-
+                         w = #'\\s?$'") "\n")
          (re-seq #"\s$" "\n")
 
          (insta/parse
@@ -50,29 +49,6 @@ w = #'\\s?$'") "\n")
     initial = '✳'
     terminal = '🔚'
     expr = <initial> (!'//' ('=' | '+' | '+=')? ) #'[^=+][^🔚]*' !'//' <terminal>
+    (* the left side of txt's regex is a fast possessive quantifier
+       for the easy case, the right side is the more complex lookahead *)
     txt = #'(\\A[^✳🔚]*+)|([\\S\\s]*?(?=\\Z|(?:✳|/{2}?🔚)))'"))
-
-(comment
-
-  (re-matches #".*(?=↩)" "something ↩")
-
-  (re-matches #"//" "//")
-
-  (template "✳//[:div
- text more text ]//🔚 ✳nil🔚")
-
-  (template "text (with parens)")
-
-  (template "✳// text more text //🔚 ✳(+ 3 4)🔚")
-
-  (template "text, followed by expr ✳(+ 3 4)🔚 and text  ✳(+ 3 4)🔚")
-
-  (insta/parse template "some/text" :trace true)
-
-
-  (insta/parse
-   template "↪[
- text]↩ ✳nil🔚"
-   :total true)
-
-  )
