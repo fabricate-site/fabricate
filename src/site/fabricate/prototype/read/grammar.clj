@@ -30,13 +30,19 @@
          )
 
 (def template
+  ;; ext-form-open = initial '//' open-form
+  ;; ext-form-close = close-form '//' terminal
+  ;; open-form = ( '[' | '(' | '{' ) <'\n'>
+  ;; close-form = ']' | ')' | '}'
+  ;; extended-form = ext-form-open ( expr | txt )* ext-form-close
+
   (insta/parser
-   "template = EPSILON | ( expr | txt | extended-form )*
-    expr = '✳' #'=?[^🔚]*' '🔚'
-    txt = #'[^✳]*'
-    form-open = '✳//'
-    form-close = '//🔚'
-    extended-form = form-open ( expr | txt )* form-close "))
+   "template = EPSILON | ( expr | txt | s )*
+    initial = '✳'
+    terminal = '🔚'
+    expr = <initial> !'//' #'(=|\\+)?[^🔚]*' <terminal>
+    <s> = <#'\\s+'>
+    txt = #'[\\S\\s]*?(?=\\Z|(?:✳|/{2}?🔚))'"))
 
 (comment
 
