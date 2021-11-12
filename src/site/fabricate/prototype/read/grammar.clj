@@ -49,7 +49,7 @@ w = #'\\s?$'") "\n")
    "template = EPSILON | ( expr | txt )*
     initial = '✳'
     terminal = '🔚'
-    expr = <initial> !'//' #'(=|\\+)?[^🔚]*' <terminal>
+    expr = <initial> (!'//' ('=' | '+' | '+=')? ) #'[^=+][^🔚]*' !'//' <terminal>
     txt = #'(\\A[^✳🔚]*+)|([\\S\\s]*?(?=\\Z|(?:✳|/{2}?🔚)))'"))
 
 (comment
