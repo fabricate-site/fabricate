@@ -16,16 +16,25 @@
          ;; reluctant quantifiers are the key here
 
          (re-seq #"^.*?(?=(?:🔚)|$)" "text with ending🔚")
-         (re-seq #"^.*?(?=(?:/{2}?🔚)|$)" "text with ending//🔚")
+         (re-seq #"^.*?(?=(?:🔚|//🔚)|$)" "text with ending//🔚")
 
-         (re-seq #"^.*?(?=(?:🔚)|$)" "text ")
-         (re-seq #"^.*?(?=(?:/?/?🔚)|$)" "text ")
+         (re-seq #"^[^\s\S✳]*?(?=(?:🔚)|$)" "text with embedded ✳ and more txt")
+
+         (re-seq #"\A[^✳🔚]++|([\S\s]*?(?=(?:✳|/{2}?🔚)|\Z))"
+                 "text (with parens) and an expr ✳=(+ 3 4 5)🔚 and")
+
+
+         ((insta/parser "r = EPSILON
+w = #'\\s?$'") "\n")
+
+         (re-seq #"\s$" "\n")
 
          (insta/parse
-          (insta/parser "rule = ( text | terminal) *
-                         text = #'^.*?(?=🔚|$)'
-                         terminal = '🔚'")
-          "text with ending🔚")
+          (insta/parser "rule = ( text | terminal | EPSILON ) *
+                         text = #'^[\\s\\S]*?(?=(?:/{2}?🔚)|$)$'
+                         terminal = <#'/{2}?🔚'>")
+          "text with ending\n"
+          :trace true)
 
          )
 
@@ -37,27 +46,33 @@
   ;; extended-form = ext-form-open ( expr | txt )* ext-form-close
 
   (insta/parser
-   "template = EPSILON | ( expr | txt | s )*
+   "template = EPSILON | ( expr | txt )*
     initial = '✳'
     terminal = '🔚'
     expr = <initial> !'//' #'(=|\\+)?[^🔚]*' <terminal>
-    <s> = <#'\\s+'>
-    txt = #'[\\S\\s]*?(?=\\Z|(?:✳|/{2}?🔚))'"))
+    txt = #'(\\A[^✳🔚]*+)|([\\S\\s]*?(?=\\Z|(?:✳|/{2}?🔚)))'"))
 
 (comment
 
+  (re-matches #".*(?=↩)" "something ↩")
+
   (re-matches #"//" "//")
 
-  (template "✳// text more text //🔚 ✳nil🔚")
+  (template "✳//[:div
+ text more text ]//🔚 ✳nil🔚")
 
   (template "text (with parens)")
 
   (template "✳// text more text //🔚 ✳(+ 3 4)🔚")
 
-  (template "✳// text, followed by expr ✳(+ 3 4)🔚 and text //🔚 ✳(+ 3 4)🔚")
+  (template "text, followed by expr ✳(+ 3 4)🔚 and text  ✳(+ 3 4)🔚")
 
   (insta/parse template "some/text" :trace true)
 
 
+  (insta/parse
+   template "↪[
+ text]↩ ✳nil🔚"
+   :total true)
 
   )
