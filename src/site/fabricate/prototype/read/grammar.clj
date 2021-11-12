@@ -45,10 +45,19 @@
   ;; extended-form = ext-form-open ( expr | txt )* ext-form-close
 
   (insta/parser
-   "template = EPSILON | ( expr | txt )*
+   "template = EPSILON | ( expr | txt | extended-form )*
     initial = '✳'
     terminal = '🔚'
-    expr = <initial> (!'//' ('=' | '+' | '+=')? ) #'[^=+][^🔚]*' !'//' <terminal>
+    expr = <initial> !'//'  ('=' | '+' | '+=')?  #'[^=+][^🔚]*' !'//' <terminal>
+
     (* the left side of txt's regex is a fast possessive quantifier
        for the easy case, the right side is the more complex lookahead *)
-    txt = #'(\\A[^✳🔚]*+)|([\\S\\s]*?(?=\\Z|(?:✳|/{2}?🔚)))'"))
+
+    txt = #'(\\A[^✳🔚]*+)|([\\S\\s]*?(?=\\Z|(?://[\\]\\}\\)]🔚|✳|🔚)))'
+
+    (* extended forms allow arbitrary nesting without breaking the flow *)
+
+    ext-form-open = <initial> <'//'> ( '[' | '(' | '{' ) <'\n'>
+    ext-form-close = ( ']' | ')' | '}') <'//'> <terminal>
+
+    extended-form = ext-form-open (expr|txt)+ ext-form-close"))

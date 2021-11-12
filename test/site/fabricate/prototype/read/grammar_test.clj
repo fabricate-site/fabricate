@@ -9,12 +9,20 @@
   (t/testing "rules"
     (t/is (insta/failure?
            (template "some text with unbalanced iniital ✳ and more txt"
-                     :rule :txt))
+                     :start :txt))
           "Unbalanced start characters should cause failure")
     (t/is (insta/failure?
            (template "some text with unbalanced iniital ✳ and more txt"
-                     :rule :template))
-          "Unbalanced start characters should cause failure"))
+                     :start :template))
+          "Unbalanced start characters should cause failure")
+
+    (t/testing " for extended forms"
+      (t/is (not (insta/failure? (template "✳//[\n" :start :ext-form-open))))
+      (t/is (not (insta/failure? (template "]//🔚" :start :ext-form-close))))
+      (t/is (not (insta/failure? (template "✳//[\n more text ]//🔚" :start :extended-form
+                                           :trace true))))
+      (t/is (not (insta/failure? (template "✳//[\n ✳(+ 3 4 5)🔚 ]//🔚" :start :extended-form
+                                           :trace true))))))
 
   (t/testing "simple forms"
     (t/is (not (insta/failure? (template "✳=abcd🔚 some text"))))
@@ -38,7 +46,7 @@
 
     (t/is  (= [:template [:txt "some text "] [:expr "(def something 2)"] [:txt " some text"]]
               (template "some text ✳(def something 2)🔚 some text")))
-    #_(t/is (not (insta/failure? (template "text ✳//\nmore text //🔚 ✳(+ 3 4)🔚"))))
+    (t/is (not (insta/failure? (template "text ✳//[\n more text ]//🔚 an expr ✳(+ 3 4)🔚"))))
 
     #_(t/is (not (insta/failure?
                   (template
@@ -145,4 +153,9 @@ Introducing fabricate, a Clojure library for making static websites, using Cloju
 
   (insta/parses template "some text ✳(def something 2)🔚 some text"
                 :rule :txt
-                :partial true))
+                :partial true)
+
+  (template "✳//[\n more text ]//🔚" :start :extended-form
+            :trace true)
+
+  (template "more text" :start :txt))
