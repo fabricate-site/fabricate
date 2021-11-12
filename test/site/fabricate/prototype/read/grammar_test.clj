@@ -9,7 +9,12 @@
   (t/testing "rules"
     (t/is (insta/failure?
            (template "some text with unbalanced iniital ✳ and more txt"
-                     :rule :txt))))
+                     :rule :txt))
+          "Unbalanced start characters should cause failure")
+    (t/is (insta/failure?
+           (template "some text with unbalanced iniital ✳ and more txt"
+                     :rule :template))
+          "Unbalanced start characters should cause failure"))
 
   (t/testing "simple forms"
     (t/is (not (insta/failure? (template "✳=abcd🔚 some text"))))
