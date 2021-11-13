@@ -17,12 +17,6 @@
           "Unbalanced start characters should cause failure")
 
     (t/testing " for extended forms"
-      (t/is (not (insta/failure? (template "✳//[\n" :start :ext-form-open))))
-      (t/is (not (insta/failure? (template "✳//{\n" :start :ext-form-open))))
-      (t/is (not (insta/failure? (template "✳//(\n" :start :ext-form-open))))
-      (t/is (not (insta/failure? (template "]//🔚" :start :ext-form-close))))
-      (t/is (not (insta/failure? (template "}//🔚" :start :ext-form-close))))
-      (t/is (not (insta/failure? (template ")//🔚" :start :ext-form-close))))
       (t/is (not (insta/failure? (template "✳//[\n more text ]//🔚" :start :extended-form))))
       (t/is (not (insta/failure? (template "✳//[\n ✳(+ 3 4 5)🔚 ]//🔚" :start :extended-form))))))
 
@@ -164,6 +158,5 @@ Introducing fabricate, a Clojure library for making static websites, using Cloju
             :trace true)
 
 
-  (instaparse.)
 
   )

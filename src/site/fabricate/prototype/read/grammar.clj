@@ -57,6 +57,6 @@
 
     (* extended forms allow arbitrary nesting without breaking the flow *)
 
-    ext-form-open = <initial> <'//'> ( '[' | '(' | '{' ) <'\n'>
-    ext-form-close = ( ']' | ')' | '}') <'//'> <terminal>
-    extended-form = ext-form-open (expr|txt|extended-form)+ ext-form-close"))
+    extended-form = (<initial> <'//'> '[' <'\n'> (expr|txt|extended-form)+ ']' <'//'> <terminal>) |
+                    (<initial> <'//'> '(' <'\n'> (expr|txt|extended-form)+ ')' <'//'> <terminal>) |
+                    (<initial> <'//'> '{' <'\n'> (expr|txt|extended-form)+ '}' <'//'> <terminal>)"))
