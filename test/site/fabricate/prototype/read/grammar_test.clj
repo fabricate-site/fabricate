@@ -50,7 +50,8 @@
               (template "some text ✳(def something 2)🔚 some text")))
     (t/is (not (insta/failure? (template "text ✳//[\n more text ]//🔚 an expr ✳(+ 3 4)🔚"))))
     (t/is (not (insta/failure? (template "text ✳//[\n more text ✳//(\n (str 23) )//🔚 ]//🔚 an expr ✳(+ 3 4)🔚"))))
-
+    (t/is (insta/failure? (template "text ✳//[\n more text ✳//(\n (str 23) }//🔚 ]//🔚 an expr ✳(+ 3 4)🔚"))
+          "Unbalanced extended forms should cause parse failures")
     (t/is (not (insta/failure?
                 (template
                  "text ✳//[
@@ -163,5 +164,6 @@ Introducing fabricate, a Clojure library for making static websites, using Cloju
             :trace true)
 
 
+  (instaparse.)
 
   )
