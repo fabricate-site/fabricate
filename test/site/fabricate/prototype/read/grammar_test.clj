@@ -67,7 +67,18 @@ text
                 "Each template should successfully parse")
           (t/is (= 1 (count
                       (take 5 (insta/parses template c))))
-                "Each template should parse only once and exactly once"))))))
+                "Each template should parse only once and exactly once")))))
+
+  ;; leveraging github for this is the simplest thing that works
+  ;; a localized version using jgit is preferable, but modifying the working
+  ;; tree while running tests seems fraught with pitfalls
+  (t/testing "backwards compatibility"
+    (doseq [p ["https://raw.githubusercontent.com/fabricate-site/fabricate/d0b44d79f78d081b7a2282ccde97e69cfa390ca5/pages/fabricate.html.fab"
+               "https://raw.githubusercontent.com/fabricate-site/fabricate/d0b44d79f78d081b7a2282ccde97e69cfa390ca5/pages/finite-schema-machines.html.fab"
+               "https://raw.githubusercontent.com/fabricate-site/fabricate/d0b44d79f78d081b7a2282ccde97e69cfa390ca5/pages/index.html.fab"]]
+      (let [page-name (last (clojure.string/split p #"/"))]
+        (t/testing (str " for page " page-name)
+          (t/is (not (insta/failure? (template (slurp p))))))))))
 
 (comment
 
