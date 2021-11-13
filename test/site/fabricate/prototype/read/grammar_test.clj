@@ -50,14 +50,15 @@
               (template "some text ✳(def something 2)🔚 some text")))
     (t/is (not (insta/failure? (template "text ✳//[\n more text ]//🔚 an expr ✳(+ 3 4)🔚"))))
 
-    #_(t/is (not (insta/failure?
+    (t/is (not (insta/failure?
                   (template
-                   "text ✳// more text
+                   "text ✳//[
+more text
 ✳(+ 3 4)🔚
 separate paragraphs
 ✳=(into [:div] (map inc (range 32 21 -1)))🔚
 text
- //🔚 "))))))
+ ]//🔚 "))))))
 
 (t/deftest pages
   (t/testing "ambiguity"
