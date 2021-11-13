@@ -49,10 +49,11 @@
     (t/is  (= [:template [:txt "some text "] [:expr "(def something 2)"] [:txt " some text"]]
               (template "some text ✳(def something 2)🔚 some text")))
     (t/is (not (insta/failure? (template "text ✳//[\n more text ]//🔚 an expr ✳(+ 3 4)🔚"))))
+    (t/is (not (insta/failure? (template "text ✳//[\n more text ✳//(\n (str 23) )//🔚 ]//🔚 an expr ✳(+ 3 4)🔚"))))
 
     (t/is (not (insta/failure?
-                  (template
-                   "text ✳//[
+                (template
+                 "text ✳//[
 more text
 ✳(+ 3 4)🔚
 separate paragraphs

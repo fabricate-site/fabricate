@@ -59,4 +59,4 @@
 
     ext-form-open = <initial> <'//'> ( '[' | '(' | '{' ) <'\n'>
     ext-form-close = ( ']' | ')' | '}') <'//'> <terminal>
-    extended-form = ext-form-open (expr|txt)+ ext-form-close"))
+    extended-form = ext-form-open (expr|txt|extended-form)+ ext-form-close"))
