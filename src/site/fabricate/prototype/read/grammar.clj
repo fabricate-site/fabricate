@@ -53,11 +53,10 @@
     (* the left side of txt's regex is a fast possessive quantifier
        for the easy case, the right side is the more complex lookahead *)
 
-    txt = #'(\\A[^✳🔚]*+)|([\\S\\s]*?(?=\\Z|(?://[\\]\\}\\)]🔚|✳|🔚)))'
+    txt = #'(\\A[^✳🔚]*+\\Z)|([\\S\\s]*?(?=\\Z|(?:[\\]})]//🔚|✳|🔚)))'
 
     (* extended forms allow arbitrary nesting without breaking the flow *)
 
     ext-form-open = <initial> <'//'> ( '[' | '(' | '{' ) <'\n'>
     ext-form-close = ( ']' | ')' | '}') <'//'> <terminal>
-
     extended-form = ext-form-open (expr|txt)+ ext-form-close"))
