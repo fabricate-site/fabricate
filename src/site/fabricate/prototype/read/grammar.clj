@@ -37,6 +37,13 @@
 
          )
 
+(def ^:private txt-insta-regex
+  "the left side of txt's regex is a fast possessive quantifier for the easy case, the right side is the more complex lookahead"
+  (let [fast-possessive "(\\A[^✳🔚]*+\\Z)"
+        reluctant-txt "[\\S\\s]*?"
+        terminal-lookahead "(?=\\Z|(?:[\\]})]//🔚|✳|🔚))"]
+    (str fast-possessive "|(" reluctant-txt terminal-lookahead ")")))
+
 (def template
   ;; ext-form-open = initial '//' open-form
   ;; ext-form-close = close-form '//' terminal
@@ -45,18 +52,19 @@
   ;; extended-form = ext-form-open ( expr | txt )* ext-form-close
 
   (insta/parser
-   "template = EPSILON | ( expr | txt | extended-form )*
+   (format
+    "template = EPSILON | ( expr | txt | extended-form )*
     initial = '✳'
     terminal = '🔚'
     expr = <initial> !'//'  ('=' | '+' | '+=')?  #'[^=+][^🔚]*' !'//' <terminal>
 
     (* the left side of txt's regex is a fast possessive quantifier
        for the easy case, the right side is the more complex lookahead *)
-
-    txt = #'(\\A[^✳🔚]*+\\Z)|([\\S\\s]*?(?=\\Z|(?:[\\]})]//🔚|✳|🔚)))'
+    txt = #'%s'
 
     (* extended forms allow arbitrary nesting without breaking the flow *)
 
     extended-form = (<initial> <'//'> '[' <'\n'> (expr|txt|extended-form)+ ']' <'//'> <terminal>) |
                     (<initial> <'//'> '(' <'\n'> (expr|txt|extended-form)+ ')' <'//'> <terminal>) |
-                    (<initial> <'//'> '{' <'\n'> (expr|txt|extended-form)+ '}' <'//'> <terminal>)"))
+                    (<initial> <'//'> '{' <'\n'> (expr|txt|extended-form)+ '}' <'//'> <terminal>)"
+    txt-insta-regex)))

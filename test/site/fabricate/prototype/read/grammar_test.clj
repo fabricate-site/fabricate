@@ -43,7 +43,9 @@
     (t/is  (= [:template [:txt "some text "] [:expr "(def something 2)"] [:txt " some text"]]
               (template "some text ✳(def something 2)🔚 some text")))
     (t/is (not (insta/failure? (template "text ✳//[\n more text ]//🔚 an expr ✳(+ 3 4)🔚"))))
-    (t/is (not (insta/failure? (template "text ✳//[\n more text ✳//(\n (str 23) )//🔚 ]//🔚 an expr ✳(+ 3 4)🔚"))))
+    (t/is (not (insta/failure? (template "text ✳//[\n more text ✳//(\n (str 23) )//🔚 ]//🔚 an expr ✳(+ 3 4)🔚")))
+          "Extended expressions should nest")
+
     (t/is (insta/failure? (template "text ✳//[\n more text ✳//(\n (str 23) }//🔚 ]//🔚 an expr ✳(+ 3 4)🔚"))
           "Unbalanced extended forms should cause parse failures")
     (t/is (not (insta/failure?
@@ -124,12 +126,19 @@ text
      (re-seq #"(\A[^✳🔚]*+)|(\A[\S\s]*?(?=\Z|(?:✳|/{2}?🔚)))"
              "text (with parens) and an expr ✳=(+ 3 4 5)🔚 and")))
 
+  (crit/with-progress-reporting
+
+    (crit/quick-bench
+     (re-seq #"(\A[^✳🔚]*+\Z)|(\A[\S\s]*?(?=\Z|(?:✳|/{2}?🔚)))"
+             "text (with parens) and an expr ✳=(+ 3 4 5)🔚 and")))
+
   (re-seq #"([^✳🔚]*+)|(\A[\S\s]*?(?=\Z|(?:✳|/{2}?🔚)))"
           "text (with parens) and an expr ✳=(+ 3 4 5)🔚 and")
 
-  (crit/with-progress-reporting
-    (crit/quick-bench
-     (template (slurp "./README.md.fab"))))
+  (let [f (slurp "./pages/finite-schema-machines.html.fab")]
+    (crit/with-progress-reporting
+      (crit/bench
+       (template f))))
 
   (template "
 ✳=[:h1 (:title metadata)]🔚
@@ -143,30 +152,8 @@ Introducing fabricate, a Clojure library for making static websites, using Cloju
 
   (template (slurp "./pages/fabricate.html.fab"))
 
-  (time (template
-         (slurp "./pages/finite-schema-machines.html.fab")))
-
-  (doseq [p (insta/parses
-             template
-             (slurp "./pages/finite-schema-machines.html.fab"))]
-    (println p))
-
-  (count (take 50 (insta/parses template
-                                (slurp "./pages/finite-schema-machines.html.fab"))))
-
-  (template (slurp "./README.md.fab") :trace true)
-
-  (count (insta/parses template (slurp "./pages/fabricate.html.fab")))
-
-  (time
-   (insta/parse template (slurp "./pages/fabricate.html.fab")))
-
-  (insta/parses template "some text ✳(def something 2)🔚 some text"
-                :rule :txt
-                :partial true)
-
-  (template "✳//[\n more text ]//🔚" :start :extended-form
-            :trace true)
+   (template
+    (slurp "./pages/finite-schema-machines.html.fab"))
 
 
 
