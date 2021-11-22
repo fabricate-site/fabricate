@@ -17,7 +17,7 @@
           "Unbalanced start characters should cause failure")
 
     (t/testing " for extended forms"
-      (t/is (not (insta/failure? (template "✳//[\n more text ]//🔚" :start :extended-form))))
+      (t/is (not (insta/failure? (template "✳//[:div \n more text ]//🔚" :start :extended-form))))
       (t/is (not (insta/failure? (template "✳//[\n ✳(+ 3 4 5)🔚 ]//🔚" :start :extended-form))))))
 
   (t/testing "simple forms"
@@ -88,57 +88,6 @@ text
           (t/is (not (insta/failure? (template (slurp p))))))))))
 
 (comment
-
-  (require '[criterium.core :as crit])
-
-  (crit/with-progress-reporting
-    ;;           Execution time mean : 4.633221 µs
-    ;;  Execution time std-deviation : 1.402354 µs
-    ;; Execution time lower quantile : 3.436020 µs ( 2.5%)
-    ;; Execution time upper quantile : 6.546986 µs (97.5%)
-    ;;                 Overhead used : 8.073388 ns
-    (crit/quick-bench
-     (re-seq #"(\A[^✳🔚]++\Z)|([\S\s]*?(?=(?:✳|/{2}?🔚)|\Z))"
-             "text (with parens) and an expr ✳=(+ 3 4 5)🔚 and")))
-
-  (crit/with-progress-reporting
-    ;;               Execution time mean : 2.486980 µs
-    ;;  Execution time std-deviation : 47.043546 ns
-    ;; Execution time lower quantile : 2.437766 µs ( 2.5%)
-    ;; Execution time upper quantile : 2.541947 µs (97.5%)
-    ;;                 Overhead used : 8.073388 ns
-    (crit/quick-bench
-     (re-seq #"\A[\S\s]*?(?=\Z|(?:✳|/{2}?🔚))"
-             "text (with parens) and an expr ✳=(+ 3 4 5)🔚 and")))
-
-  (crit/with-progress-reporting
-    ;;               Execution time mean : 3.103925 µs
-    ;;  Execution time std-deviation : 931.925567 ns
-    ;; Execution time lower quantile : 2.395667 µs ( 2.5%)
-    ;; Execution time upper quantile : 4.609288 µs (97.5%)
-    ;;                 Overhead used : 8.073388 ns
-    (crit/quick-bench
-     (re-seq #"\A[\S\s]*?(?=(?:✳|/{2}?🔚)|\Z)"
-             "text (with parens) and an expr ✳=(+ 3 4 5)🔚 and")))
-
-  (crit/with-progress-reporting
-    ;;               Execution time mean : 3.103925 µs
-    ;;  Execution time std-deviation : 931.925567 ns
-    ;; Execution time lower quantile : 2.395667 µs ( 2.5%)
-    ;; Execution time upper quantile : 4.609288 µs (97.5%)
-    ;;                 Overhead used : 8.073388 ns
-    (crit/quick-bench
-     (re-seq #"(\A[^✳🔚]*+)|(\A[\S\s]*?(?=\Z|(?:✳|/{2}?🔚)))"
-             "text (with parens) and an expr ✳=(+ 3 4 5)🔚 and")))
-
-  (crit/with-progress-reporting
-
-    (crit/quick-bench
-     (re-seq #"(\A[^✳🔚]*+\Z)|(\A[\S\s]*?(?=\Z|(?:✳|/{2}?🔚)))"
-             "text (with parens) and an expr ✳=(+ 3 4 5)🔚 and")))
-
-  (re-seq #"([^✳🔚]*+)|(\A[\S\s]*?(?=\Z|(?:✳|/{2}?🔚)))"
-          "text (with parens) and an expr ✳=(+ 3 4 5)🔚 and")
 
   (let [f (slurp "./pages/finite-schema-machines.html.fab")]
     (crit/with-progress-reporting
