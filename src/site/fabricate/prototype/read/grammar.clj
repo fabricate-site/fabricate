@@ -66,9 +66,9 @@
 
     (* extended forms allow arbitrary nesting without breaking the flow *)
 
-    extended-form = (<initial> <'//'> '[' <'\n'> (expr|txt|extended-form)+ ']' <'//'> <terminal>) |
-                    (<initial> <'//'> '(' <'\n'> (expr|txt|extended-form)+ ')' <'//'> <terminal>) |
-                    (<initial> <'//'> '{' <'\n'> (expr|txt|extended-form)+ '}' <'//'> <terminal>)"
+    extended-form = (<initial> <'//'> '[' #'[^\n✳🔚]*' <'\n'> (expr|txt|extended-form)+ ']' <'//'> <terminal>) |
+                    (<initial> <'//'> '(' #'[^\n✳🔚]*' <'\n'> (expr|txt|extended-form)+ ')' <'//'> <terminal>) |
+                    (<initial> <'//'> '{' #'[^\n✳🔚]*' <'\n'> (expr|txt|extended-form)+ '}' <'//'> <terminal>)"
     txt-insta-regex)))
 
 (defn parsed-form->exec-map [[t form-or-ctrl? form?]]
@@ -94,6 +94,7 @@
        {:encode/get {:leave extended-form->form}}
        [:= :extended-form]
        [:enum "{" "[" "("]
+       [:string {:encode/get identity}]
        [:* [:or [:ref ::txt] [:ref ::form] [:ref ::extended-form]]]
        [:enum "}" "]" ")"]
        ]}}
@@ -113,7 +114,7 @@
 
   (m/encode
    parsed-schema
-   (template "text ✳//[\n more text ✳//(\n (str 23) )//🔚 ]//🔚 an expr ✳(+ 3 4)🔚")
+   (template "text ✳//[:div \n more text ✳//(\n (str 23) )//🔚 ✳=(+ 3 2)🔚 ]//🔚 an expr ✳(+ 3 4)🔚")
    (mt/transformer {:name :get}))
 
   )

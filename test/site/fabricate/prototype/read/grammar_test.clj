@@ -46,6 +46,10 @@
     (t/is (not (insta/failure? (template "text ✳//[\n more text ✳//(\n (str 23) )//🔚 ]//🔚 an expr ✳(+ 3 4)🔚")))
           "Extended expressions should nest")
 
+    (t/is (some #{":div"}
+                (flatten (template "text ✳//[:div\n more text ✳//(\n (str 23) )//🔚 ]//🔚 an expr ✳(+ 3 4)🔚") ))
+          "Extended expressions should yield front matter")
+
     (t/is (insta/failure? (template "text ✳//[\n more text ✳//(\n (str 23) }//🔚 ]//🔚 an expr ✳(+ 3 4)🔚"))
           "Unbalanced extended forms should cause parse failures")
     (t/is (not (insta/failure?
@@ -148,12 +152,17 @@ text
 
 Introducing fabricate, a Clojure library for making static websites, using Clojure.
 
-")
+✳//[
+
+Multi-line form here
+]//🔚
+" )
+
 
   (template (slurp "./pages/fabricate.html.fab"))
 
-   (template
-    (slurp "./pages/finite-schema-machines.html.fab"))
+  (template
+   (slurp "./pages/finite-schema-machines.html.fab"))
 
 
 
