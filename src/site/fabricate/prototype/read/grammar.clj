@@ -1,7 +1,5 @@
 (ns site.fabricate.prototype.read.grammar
-  (:require [instaparse.core :as insta]
-            [malli.core :as m]
-            [malli.transform :as mt]))
+  (:require [instaparse.core :as insta]))
 
 (comment (require '[lambdaisland.regal :as regal])
 
@@ -67,52 +65,3 @@
                     (<initial> <'//'> '(' #'[^\n✳🔚]*' <'\n'> (expr|txt|extended-form)+ ')' <'//'> <terminal>) |
                     (<initial> <'//'> '{' #'[^\n✳🔚]*' <'\n'> (expr|txt|extended-form)+ '}' <'//'> <terminal>)"
     txt-insta-regex)))
-
-(defn parsed-form->exec-map [[t form-or-ctrl? form?]]
-  {:form (read-string (if (#{"="} form-or-ctrl?) form? form-or-ctrl?))
-   :ctrl (if (and form? (#{"="} form-or-ctrl?)) form-or-ctrl?)})
-
-(defn extended-form->form [[tag open front-matter & contents]]
-  (let [close (last contents)
-        forms (butlast contents)
-        delims (str open close)
-        parsed-front-matter
-        (if (= "" front-matter) '()
-            (map (fn [f] {:ctrl "=" :form (read-string f)})
-                 (clojure.string/split front-matter #"\s+")))]
-    (cond (= delims "[]") (apply conj [] (concat parsed-front-matter forms))
-          (= delims "()") (concat () parsed-front-matter forms))))
-
-(def parsed-schema
-  (m/schema
-   [:schema
-    {:registry
-     {::txt [:cat {:encode/get {:leave second}} [:= :txt] :string]
-      ::form [:cat {:encode/get {:leave parsed-form->exec-map}}
-              [:= :expr] [:? [:= "="]] [:string]]
-      ::extended-form
-      [:cat
-       {:encode/get {:leave extended-form->form}}
-       [:= :extended-form]
-       [:enum "{" "[" "("]
-       :string
-       [:* [:or [:ref ::txt] [:ref ::form] [:ref ::extended-form]]]
-       [:enum "}" "]" ")"]]}}
-    [:cat
-     [:= {:encode/get {:leave (constantly nil)}} :template]
-     [:*
-      [:or
-       [:ref ::txt]
-       [:ref ::form]
-       [:ref ::extended-form]]]]]))
-
-(comment
-  (m/encode
-   parsed-schema
-   (template "text ✳=abcd🔚")
-   (mt/transformer {:name :get}))
-
-  (m/encode
-   parsed-schema
-   (template "text ✳//[:div \n more text ✳//(\n (str 23) )//🔚 ✳=(+ 3 2)🔚 ]//🔚 an expr ✳(+ 3 4)🔚")
-   (mt/transformer {:name :get})))

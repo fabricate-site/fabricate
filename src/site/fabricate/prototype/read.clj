@@ -10,8 +10,10 @@
             [clojure.pprint :refer [pprint]]
             [clojure.tools.reader :as r]
             [malli.core :as m]
+            [malli.transform :as mt]
             [site.fabricate.prototype.schema :as schema]
             [site.fabricate.prototype.read.grammar :refer [template]]
+            [instaparse.core :as insta]
             [clojure.string :as string]
             [clojure.java.io :as io]))
 
@@ -382,3 +384,67 @@
         .getCanonicalFile
         .toPath
         .toAbsolutePath))))
+
+(defn ->form [[opening-char & rest]]
+  (let [forms (butlast rest)
+        closing-char (last rest)]
+    (cond (= ["[" "]"] [opening-char closing-char])
+          (apply conj [] forms)
+          (= ["(" ")"] [opening-char closing-char])
+          (concat () forms))))
+
+(->form ["["  :div "something" "]"])
+
+
+(defn parsed-form->exec-map [[t form-or-ctrl? form?]]
+  {:src (if (#{"="} form-or-ctrl?) form? form-or-ctrl?)
+   :form (read-string (if (#{"="} form-or-ctrl?) form? form-or-ctrl?))
+   :ctrl (if (and form? (#{"="} form-or-ctrl?)) form-or-ctrl?)})
+
+(defn extended-form->form [[tag open front-matter & contents]]
+  (let [close (last contents)
+        forms (butlast contents)
+        delims (str open close)
+        parsed-front-matter
+        (if (= "" front-matter) '()
+            (map (fn [f] {:ctrl "=" :form (read-string f)})
+                 (clojure.string/split front-matter #"\s+")))]
+    (cond (= delims "[]") (apply conj [] (concat parsed-front-matter forms))
+          (= delims "()") (concat () parsed-front-matter forms))))
+
+(def parsed-schema
+  "Malli schema describing the elements of a fabricate template after it has been parsed by the Instaparse grammar"
+  (m/schema
+   [:schema
+    {:registry
+     {::txt [:cat {:encode/get {:leave second}} [:= :txt] :string]
+      ::form [:cat {:encode/get {:leave parsed-form->exec-map}}
+              [:= :expr] [:? [:= "="]] [:string]]
+      ::extended-form
+      [:cat
+       {:encode/get {:leave extended-form->form}}
+       [:= :extended-form]
+       [:enum "{" "[" "("]
+       :string
+       [:* [:or [:ref ::txt] [:ref ::form] [:ref ::extended-form]]]
+       [:enum "}" "]" ")"]]}}
+    [:cat
+     [:= {:encode/get {:leave (constantly nil)}} :template]
+     [:*
+      [:or
+       [:ref ::txt]
+       [:ref ::form]
+       [:ref ::extended-form]]]]]))
+
+(comment
+  (m/encode
+   parsed-schema
+   (template "text ✳=abcd🔚")
+   (mt/transformer {:name :get}))
+
+  (m/encode
+   parsed-schema
+   (template "text ✳//[:div \n more text ✳//(\n (str 23) )//🔚 ✳=(+ 3 2)🔚 ]//🔚 an expr ✳(+ 3 4)🔚")
+   (mt/transformer {:name :get}))
+
+  )
