@@ -42,18 +42,14 @@
     (str fast-possessive "|(" reluctant-txt terminal-lookahead ")")))
 
 (def template
-  ;; ext-form-open = initial '//' open-form
-  ;; ext-form-close = close-form '//' terminal
-  ;; open-form = ( '[' | '(' | '{' ) <'\n'>
-  ;; close-form = ']' | ')' | '}'
-  ;; extended-form = ext-form-open ( expr | txt )* ext-form-close
-
+  "The formal grammar for Fabricate templates."
   (insta/parser
    (format
     "template = EPSILON | ( expr | txt | extended-form )*
     initial = '✳'
     terminal = '🔚'
-    expr = <initial> !'//'  ('=' | '+' | '+=')?  #'[^=+][^🔚]*' !'//' <terminal>
+    ctrl = ('=' | '+' | '+=')
+    expr = <initial> !'//'  ctrl?  #'[^=+][^🔚]*' !'//' <terminal>
 
     (* the left side of txt's regex is a fast possessive quantifier
        for the easy case, the right side is the more complex lookahead *)

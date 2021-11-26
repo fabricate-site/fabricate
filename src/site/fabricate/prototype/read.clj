@@ -10,6 +10,7 @@
             [clojure.pprint :refer [pprint]]
             [clojure.tools.reader :as r]
             [malli.core :as m]
+            [malli.util :as mu]
             [malli.transform :as mt]
             [site.fabricate.prototype.schema :as schema]
             [site.fabricate.prototype.read.grammar :refer [template]]
@@ -95,70 +96,64 @@
         raw (.digest algorithm (.getBytes s))]
     (format "%032x" (BigInteger. 1 raw))))
 
-(def ^{:doc "Model for parsed expressions."} expr-model
-  [:orn
-   [:yield {:doc "An expression intended to have its results embedded in the resulting text."} [:any]]
-   [:exec {:doc "An expression intended be evaluated for side effects or definitions."} [:any]]
-   [:nil {:doc "An invalid expression"} nil?]])
-
 (comment
   (m/validate expr-model '(+ 3 4)))
 
-(def parsed-expr-model
+(def parsed-expr-schema
   [:map
-   [:src {:doc (-> src-model var meta :doc)} src-model]
-   [:expr {:doc (-> expr-model var meta :doc)} expr-model]
+   [:src {:doc "The source expression as a string"} :string]
+   [:expr {:doc "An expression intended to have its results embedded in the resulting text."
+           :optional true} :any]
+   [:exec {:optional true
+           :doc "An expression intended be evaluated for side effects or definitions."} :any]
    [::parse-error {:optional true :doc ""}
     [:map [:type [:fn class?]]
      [:message [:string]]]]])
 
-(def evaluated-expr-model
-  [:map
-   [:src expr-model]
-   [:expr ]])
+(def evaluated-expr-schema
+  (-> parsed-expr-schema
+      (mu/assoc :result :any)
+      (mu/assoc :error [:or :nil :map])))
 
 (comment
-  (defn parse
-    ([src start-seq]
-     (loop [src src form start-seq]
-       (let [[_ before expr after] (re-matches parser-regex src)]
-         (if expr
-           (recur
-            after
-            (conj-non-nil form before (yield-expr expr)))
-           (conj-non-nil form after)))))
-    ([src] (parse src []))))
 
-(defn parse
-  ([src start-seq]
-   (let [parsed (template src)]
-     (reduce
-      (fn [acc n]
-        (cond
-          (keyword? n) acc
-          (and (not (keyword? n)) (= :expr (first n)))
-          (conj acc (yield-expr (nth n 2)))
-          (and (not (keyword? n)) (= :txt (first n)))
-          (conj acc (peek n))
-          :else acc))
-      start-seq
-      parsed)))
-  ([src] (parse src [])))
+  (clojure.repl/doc mu/assoc)
+
+  (m/validate parsed-expr-schema {:expr nil :src "" :err nil})
+
+  )
+
+(defn read-template [template-txt]
+  (let [attempt (template template-txt)]
+    (if (insta/failure? attempt)
+      {::parse-failure attempt}
+      ;; preserve provenance information, you'll
+      ;; never know when it might be useful
+      ;;
+      ;; for example, cleverly calculating the start and end
+      ;; points of a paragraph (after detection) in the source
+      ;; template (this may be too clever)
+      (insta/add-line-and-column-info-to-metadata template-txt attempt))))
 
 ;; post-validator should have the following signature
 ;; if it validates, return the input in a map: {:result input}
 ;; if it doesn't, return a map describing the error
 
 (defn eval-parsed-expr
-  ([{:keys [src expr err result display]
+  ([{:keys [src expr exec err result display]
      :as expr-map} simplify? post-validator]
    (cond err expr-map
          result result
          :else
          (let [res (try
-                     {:result (eval expr)}
+                     {:result
+                      (if exec
+                        (do (eval exec) nil)
+                        (eval expr))
+                      :err nil}
                      (catch Exception e
-                       {:err (merge {:type (.getClass e)
+                       {:result nil
+                        :err (merge {:type (.getClass e)
                                      :message (.getMessage e)}
                                     (select-keys (Throwable->map e)
                                                  [:cause :phase]))}))
@@ -179,12 +174,12 @@
   [expr-tree]
   (let [first-expr (->> expr-tree
                         (tree-seq vector? identity)
-                        (filter #(m/validate parsed-expr-model %))
+                        (filter #(m/validate parsed-expr-schema %))
                         first
-                        :expr)]
+                        :exec)]
     (if (and (seq? first-expr)
-             (schema/ns-form? (second first-expr)))
-        (second (second first-expr))
+             (schema/ns-form? first-expr))
+       (second first-expr)
         nil)))
 
 ;; An alternative design choice: rather than making the ns form
@@ -209,11 +204,10 @@
   [expr-tree]
   (->> expr-tree
        (tree-seq vector? identity)
-       (filter #(and (m/validate parsed-expr-model %)
-                     (m/validate metadata-expr-model (:expr %))))
+       (filter #(and (m/validate parsed-expr-schema %)
+                     (m/validate metadata-model (:exec %))))
        first
-       :expr
-       second))
+       :exec))
 
 (defn eval-all
   ([parsed-form simplify?]
@@ -240,7 +234,7 @@
 (defn form->hiccup
   "If the form has no errors, return its results.
   Otherwise, create a hiccup form describing the error."
-  [{:keys [src expr err result display]
+  [{:keys [src exec expr err result display]
     :as parsed-expr}]
   (cond
     err [:div [:h6 "Error"]
@@ -253,7 +247,7 @@
           [:dd [:code (str (:phase err))]]]
          [:details [:summary "Source expression"]
           [:pre [:code src]]]]
-    display (list [:pre [:code (render-src expr true)]] result)
+    display (list [:pre [:code (render-src (or exec expr) true)]] result)
     :else result))
 
 (defn eval-with-errors
@@ -262,7 +256,7 @@
      (binding [*ns* (create-ns form-nmspc)]
        (refer-clojure)
        (clojure.walk/postwalk
-        (fn [i] (if (m/validate parsed-expr-model i)
+        (fn [i] (if (m/validate parsed-expr-schema i)
                   (form->hiccup (eval-parsed-expr i false post-validator))
                   i))
         parsed-form))
@@ -385,21 +379,82 @@
         .toPath
         .toAbsolutePath))))
 
-(defn ->form [[opening-char & rest]]
-  (let [forms (butlast rest)
-        closing-char (last rest)]
-    (cond (= ["[" "]"] [opening-char closing-char])
-          (apply conj [] forms)
-          (= ["(" ")"] [opening-char closing-char])
-          (concat () forms))))
 
-(->form ["["  :div "something" "]"])
+(comment
+  (require '[clojure.core.server :as server])
+  (import '[clojure.lang LineNumberingPushbackReader])
+
+  (def rdr (LineNumberingPushbackReader. (io/reader *in*)))
+
+  (server/start-server )
+  (server/prepl rdr  println)
+
+  (server/prepl *in* println)
+
+  (clojure.repl/doc server/repl-read)
+
+  (server/repl-read "=>" nil)
+
+  (server/remote-prepl "127.0.0.1" 39205 *in* println)
 
 
-(defn parsed-form->exec-map [[t form-or-ctrl? form?]]
-  {:src (if (#{"="} form-or-ctrl?) form? form-or-ctrl?)
-   :form (read-string (if (#{"="} form-or-ctrl?) form? form-or-ctrl?))
-   :ctrl (if (and form? (#{"="} form-or-ctrl?)) form-or-ctrl?)})
+  )
+
+;; fill-in-the-blank style development
+;; don't try to understand prepl / core.server at the same
+;; time as developing an evaluation model for trees of forms
+;; just sketch out a signature that matches the signature of prepl
+;; (which helpfully preserves a lot of metadata about form evaluation)
+;; use that placeholder function to solve the tree eval (treeval?)
+;; problem, then figure out how to swap in prepl when it's necessary
+
+
+;; mimicking the contents of clojure.core.server/prepl
+(defn- -read-eval [form-str]
+  (let [form (read-string form-str)
+        start (System/nanoTime)
+        ret (eval form)
+        ms (quot (- (System/nanoTime) start) 1000000)]
+    {:tag :ret
+     :val (if (instance? Throwable ret)
+            (Throwable->map ret)
+            ret)
+     :ns (str (.name *ns*))
+     :ms ms
+     :form form-str}))
+
+
+(comment
+  (template "✳+=(+ 2 3)🔚")
+
+  (template "✳(+ 2 3)🔚")
+
+  )
+
+(defn parsed-form->expr-map [[t form-or-ctrl? form?]]
+  (let [read-results
+        (try (r/read-string (or form? form-or-ctrl?))
+             (catch Exception e
+               {:err
+                (let [em (Throwable->map e)]
+                  (merge
+                   (select-keys (first (:via em)) [:type])
+                   (select-keys
+                    em
+                    [:cause :data])))} ))
+        m (merge {:src (if (vector? form-or-ctrl?) form? form-or-ctrl?)
+                  :display false}
+                 (if (:err read-results)
+                   (assoc read-results :expr nil)))]
+    (cond
+      (:err m) m
+      (not (vector? form-or-ctrl?))
+      (assoc m :exec read-results)
+      :else
+      (case (second form-or-ctrl?)
+        "+" (assoc m :exec read-results :display true)
+        "=" (assoc m :expr read-results)
+        "+=" (assoc m :expr read-results :display true)))))
 
 (defn extended-form->form [[tag open front-matter & contents]]
   (let [close (last contents)
@@ -407,7 +462,7 @@
         delims (str open close)
         parsed-front-matter
         (if (= "" front-matter) '()
-            (map (fn [f] {:ctrl "=" :form (read-string f)})
+            (map (fn [f] {:src f :expr (r/read-string f)})
                  (clojure.string/split front-matter #"\s+")))]
     (cond (= delims "[]") (apply conj [] (concat parsed-front-matter forms))
           (= delims "()") (concat () parsed-front-matter forms))))
@@ -418,8 +473,8 @@
    [:schema
     {:registry
      {::txt [:cat {:encode/get {:leave second}} [:= :txt] :string]
-      ::form [:cat {:encode/get {:leave parsed-form->exec-map}}
-              [:= :expr] [:? [:= "="]] [:string]]
+      ::form [:cat {:encode/get {:leave parsed-form->expr-map}}
+              [:= :expr] [:? [:schema [:cat [:= :ctrl] [:enum "=" "+" "+="]]]] [:string]]
       ::extended-form
       [:cat
        {:encode/get {:leave extended-form->form}}
@@ -437,14 +492,42 @@
        [:ref ::extended-form]]]]]))
 
 (comment
+
   (m/encode
+   [:or [:cat {:encode/get {:leave second}} [:= :txt] :string]
+    :double]
+   [:txt "something"]
+   (mt/transformer {:name :get}))
+
+  (m/validate
    parsed-schema
    (template "text ✳=abcd🔚")
-   (mt/transformer {:name :get}))
+
+   )
 
   (m/encode
    parsed-schema
    (template "text ✳//[:div \n more text ✳//(\n (str 23) )//🔚 ✳=(+ 3 2)🔚 ]//🔚 an expr ✳(+ 3 4)🔚")
    (mt/transformer {:name :get}))
+
+  )
+
+(defn parse
+  ([src start-seq]
+   (let [parsed (read-template src)]
+     (into []
+           (rest (m/encode parsed-schema parsed
+                           (mt/transformer {:name :get}))))))
+  ([src] (parse src [])))
+
+(comment
+
+  (parsed-form->expr-map [[:ctrl "="] "(+ 3 4)"])
+
+  (parse "✳((+ 2 3)🔚")
+
+  (template "✳((+ 2 3)🔚")
+
+             (parse "✳(+ 2 3)🔚")
 
   )

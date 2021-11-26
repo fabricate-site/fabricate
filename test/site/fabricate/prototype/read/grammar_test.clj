@@ -25,15 +25,19 @@
 
     (t/is (let [r (template "text (with parens) and an expr ✳=(+ 3 4 5)🔚")]
             (and
-             (= [:template [:txt "text (with parens) and an expr "] [:expr "=" "(+ 3 4 5)"]]
+             (= [:template [:txt "text (with parens) and an expr "] [:expr [:ctrl "="] "(+ 3 4 5)"]]
                 r)
              (not (insta/failure? r)))))
     (t/is (not (insta/failure? (template "text (with parens) and an expr ✳=(+ 3 4 5)🔚 and a trailing newline\n"))))
     (t/is (not (insta/failure? (template "text/text and an expr ✳=(+ 3 4 5)🔚")))
           "Grammar should recognize plaintext with common usage of special characters")
-    (t/is (= [:template [:expr "=" "(+ 3 4 5)"] [:txt " some text"]]
+    (t/is (= [:template [:expr [:ctrl "="] "(+ 3 4 5)"] [:txt " some text"]]
              (template "✳=(+ 3 4 5)🔚 some text")))
-    (t/is (= [:template [:expr "=" "(my.ns/fn  22)"] [:txt " some text"]]
+    (t/is (= [:template [:expr [:ctrl "+"] "(+ 3 4 5)"] [:txt " some text"]]
+             (template "✳+(+ 3 4 5)🔚 some text")))
+    (t/is (= [:template [:expr [:ctrl "+="] "(+ 3 4 5)"] [:txt " some text"]]
+             (template "✳+=(+ 3 4 5)🔚 some text")))
+    (t/is (= [:template [:expr [:ctrl "="] "(my.ns/fn  22)"] [:txt " some text"]]
              (template "✳=(my.ns/fn  22)🔚 some text")))
 
     (t/is
