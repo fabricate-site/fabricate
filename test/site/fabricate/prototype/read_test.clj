@@ -50,8 +50,7 @@
     (t/is (= [{:exec '(+ 2 3)
                :src "(+ 2 3)"
                :display false}]
-             (parse "✳(+ 2 3)🔚")
-             )))
+             (parse "✳(+ 2 3)🔚"))))
 
   (t/testing "evaluation of parsed expressions"
     (t/is (= 5 (eval-parsed-expr (first (parse "✳=(+ 2 3)🔚")) true)))
@@ -72,6 +71,15 @@
                  first
                  eval-parsed-expr)))
 
+    (t/is (=
+           [{:src ":div", :expr :div}
+            {:src "{:class \"col\"}", :expr {:class "col"}}
+            [:txt "some text"]]
+           (extended-form->form
+            [:extended-form
+             "["
+             ":div {:class \"col\"}"
+             [:txt "some text"] "]"])))
 
     (t/is (and
            (not (nil? (:err (eval-parsed-expr (first (parse "✳=((+ 2 3)🔚")) false))))
@@ -116,8 +124,7 @@
             "Namespace scoping should be preserved")
 
       (t/is (= [[:em "text"] ", with a comma following"]
-               (parse-eval "✳=[:em \"text\"]🔚, with a comma following")
-               ))
+               (parse-eval "✳=[:em \"text\"]🔚, with a comma following")))
 
       (t/is (= (hiccup/html
                 (apply conj [:div] (parse-eval "✳=[:em \"text\"]🔚, with a comma following")))
@@ -140,11 +147,11 @@
 
     (t/is (= [:foo " bar " :baz]
              (parse-eval "✳=:foo🔚 bar ✳=:baz🔚")))
-    (t/is (= ["some text"] (parse-eval "some text") )
+    (t/is (= ["some text"] (parse-eval "some text"))
           "Plaintext should be passed as-is")
 
-    (t/is (= [[1 2 3]] (parse-eval "✳=[1 2 3]🔚") ))
-    (t/is (= [["a" "b"]] (parse-eval "✳=[\"a\" \"b\"]🔚")  )
+    (t/is (= [[1 2 3]] (parse-eval "✳=[1 2 3]🔚")))
+    (t/is (= [["a" "b"]] (parse-eval "✳=[\"a\" \"b\"]🔚"))
           "Escaped quotes in forms should be preserved.")
     (t/is (= [nil " foo " 3]  (eval-with-errors  (parse "✳(def var 3)🔚 foo ✳=var🔚")  'var-test-ns))
           "In-form defs should be evaluated successfully.")
@@ -204,6 +211,4 @@
 
     (let [fsm-f (io/file "pages/finite-schema-machines.html.fab")]
       (t/is (= "pages/finite-schema-machines.html.fab"
-               (->dir-local-path fsm-f)))))
-
-  )
+               (->dir-local-path fsm-f))))))

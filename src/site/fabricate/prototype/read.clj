@@ -314,10 +314,12 @@
         delims (str open close)
         parsed-front-matter
         (if (= "" front-matter) '()
-            (map (fn [f] {:src f :expr (r/read-string f)})
-                 (clojure.string/split front-matter #"\s+")))]
+            (map (fn [e] {:src (str e) :expr e})
+                 (r/read-string (str open front-matter close))))]
     (cond (= delims "[]") (apply conj [] (concat parsed-front-matter forms))
           (= delims "()") (concat () parsed-front-matter forms))))
+
+
 
 (def parsed-schema
   "Malli schema describing the elements of a fabricate template after it has been parsed by the Instaparse grammar"
