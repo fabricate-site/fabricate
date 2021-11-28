@@ -265,12 +265,12 @@
     (section? (first (first chunk)))
     (let [[[s] content] chunk]
       (apply conj s
-             (parse-paragraphs (process-nexts content))))
+             (parse-paragraphs content)))
     :else
     (let [[content] chunk]
       (apply conj
              [:section]
-             (parse-paragraphs (process-nexts content))))))
+             (parse-paragraphs content)))))
 
 (def sectionize-contents
   (comp
