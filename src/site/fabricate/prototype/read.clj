@@ -216,7 +216,7 @@
      (binding [*ns* nmspc]
        (refer-clojure)
        (clojure.walk/postwalk
-        (fn [i] (if (m/validate parsed-expr-model i)
+        (fn [i] (if (m/validate parsed-expr-schema i)
                   (eval-parsed-expr i simplify?)
                   i))
         parsed-form))))
@@ -262,7 +262,7 @@
         parsed-form))
      (do (eval form-nmspc)
          (clojure.walk/postwalk
-        (fn [i] (if (m/validate parsed-expr-model i)
+        (fn [i] (if (m/validate parsed-expr-schema i)
                   (form->hiccup (eval-parsed-expr i false post-validator))
                   i))
         parsed-form))))

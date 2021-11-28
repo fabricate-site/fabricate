@@ -44,19 +44,19 @@
 
   (t/testing "parsed element model"
     (t/is
-     (m/validate parsed-expr-model
-                 {:src "✳=(+ 3 4)🔚"
+     (m/validate parsed-expr-schema
+                 {:src "(+ 3 4)"
                   :expr '(+ 3 4)
                   :err nil
                   :result 7}))
     (t/is
-     (m/validate parsed-expr-model
-                 {:src "✳(+ 3 4)🔚"
-                  :expr '(do (+ 3 4) nil)
+     (m/validate parsed-expr-schema
+                 {:src "(+ 3 4)"
+                  :exec '(+ 3 4)
                   :err nil
                   :result nil}))
     (t/is
-     (m/validate parsed-expr-model
+     (m/validate parsed-expr-schema
                  {:src "((+ 3 4)"
                   :expr nil
                   :err {:type clojure.lang.ExceptionInfo
@@ -132,7 +132,8 @@
       (t/is (= (parse-eval "✳=[\"a\" \"b\"]🔚")  [["a" "b"]])
             "Escaped quotes in forms should be preserved.")
       (t/is (= [nil " baz " nil " foo " 3]
-               (parse-eval "✳(ns test-form-ns)🔚 baz ✳(def var 3)🔚 foo ✳=var🔚"))
+               (let [parsed (parse "✳(ns test-form-ns)🔚 baz ✳(def var 3)🔚 foo ✳=var🔚")]
+                 (eval-with-errors parsed)))
             "In-form defs should be evaluated successfully.")
 
       (t/is (= (parse-eval "✳=(site.fabricate.prototype.page/em 3)🔚")
