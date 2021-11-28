@@ -3,8 +3,6 @@
   The functions in this namespace split the text into a sequence of Hiccup forms and embedded expressions,
   which is then traversed again to evaluate it, embedding (or not) the results
   of those expressions within the Hiccup document."
-  {:license {:source "https://github.com/weavejester/comb"
-             :type "Eclipse Public License, v1.0"}}
   (:require [clojure.edn :as edn]
             [hiccup.util :as util]
             [clojure.pprint :refer [pprint]]
@@ -18,72 +16,6 @@
             [clojure.string :as string]
             [clojure.java.io :as io]))
 
-(def delimiters ["✳" "🔚"])
-
-(def delimiters-2
-  "Compositional delimiters: the :display emoji can be added to either add or run so that the input is displayed"
-  {:add "➕"
-   :run "▶"
-   :display "👁️"
-   :end "⏹"})
-
-;; regex adapted from comb; licensed under EPLv2
-(def parser-regex
-  (re-pattern
-   (str "(?s)\\A"
-        "(?:" "(.*?)"
-        (first delimiters) "(.*?)" (last delimiters)
-        ")?"
-        "(.*)\\z")))
-
-(defn get-parser-regex [start end]
-  (re-pattern
-   (str "(?s)\\A"
-        "(?:" "(.*?)"
-        start "(.*?)" end
-        ")?"
-        "(.*)\\z")))
-
-(def ^{:doc "Malli schema for parser regex."} src-model [:re parser-regex])
-
-(comment
-  (m/validate src-model "✳(+ 3 4)🔚"))
-
-(defn eval-expr [expr]
-  (if (.startsWith expr "=")
-    (try
-      (eval (r/read-string (subs expr 1)))
-      (catch Exception e
-        (do (println "caught an exception while reading:" (.getMessage e))
-            ::parse-error)))
-    (let [res (try (eval (r/read-string expr))
-                   (catch Exception e
-                     (do (println "caught an exception while reading:" (.getMessage e))
-                         ::parse-error)))]
-      (if (= res ::parse-error)
-        res
-        nil))))
-
-(defn yield-expr [expr]
-  (let [display? (.startsWith expr "+")
-        e (if display? (subs expr 1) expr)
-        attempt
-        (try {:success
-              (cond
-                (.startsWith e "=") (r/read-string (subs e 1))
-                :else `(do ~(r/read-string e) nil))}
-             (catch Exception ex
-               (let [{:keys [cause phase]} (Throwable->map ex)]
-                 {:error {:type (.getClass ex)
-                          :cause cause
-                          :phase phase
-                          :message (.getMessage ex)}})))]
-    {:expr (:success attempt)
-     :src (str (first delimiters) expr (last delimiters))
-     :err (:error attempt)
-     :result nil
-     :display display?}))
-
 (defn nil-or-empty? [v]
   (if (seqable? v) (empty? v)
       (nil? v)))
@@ -95,9 +27,6 @@
   (let [algorithm (java.security.MessageDigest/getInstance "MD5")
         raw (.digest algorithm (.getBytes s))]
     (format "%032x" (BigInteger. 1 raw))))
-
-(comment
-  (m/validate expr-model '(+ 3 4)))
 
 (def parsed-expr-schema
   [:map
@@ -114,14 +43,6 @@
   (-> parsed-expr-schema
       (mu/assoc :result :any)
       (mu/assoc :error [:or :nil :map])))
-
-(comment
-
-  (clojure.repl/doc mu/assoc)
-
-  (m/validate parsed-expr-schema {:expr nil :src "" :err nil})
-
-  )
 
 (defn read-template [template-txt]
   (let [attempt (template template-txt)]
@@ -329,24 +250,6 @@
    [:created {:optional true :description "When the file was created"} :string]
    [:modified {:optional true :description "When the file was modified"}]])
 
-(comment
-  (def working-dir
-    (io/file (System/getProperty "user.dir")))
-
-
-
-  (def example-file
-    (io/file "./pages/index.html.fab"))
-
-  (def dir-local-path
-    (.relativize (.toPath (io/file ".")) (.toPath example-file)))
-
-  (.relativize (.toPath (io/file ".")) (.toPath example-file))
-
-  (.relativize (.toPath (io/file ".")) (.toPath (io/file "pages/index.html.fab")))
-
-  )
-
 (defn get-file-metadata [file-path]
   (let [wd (-> "."
                io/file
@@ -379,57 +282,6 @@
         .toPath
         .toAbsolutePath))))
 
-
-(comment
-  (require '[clojure.core.server :as server])
-  (import '[clojure.lang LineNumberingPushbackReader])
-
-  (def rdr (LineNumberingPushbackReader. (io/reader *in*)))
-
-  (server/start-server )
-  (server/prepl rdr  println)
-
-  (server/prepl *in* println)
-
-  (clojure.repl/doc server/repl-read)
-
-  (server/repl-read "=>" nil)
-
-  (server/remote-prepl "127.0.0.1" 39205 *in* println)
-
-
-  )
-
-;; fill-in-the-blank style development
-;; don't try to understand prepl / core.server at the same
-;; time as developing an evaluation model for trees of forms
-;; just sketch out a signature that matches the signature of prepl
-;; (which helpfully preserves a lot of metadata about form evaluation)
-;; use that placeholder function to solve the tree eval (treeval?)
-;; problem, then figure out how to swap in prepl when it's necessary
-
-
-;; mimicking the contents of clojure.core.server/prepl
-(defn- -read-eval [form-str]
-  (let [form (read-string form-str)
-        start (System/nanoTime)
-        ret (eval form)
-        ms (quot (- (System/nanoTime) start) 1000000)]
-    {:tag :ret
-     :val (if (instance? Throwable ret)
-            (Throwable->map ret)
-            ret)
-     :ns (str (.name *ns*))
-     :ms ms
-     :form form-str}))
-
-
-(comment
-  (template "✳+=(+ 2 3)🔚")
-
-  (template "✳(+ 2 3)🔚")
-
-  )
 
 (defn parsed-form->expr-map [[t form-or-ctrl? form?]]
   (let [read-results
@@ -491,27 +343,6 @@
        [:ref ::form]
        [:ref ::extended-form]]]]]))
 
-(comment
-
-  (m/encode
-   [:or [:cat {:encode/get {:leave second}} [:= :txt] :string]
-    :double]
-   [:txt "something"]
-   (mt/transformer {:name :get}))
-
-  (m/validate
-   parsed-schema
-   (template "text ✳=abcd🔚")
-
-   )
-
-  (m/encode
-   parsed-schema
-   (template "text ✳//[:div \n more text ✳//(\n (str 23) )//🔚 ✳=(+ 3 2)🔚 ]//🔚 an expr ✳(+ 3 4)🔚")
-   (mt/transformer {:name :get}))
-
-  )
-
 (defn parse
   ([src start-seq]
    (let [parsed (read-template src)]
@@ -519,15 +350,3 @@
            (rest (m/encode parsed-schema parsed
                            (mt/transformer {:name :get}))))))
   ([src] (parse src [])))
-
-(comment
-
-  (parsed-form->expr-map [[:ctrl "="] "(+ 3 4)"])
-
-  (parse "✳((+ 2 3)🔚")
-
-  (template "✳((+ 2 3)🔚")
-
-             (parse "✳(+ 2 3)🔚")
-
-  )

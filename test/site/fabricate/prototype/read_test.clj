@@ -13,33 +13,6 @@
 
 (t/use-fixtures :once setup)
 
-(t/deftest regex
-  (t/testing "regular expression"
-    (t/is (= (re-matches parser-regex
-                         (str (first delimiters) "=(+ 2 3)"
-                              (last delimiters)))
-             (re-matches (get-parser-regex (first delimiters)
-                                           (last delimiters))
-                         (str (first delimiters) "=(+ 2 3)"
-                              (last delimiters)))
-             [(str (first delimiters) "=(+ 2 3)" (last delimiters)) "" "=(+ 2 3)" ""]))
-
-    (t/is (re-find parser-regex "✳=(+ 2 3)🔚"))
-    (t/is (re-find parser-regex "some text, then code ✳=(+ 2 3)🔚"))))
-
-(t/deftest evals
-  (t/testing "expression evaluation"
-    (t/is (= (eval-expr "=:foo") :foo)
-          "Forms should be returned.")
-
-    (t/is (= (eval-expr ":foo") nil)
-          "Non-forms should be evaluated and not returned.")
-
-    (t/is (= (eval-expr "=((+ 3 4)") :site.fabricate.prototype.read/parse-error)
-          "Invalid exprs should return error values")
-    (t/is (= (eval-expr "=(unknown-function 3 4)") :site.fabricate.prototype.read/parse-error)
-          "Invalid exprs should return error values")))
-
 (t/deftest parser
 
   (t/testing "parsed element model"
@@ -65,7 +38,6 @@
                   :result nil})))
 
   (t/testing "expression parsing"
-
 
     (t/is (= ["text " {:expr '(+ 2 3)
                        :src "(+ 2 3)"
