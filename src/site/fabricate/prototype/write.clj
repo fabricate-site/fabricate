@@ -91,9 +91,7 @@
                     parsed form-ns html/validate-element)
         page-meta (var-get (ns-resolve form-ns 'metadata))
         body-content
-        (into [:article {:lang "en"}]
-              #_ page/sectionize-contents
-              evaluated)]
+        (into [:article {:lang "en"}] evaluated)]
     [:html
      (page/doc-header page-meta)
      [:body

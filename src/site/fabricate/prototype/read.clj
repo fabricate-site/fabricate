@@ -319,8 +319,6 @@
     (cond (= delims "[]") (apply conj [] (concat parsed-front-matter forms))
           (= delims "()") (concat () parsed-front-matter forms))))
 
-
-
 (def parsed-schema
   "Malli schema describing the elements of a fabricate template after it has been parsed by the Instaparse grammar"
   (m/schema
