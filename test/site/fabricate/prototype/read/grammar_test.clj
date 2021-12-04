@@ -1,8 +1,14 @@
 (ns site.fabricate.prototype.read.grammar-test
   (:require [site.fabricate.prototype.read.grammar  :refer :all]
             [instaparse.core :as insta]
+            [clojure.test.check.generators :as gen]
+            [clojure.test.check.properties :as prop]
+            [malli.core :as m]
+            [malli.generator :as mg]
             [clojure.java.io :as io]
-            [clojure.test :as t]))
+            [clojure.test :as t]
+            [clojure.test.check.clojure-test :refer [defspec]]
+            ))
 
 (t/deftest parser
 
@@ -116,3 +122,22 @@ Multi-line form here
 
   (template
    (slurp "./pages/finite-schema-machines.html.fab")))
+
+(def pathological-input-schema
+    "Malli schema for problematic input cases"
+    (m/schema
+     [:orn
+      [:unclosed-tag
+       [:cat [:? :string] [:enum "✳" "✳=" "✳+" "✳+="]
+        [:string]
+        [:? :string]]]
+      [:trailing-end
+       [:cat :string [:= "🔚"] [:? [:string]]]]]))
+
+(def pathological-input-generator
+    (gen/fmap #(apply str %) (mg/generator pathological-input-schema)))
+
+(defspec pathological-input-detection 8000
+  (prop/for-all
+   [input pathological-input-generator]
+   (insta/failure? (template input))))
