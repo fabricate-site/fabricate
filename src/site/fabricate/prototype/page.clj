@@ -232,7 +232,7 @@
 
 (defn ->meta [[k v]]
   (let [attrs (if (map? v) v {:content v})]
-    [:meta (merge {:name k} attrs)]))
+    [:meta (merge {:name (if (keyword? k) (str (name k)) k)} attrs)]))
 
 (defn metadata-map->head-elements
   "Return the contents of the metadata map as a sequence of Hiccup elements"
@@ -264,8 +264,7 @@
    "viewport" "width=device-width, initial-scale=1.0"
    :locale "en_US"
    :site-name "fabricate.site"
-   :site-title "Fabricate"}
-  )
+   :site-title "Fabricate"})
 
 (def default-metadata
   (list [:meta {:charset "utf-8"}]
@@ -274,9 +273,13 @@
 
 (def opengraph-property-map
   {:title "og:title"
+   "title" "og:title"
    :description "og:description"
+   "description" "og:description"
    :locale "og:locale"
-   :site-name "og:site_name"})
+   "locale" "og:locale"
+   :site-name "og:site_name"
+   "site-name" "og:site_name"})
 
 (comment
   (map ->meta default-metadata)
