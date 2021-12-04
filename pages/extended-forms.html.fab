@@ -1,0 +1,35 @@
+✳(ns site.fabricate.docs.ext-forms
+                 (:require [site.fabricate.prototype.page :refer :all]
+                           [garden.core :as garden]
+[garden.stylesheet :refer [at-import]]))🔚
+
+✳(def page-style
+  (garden/css
+   (list
+    (at-import "https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@300;400;500;700;900&display=swap")
+    [:body {:font-family "'Zen Kaku Gothic New', sans-serif"
+            :max-width "60ch"}]
+    [:h1 {:font-size "3rem"
+          :font-weight "900"
+          :max-width "90ch"}]
+    [:.cols-2 {:display "flex"}]
+    [:.col {:flex "50%"}]
+    )))🔚
+
+✳(def metadata {:title "Putting text into columns with extended forms"
+:page-style page-style})🔚
+
+✳=[:h1 (:title metadata)]🔚
+
+
+✳//[:section {:class "cols-2"}
+✳//[:div {:class "col"}
+Another concrete use case motivating the design of Fabricate: the ability to place paragraphs of text next to one another rather than sequentially.
+]//🔚
+✳//[:div {:class "col"}
+
+I wanted to do this without always resorting to including HTML elements (or the equivalent Hiccup expressions) in lieu of ordinary text, so that I can juxtapose two ideas without stepping out of the flow of plaintext writing.
+]//🔚
+
+
+]//🔚

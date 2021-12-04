@@ -22,21 +22,17 @@
   (t/testing "page metadata"
     (let [ex-file (io/file "./content/test-file.txt.fab")]
       (t/is (= {:namespace (symbol 'test-ns)
-                :parsed-content [{:expr '(do (ns test-ns) nil)
-                                  :src "✳(ns test-ns)🔚"
-                                  :err nil
-                                  :result nil}]
+                :parsed-content [{:exec '(ns test-ns)
+                                  :src "(ns test-ns)"}]
                 :filename "content/test-file"
                 :file-extension "txt"
                 :fabricate/suffix ".fab"
                 :output-file "./pages/test-file.txt"
                 :input-file ex-file}
                (populate-page-meta
-                {:parsed-content [{:expr '(do (ns test-ns) nil)
-                                   :src "✳(ns test-ns)🔚"
-                                   :err nil
-                                   :result nil}]
-                 :input-file ex-file}
+                {:parsed-content [{:exec '(ns test-ns)
+                                   :src "(ns test-ns)"}]
+                 :input-file (io/file "./content/test-file.txt.fab") }
                 {:output-dir "./pages"
                  :input-dir "./content"})))))
 
