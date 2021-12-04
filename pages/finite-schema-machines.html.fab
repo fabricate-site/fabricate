@@ -1,4 +1,3 @@
-
 ✳(ns site.fabricate.docs.fsm
                  (:require [site.fabricate.prototype.page :refer :all]
 [site.fabricate.prototype.read :as read]

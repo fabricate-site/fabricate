@@ -91,9 +91,7 @@
                     parsed form-ns html/validate-element)
         page-meta (var-get (ns-resolve form-ns 'metadata))
         body-content
-        (into [:article {:lang "en"}]
-              page/sectionize-contents
-              evaluated)]
+        (into [:article {:lang "en"}] evaluated)]
     [:html
      (page/doc-header page-meta)
      [:body
@@ -230,8 +228,8 @@
     :as page-data}]
   (let [metadata (var-get (ns-resolve namespace 'metadata))
         body-content (into [:article {:lang "en"}]
-                           page/sectionize-contents
-                           evaluated-content)]
+                           (page/parse-paragraphs
+                            evaluated-content))]
     (list
      (page/doc-header metadata)
      [:article body-content]
@@ -348,9 +346,6 @@
 
   (close-watcher drafts)
 
-
-
-
   )
 
 
@@ -362,6 +357,11 @@
   (fsm/complete operations "./README.md.fab")
 
   (fsm/complete operations "./pages/finite-schema-machines.html.fab")
+
+  (fsm/complete operations "./pages/extended-forms.html.fab")
+
+  (site.fabricate.prototype.read.grammar/template
+   (slurp "./pages/extended-forms.html.fab"))
 
   (fsm/complete operations "./pages/fabricate.html.fab")
 

@@ -219,8 +219,6 @@
   )
 
 (comment
-  
-
 
   (parse-paragraphs
    [:b [:dfn [:del "some\n\n"] "text"]])
@@ -230,53 +228,7 @@
 
   (html/element? (parse-paragraphs [:del "some\n\n"]))
 
-  ()
   )
-
-(defn process-nexts [nexts]
-  (loop [[h n & rest] nexts
-         res []]
-    (if (empty? rest) ; base case
-      (condp = [(nil? h) (nil? n)]
-        [true true] res
-        [false true] (conj res h)
-        [false false] (conj res h n))
-      (cond
-        (= :next n)
-        (recur (apply conj [:next] rest)
-               (conj res h))
-        (= :next h)
-        (recur
-         (drop-while #(not= % :next) rest)
-         (conj res (apply conj n (take-while #(not= % :next) rest))))
-        :else
-        (recur
-         (drop-while #(not= % :next) rest)
-         (apply conj res h n (take-while #(not= % :next) rest)))))))
-
-(defn front-matter? [_] false)
-
-(defn section? [i]
-  (and (vector? i) (= :section (first i))))
-
-(defn process-chunk [chunk]
-  (cond
-    (front-matter? chunk) chunk         ; front matter gets left as-is
-    (section? (first (first chunk)))
-    (let [[[s] content] chunk]
-      (apply conj s
-             (parse-paragraphs (process-nexts content))))
-    :else
-    (let [[content] chunk]
-      (apply conj
-             [:section]
-             (parse-paragraphs (process-nexts content))))))
-
-(def sectionize-contents
-  (comp
-   (partition-by section?)
-   (partition-all 2)
-   (map process-chunk)))
 
 (defn ->meta [[k v]]
   (let [attrs (if (map? v) v {:content v})]
