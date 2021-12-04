@@ -37,7 +37,18 @@
           [:meta {:name "locale", :content "en_US" :property "og:locale"}]}
         (into #{}
               (opengraph-enhance opengraph-property-map
-                                 (map ->meta default-metadata-map)))))))
+                                 (map ->meta default-metadata-map))))))
+
+  (t/testing "page metadata collection"
+    (t/is (= {:icon "an image"}
+             (lift-metadata
+              [:article {:lang "en" :page/title "Some document"}
+               [:p "some text"]
+               (with-meta [:img "src-url.jpg"] {:page/icon "an image"
+                                                "some-prop" "a property"})]
+              {}))))
+
+  )
 
 (def html-newline-gen
   (let [newline-gen
