@@ -8,18 +8,25 @@
             [site.fabricate.prototype.write]
             [clojure.test :as t]))
 
+(defn has-schema? [v]
+  (let [var-schema (:malli/schema (meta v))
+        val-schema (:malli/schema (meta (var-get v)))]
+    (or (malli? var-schema)
+        (malli? val-schema)
+        (malli? (var-get v))
+        (not (fn? (var-get v))))))
 
-(comment (ns-publics 'site.fabricate.prototype.fsm))
+(comment
+  (has-schema?  #'site.fabricate.prototype.html/element-flat-explainer)
+
+  (has-schema?  #'site.fabricate.prototype.write/rerender)
+
+  )
 
 (defn test-ns-schemas [nmspc]
   (for [[sym value] (ns-publics nmspc)]
-    (do
-      (t/testing (str ": " value))
-      (let [schema (:malli/schema (meta value))
-            schema? (or (and (fn? (var-get value)) (some? schema))
-                        (malli? (var-get value))
-                        (not (fn? (var-get value))))]
-        {:namespace nmspc :var value :schema? schema?}))))
+    (t/testing (str ": " value)
+      {:namespace nmspc :var value :schema? (has-schema? value)})))
 
 (defmethod t/assert-expr 'covered? [msg form]
   `(let [ns-results# ~(nth form 1)
@@ -37,11 +44,9 @@
                        (->> ns-results#
                             (filter #(false? (:schema? %)))
                             (map :var)
-                            (clojure.string/join "\n")))
+                            (clojure.string/join " \n")))
                   result#)})
      result#))
-
-
 
 (comment
   (malli? (var-get #'site.fabricate.prototype.fsm/state-action-map))

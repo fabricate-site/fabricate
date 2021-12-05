@@ -130,10 +130,12 @@
   [:text :string]
   [:nil nil?]])
 
-(def atomic-element?
+(def
+  ^{:malli/schema [:=> [:cat :any] :boolean]}
+  atomic-element?
   (m/validator atomic-element))
 
-(defn ->hiccup-schema [tag attr-model content-model]
+(defn- ->hiccup-schema [tag attr-model content-model]
   (let [head
         [:catn
          [:tag [:= tag]]
@@ -148,6 +150,11 @@
     ))
 
 (defn ns-kw
+  {:malli/schema
+   [:=>
+     [:cat
+         [:? [:fn #(.isInstance clojure.lang.Namespace %)]] :keyword]
+    :keyword]}
   ([ns kw] (keyword (str ns) (str (name kw))))
   ([kw] (ns-kw *ns* kw)))
 
@@ -734,9 +741,17 @@
    ::html])
 
 (def element (m/schema (schema/subschema html ::element)))
-(def element? (m/validator element))
-(def parse-element (m/parser element))
-(def explain-element (m/explainer element))
+
+(def ^{:malli/schema [:=> [:cat :any] :boolean]}
+  element? (m/validator element))
+
+(def ^{:malli/schema [:=> [:cat :any] [:or :map [:= :malli.core/invalid]]]}
+  parse-element
+  (m/parser element))
+
+(def ^{:malli/schema [:=> [:cat :any] [:or :map :nil]]}
+  explain-element
+  (m/explainer element))
 
 (def element-flat
   (let [elems
@@ -752,8 +767,11 @@
      (apply conj [:orn {:registry (get (m/properties html) :registry)}
                   [:atomic-element atomic-element]]
             (seq elems)))))
-(def element-flat-explainer (m/explainer element-flat))
-(def parse-element-flat (m/parser element-flat))
+
+(def ^{:malli/schema [:=> [:cat :any] [:or :map :nil]]}
+  element-flat-explainer (m/explainer element-flat))
+(def ^{:malli/schema [:=> [:cat :any] [:or :map [:= :malli.core/invalid]]]}
+  parse-element-flat (m/parser element-flat))
 
 (def element-validators
   (let [kws (filter keyword? (keys (get (second html) :registry)))]
@@ -778,29 +796,41 @@
 ;; it is content that is rendered and is substantive.
 ;; Elements whose model is flow content or phrasing content
 ;; should have at least one node which is palpable."
-(defn palpable? [c]
+(defn palpable?
+  {:malli/schema [:=> [:cat :any] :boolean]}
+  [c]
   (some? (some
           #(m/validate atomic-element %)
           (tree-seq #(and (vector? %) (keyword? (first %))) rest c))))
 
-(def phrasing? (m/validator (schema/subschema html ::phrasing-content)))
-(def heading? (m/validator (schema/subschema html ::heading-content)))
-(def flow? (m/validator (schema/subschema html ::flow-content)))
+(def ^{:malli/schema [:=> [:cat :any] :boolean]}
+  phrasing?
+  (m/validator (schema/subschema html ::phrasing-content)))
 
-(defn validate-element [elem]
+(def ^{:malli/schema [:=> [:cat :any] :boolean]}
+  heading?
+  (m/validator (schema/subschema html ::heading-content)))
+
+(def ^{:malli/schema [:=> [:cat :any] :boolean]}
+  flow? (m/validator (schema/subschema html ::flow-content)))
+
+(defn validate-element
+  {:malli/schema [:=> [:cat :any] :boolean]}
+  [elem]
   (if (and (vector? elem)
            (keyword? (first elem)))
     (let [form-kw (first elem)
           valid? (get element-validators (ns-kw form-kw))]
       (if (valid? elem)
-                {:result elem}
-                {:err {:type ::invalid-form
-                       :message (str "Invalid <" (name form-kw) "> form")
-                       :cause ((get element-explainers (ns-kw form-kw)) elem)}}))
+        {:result elem}
+        {:err {:type ::invalid-form
+               :message (str "Invalid <" (name form-kw) "> form")
+               :cause ((get element-explainers (ns-kw form-kw)) elem)}}))
     elem))
 
 (defn permitted-contents
   "Gets the permitted contents of the given tag"
+  {:malli/schema [:=> [:cat :keyword] :keyword]}
   [tag]
   (if (nil? tag) tag
       (let [tag (if (qualified-keyword? tag) tag
