@@ -49,7 +49,9 @@
                                          :fsm/description))
           (op value))))))
 
-(defn complete [fsm-map value]
+(defn complete
+  {:malli/schema [:=> [:cat state-action-map :any] :any]}
+  [fsm-map value]
   (let [fsm-states (iterate (partial advance fsm-map) value)]
     (reduce (fn [current-state next-state]
               (if (= current-state next-state)

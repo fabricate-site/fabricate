@@ -21,14 +21,14 @@
         {:namespace nmspc :var value :schema? schema?}))))
 
 (defmethod t/assert-expr 'covered? [msg form]
-  `(let [nmspc# ~(nth form 1)
-         ns-results# (test-ns-schemas nmspc#)
+  `(let [ns-results# ~(nth form 1)
+         nmspc# (:namespace (first ns-results#))
          coverage# (* 1.0 (/ (count (filter :schema? ns-results#))
                              (count ns-results#)))
          result# (= 1.0 coverage#)]
      (t/do-report
       {:type (if result# :pass :fail)
-       :message ~msg
+       :message (str ~msg (format "%.2f%% coverage" (* coverage# 100)))
        :expected (format "namespace %s has full schema coverage"
                          nmspc#)
        :actual  (if (not result#)
@@ -40,6 +40,8 @@
                   result#)})
      result#))
 
+
+
 (comment
   (malli? (var-get #'site.fabricate.prototype.fsm/state-action-map))
 
@@ -49,4 +51,5 @@
   (doseq [nmspc '(site.fabricate.prototype.fsm
                   site.fabricate.prototype.html)]
     (t/testing (str "coverage for namespace " nmspc)
-      (t/is (covered? nmspc)))))
+      (let [ns-results (test-ns-schemas nmspc)]
+        (t/is (covered? ns-results))))))
