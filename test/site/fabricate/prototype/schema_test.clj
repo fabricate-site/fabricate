@@ -17,7 +17,8 @@
       (t/testing (str ": " value))
       (let [schema (:malli/schema (meta value))
             schema? (or (and (fn? (var-get value)) (some? schema))
-                        (malli? (var-get value)))]
+                        (malli? (var-get value))
+                        (not (fn? (var-get value))))]
         {:namespace nmspc :var value :schema? schema?}))))
 
 (defmethod t/assert-expr 'covered? [msg form]
@@ -49,7 +50,11 @@
 
 (t/deftest schema-coverage
   (doseq [nmspc '(site.fabricate.prototype.fsm
-                  site.fabricate.prototype.html)]
+                  site.fabricate.prototype.html
+                  site.fabricate.prototype.read
+                  site.fabricate.prototype.page
+                  site.fabricate.prototype.read.grammar
+                  site.fabricate.prototype.write)]
     (t/testing (str "coverage for namespace " nmspc)
       (let [ns-results (test-ns-schemas nmspc)]
         (t/is (covered? ns-results))))))
