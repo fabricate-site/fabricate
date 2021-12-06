@@ -18,9 +18,7 @@
 
 (comment
   (has-schema?  #'site.fabricate.prototype.html/element-flat-explainer)
-
-  (has-schema?  #'site.fabricate.prototype.write/rerender)
-
+  (has-schema?  #'site.fabricate.prototype.page/em)
   )
 
 (defn test-ns-schemas [nmspc]
@@ -40,7 +38,7 @@
        :expected (format "namespace %s has full schema coverage"
                          nmspc#)
        :actual  (if (not result#)
-                  (str "uninstrumented symbols:\n"
+                  (str "uninstrumented functions:\n"
                        (->> ns-results#
                             (filter #(false? (:schema? %)))
                             (map :var)

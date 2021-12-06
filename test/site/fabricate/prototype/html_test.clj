@@ -65,7 +65,7 @@
   (t/testing "content models"
 
       (t/is (valid-schema?
-           (->hiccup-schema :p global-attributes
+           (#'site.fabricate.prototype.html/->hiccup-schema :p global-attributes
                             [:* atomic-element])
            [:p {:id "something"} "text in a paragraph"]))
 
