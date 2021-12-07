@@ -12,10 +12,17 @@
    [site.fabricate.prototype.read :as read]
    [site.fabricate.prototype.schema :as schema]))
 
-(defn em [& contents]  (apply conj [:em] contents))
-(defn strong [& contents]  (apply conj [:strong] contents))
+(defn em
+  {:malli/schema [:=> [:cat [:* :any]] [:cat [:= :em] [:* :any]]]}
+  [& contents]  (apply conj [:em] contents))
+
+(defn strong
+  {:malli/schema [:=> [:cat [:* :any]] [:cat [:= :em] [:* :any]]]}
+  [& contents]  (apply conj [:strong] contents))
 
 (defn link
+  {:malli/schema [:=> [:cat :string [:? :map] [:* :any]]
+                  [:cat [:= :a] [:map [:href :string]] [:* :any]]]}
   ([url
     {:keys [frag]
      :or {frag nil}
@@ -23,11 +30,30 @@
    (let [c (if (not (map? opts)) (conj contents opts) contents)]
      (apply conj [:a {:href url}] c))))
 
-(defn code ([& contents] [:pre (apply conj [:code] contents)]))
-(defn in-code ([& contents] (apply conj [:code] contents)))
-(defn aside [& contents] (apply conj [:aside] contents))
+(defn code
+  {:malli/schema
+   [:=> [:cat [:* :any]]
+    [:cat [:= :pre] [:schema [:cat [:= :code] [:* :any]]]]]}
+  [& contents]
+  [:pre (apply conj [:code] contents)])
+
+(defn in-code
+  {:malli/schema [:=> [:cat [:* :any]]
+    [:cat [:= :code] [:* :any]]]}
+  [& contents] (apply conj [:code] contents))
+
+(defn aside {:malli/schema [:=> [:cat [:* :any]]
+                            [:cat [:= :aside] [:* :any]]]}
+  [& contents] (apply conj [:aside] contents))
 
 (defn blockquote
+  {:malli/schema
+   [:=> [:cat [:? :map] [:* :any]]
+    [:cat [:= :figure]
+     [:schema [:cat [:= :blockquote]
+               :map
+               [:* :any]
+               [:? [:schema [:cat [:= :figcaption] [:* :any]]]]]]]]}
   [{:keys [caption url author source]
     :or {caption nil
          author ""
@@ -39,25 +65,49 @@
     [:figure
      (apply conj [:blockquote {:cite url}] c) s]))
 
-(defn quote [{:keys [cite]
-              :or {cite ""}
-              :as opts} & contents]
+(defn quote
+  {:malli/schema
+   [:=> [:cat [:? :map] [:* :any]]
+    [:cat [:= :q] :map [:* :any]]]}
+  [{:keys [cite]
+    :or {cite ""}
+    :as opts} & contents]
   (let [c (if (not (map? opts)) (conj contents opts) contents)]
     (apply conj [:q {:cite cite}] c)))
 
-(defn ul [& contents]
+(defn ul
+  {:malli/schema
+   [:=> [:cat [:* :any]]
+    [:cat [:= :ul] [:* [:schema [:cat [:= :li] :any]]]]]}
+  [& contents]
   (apply conj [:ul] (map (fn [i] [:li i]) contents)))
-(defn ol [& contents]
+(defn ol
+  {:malli/schema
+   [:=> [:cat [:* :any]]
+    [:cat [:= :ol] [:* [:schema [:cat [:= :li] :any]]]]]}
+  [& contents]
   (apply conj [:ol] (map (fn [i] [:li i]) contents)))
 
-(defn script [attr-map & contents]
+(defn script
+  {:malli/schema
+   [:=> [:cat :map [:* :any]]
+    [:cat [:= :script] [:? :map] [:* :any]]]}
+  [attr-map & contents]
   (apply conj [:script attr-map] contents))
 
-(defn not-in-form? [e] (and (vector? e)
-                            (not (contains? html/phrasing-tags (first e)))))
+(defn not-in-form?
+  {:malli/schema [:=> [:cat :any] :boolean]}
+  [e]
+  (and (vector? e)
+       (not (contains? html/phrasing-tags (first e)))))
 
-(defn para? [i] (and (vector? i) (= :p (first i))))
-(defn in-para? [i]
+(defn para?
+  {:malli/schema [:=> [:cat :any] :boolean]}
+  [i]
+  (and (vector? i) (= :p (first i))))
+(defn in-para?
+  {:malli/schema [:=> [:cat :any] :boolean]}
+  [i]
   (or (m/validate html/atomic-element i)
       (and (vector? i) (html/phrasing-tags (first i)))))
 
@@ -110,6 +160,9 @@
   ([] (detect-paragraphs (re-pattern "\n\n"))))
 
 (defn split-paragraphs
+  {:malli/schema
+   [:=> [:cat :string [:fn #(= java.util.regex.Pattern (type %))]]
+    [:or [:* :string] :string]]}
   ([s re]
    (if (and (string? s) (re-find #"\n\n" s))
      (clojure.string/split s #"\n\n")
@@ -123,6 +176,7 @@
 
 (defn parse-paragraphs
   "Detects the paragraphs within the form"
+  {:malli/schema [:=> [:cat [:vector :any] :map] [:vector :any]]}
   ([form {:keys [paragraph-pattern
                  default-form
                  current-paragraph?]
@@ -130,80 +184,80 @@
                default-form [:p]
                current-paragraph? false}
           :as opts}]
-   (cond  ;; (html/phrasing? form) form
-         (non-hiccup-seq? form)
-         ;; recurse?
-         (parse-paragraphs (apply conj default-form form) opts)
-         :else
-         (reduce
-          (fn [acc next]
-            ;; peek the contents of acc to determine whether to
-            ;; conj on to an extant paragraph
-            (let [previous (if (vector? acc) (peek acc) (last acc))
-                  r-acc (if (not (empty? acc)) (pop acc) acc)
-                  previous-paragraph?
-                  (and (vector? previous) (= :p (first previous)))
-                  current-paragraph? (or current-paragraph? (= :p (first acc)))
-                  permitted-contents
-                  (if (html/phrasing? acc) ::html/phrasing-content
-                      (html/permitted-contents
-                       (let [f (first acc)]
-                         (if (keyword? f) f :div))))]
-              (cond
-                ;; flow + heading content needs to break out of a paragraph
-                (and current-paragraph? (sequential? next)
-                     (or (html/flow? next) (html/heading? next))
-                     (not (html/phrasing? next)))
-                (list acc (parse-paragraphs next opts))
-                ;; if previous element is a paragraph,
-                ;; conj phrasing elements on to it
-                (and (sequential? next) previous-paragraph?
-                     (html/phrasing? next))
-                (conj r-acc (conj previous (parse-paragraphs next opts)))
-                ;; in-paragraph linebreaks are special, they get replaced with <br> elements
-                ;; we can't split text into paragraphs inside
-                ;; elements that can't contain paragraphs
-                (and (string? next) (re-find paragraph-pattern next)
-                     (not (= ::html/flow-content permitted-contents)))
-                (apply conj acc
-                       (let [r (interpose [:br] (clojure.string/split next paragraph-pattern))]
-                         (if (= 1 (count r)) (conj (into [] r) [:br]) r)))
-                ;; if there's a previous paragraph, do a head/tail split of the string
-                (and (string? next) (re-find paragraph-pattern next)
-                     previous-paragraph?)
-                (let [[h & tail] (clojure.string/split next paragraph-pattern)]
-                  (apply conj
-                         r-acc
-                         (conj previous h)
-                         (->> tail
-                              (filter #(not (empty? %)))
-                              (map #(conj default-form %)))))
-                ;; otherwise split it into separate paragraphs
-                (and (string? next) (re-find paragraph-pattern next))
-                (apply conj acc
-                       (->> (clojure.string/split next paragraph-pattern)
-                            (filter #(not (empty? %)))
-                            (map #(conj default-form %))))
-                ;; skip empty or whitespace strings
-                (and (string? next)
-                     (or (empty? next)
-                         (re-matches #"\s+" next))) acc
-                ;; add to previous paragraph
-                (and previous-paragraph? (html/phrasing? next))
-                (conj r-acc (conj previous next))
-                ;; start paragraph for orphan strings/elements
-                (and (not current-paragraph?)
-                     (not previous-paragraph?)
-                     (= ::html/flow-content permitted-contents)
-                     (html/phrasing? next))
-                (conj acc (conj default-form next))
-                (sequential? next)
-                (conj acc (parse-paragraphs
-                           next
-                           (assoc opts :current-paragraph? current-paragraph?)))
-                :else (conj acc next))))
-          []
-          form)))
+   (cond ;; (html/phrasing? form) form
+     (non-hiccup-seq? form)
+     ;; recurse?
+     (parse-paragraphs (apply conj default-form form) opts)
+     :else
+     (reduce
+      (fn [acc next]
+        ;; peek the contents of acc to determine whether to
+        ;; conj on to an extant paragraph
+        (let [previous (if (vector? acc) (peek acc) (last acc))
+              r-acc (if (not (empty? acc)) (pop acc) acc)
+              previous-paragraph?
+              (and (vector? previous) (= :p (first previous)))
+              current-paragraph? (or current-paragraph? (= :p (first acc)))
+              permitted-contents
+              (if (html/phrasing? acc) ::html/phrasing-content
+                  (html/permitted-contents
+                   (let [f (first acc)]
+                     (if (keyword? f) f :div))))]
+          (cond
+            ;; flow + heading content needs to break out of a paragraph
+            (and current-paragraph? (sequential? next)
+                 (or (html/flow? next) (html/heading? next))
+                 (not (html/phrasing? next)))
+            (list acc (parse-paragraphs next opts))
+            ;; if previous element is a paragraph,
+            ;; conj phrasing elements on to it
+            (and (sequential? next) previous-paragraph?
+                 (html/phrasing? next))
+            (conj r-acc (conj previous (parse-paragraphs next opts)))
+            ;; in-paragraph linebreaks are special, they get replaced with <br> elements
+            ;; we can't split text into paragraphs inside
+            ;; elements that can't contain paragraphs
+            (and (string? next) (re-find paragraph-pattern next)
+                 (not (= ::html/flow-content permitted-contents)))
+            (apply conj acc
+                   (let [r (interpose [:br] (clojure.string/split next paragraph-pattern))]
+                     (if (= 1 (count r)) (conj (into [] r) [:br]) r)))
+            ;; if there's a previous paragraph, do a head/tail split of the string
+            (and (string? next) (re-find paragraph-pattern next)
+                 previous-paragraph?)
+            (let [[h & tail] (clojure.string/split next paragraph-pattern)]
+              (apply conj
+                     r-acc
+                     (conj previous h)
+                     (->> tail
+                          (filter #(not (empty? %)))
+                          (map #(conj default-form %)))))
+            ;; otherwise split it into separate paragraphs
+            (and (string? next) (re-find paragraph-pattern next))
+            (apply conj acc
+                   (->> (clojure.string/split next paragraph-pattern)
+                        (filter #(not (empty? %)))
+                        (map #(conj default-form %))))
+            ;; skip empty or whitespace strings
+            (and (string? next)
+                 (or (empty? next)
+                     (re-matches #"\s+" next))) acc
+            ;; add to previous paragraph
+            (and previous-paragraph? (html/phrasing? next))
+            (conj r-acc (conj previous next))
+            ;; start paragraph for orphan strings/elements
+            (and (not current-paragraph?)
+                 (not previous-paragraph?)
+                 (= ::html/flow-content permitted-contents)
+                 (html/phrasing? next))
+            (conj acc (conj default-form next))
+            (sequential? next)
+            (conj acc (parse-paragraphs
+                       next
+                       (assoc opts :current-paragraph? current-paragraph?)))
+            :else (conj acc next))))
+      []
+      form)))
   ([form] (parse-paragraphs form {})))
 
 (comment
@@ -218,6 +272,14 @@
 
   )
 
+(defn ->meta
+  {:malli/schema
+   [:=> [:cat [:schema [:cat :any :any]]]
+    [:cat [:= :meta] :map]]}
+  [[k v]]
+  (let [attrs (if (map? v) v {:content v})]
+    [:meta (merge {:name k} attrs)]))
+
 (comment
 
   (parse-paragraphs
@@ -230,13 +292,10 @@
 
   )
 
-(defn ->meta [[k v]]
-  (let [attrs (if (map? v) v {:content v})]
-    [:meta (merge {:name k} attrs)]))
-
 (defn metadata-map->head-elements
   "Return the contents of the metadata map as a sequence of Hiccup elements"
-  [{:keys [page-style scripts title]          ; some keys are special
+  {:malli/schema [:=> [:cat :map] [:vector :any]]}
+  [{:keys [page-style scripts title]    ; some keys are special
     :as metadata}]
   (let [rest (dissoc metadata :page-style :scripts)]
     []
@@ -264,8 +323,7 @@
    "viewport" "width=device-width, initial-scale=1.0"
    :locale "en_US"
    :site-name "fabricate.site"
-   :site-title "Fabricate"}
-  )
+   :site-title "Fabricate"})
 
 (def default-metadata
   (list [:meta {:charset "utf-8"}]
@@ -297,6 +355,7 @@
 
 (defn doc-header
   "Returns a default header from a map with a post's metadata."
+  {:malli/schema [:=> [:cat :map] [:vector :any]]}
   [{:keys [title page-style scripts]
     :as metadata}]
   (let [page-meta
