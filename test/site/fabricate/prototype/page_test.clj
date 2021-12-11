@@ -8,7 +8,15 @@
             [clojure.test.check :as check]
             [clojure.test.check.clojure-test :refer [defspec]]
             [malli.core :as m]
+            [malli.instrument :as mi]
             [clojure.test :as t]))
+
+(defn setup [f]
+  (mi/instrument!)
+  (f)
+  (mi/unstrument!))
+
+(t/use-fixtures :once setup)
 
 (t/deftest page-creation
   (t/testing "html helper fns"
@@ -37,7 +45,8 @@
           [:meta {:name "locale", :content "en_US" :property "og:locale"}]}
         (into #{}
               (opengraph-enhance opengraph-property-map
-                                 (map ->meta default-metadata-map))))))
+                                 (map ->meta default-metadata-map)))
+        )))
 
   (t/testing "page metadata collection"
     (t/is (= {:icon "an image"}

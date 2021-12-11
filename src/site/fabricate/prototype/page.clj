@@ -275,7 +275,7 @@
     [:cat [:= :meta] :map]]}
   [[k v]]
   (let [attrs (if (map? v) v {:content v})]
-    [:meta (merge {:name k} attrs)]))
+    [:meta (merge {:name (if (keyword? k) (str (name k)) k)} attrs)]))
 
 (comment
 
@@ -304,6 +304,8 @@
 
   See https://stackoverflow.com/a/22984013 for more context on combining these attributes in
   a single HTML <meta> element."
+  {:malli/schema [:=> [:cat [:map [:* [:schema [:cat [:= :meta] :map]]]]]
+                  [:* [:cat [:= :meta] :map]]]}
   [prop-names items]
   (map (fn [[t attr]]
          (let [meta-name (:name attr)]
