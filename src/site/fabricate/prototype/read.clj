@@ -36,20 +36,87 @@
     (format "%032x" (BigInteger. 1 raw))))
 
 (def parsed-expr-schema
-  [:map
-   [:src {:doc "The source expression as a string"} :string]
-   [:expr {:doc "An expression intended to have its results embedded in the resulting text."
-           :optional true} :any]
-   [:exec {:optional true
-           :doc "An expression intended be evaluated for side effects or definitions."} :any]
-   [::parse-error {:optional true :doc ""}
-    [:map [:type [:fn class?]]
-     [:message [:string]]]]])
+  (m/schema
+   [:map
+    [:src {:doc "The source expression as a string"} :string]
+    [:expr {:doc "An expression intended to have its results embedded in the resulting text."
+            :optional true} :any]
+    [:exec {:optional true
+            :doc "An expression intended be evaluated for side effects or definitions."} :any]
+    [::parse-error {:optional true :doc ""}
+     [:map [:type [:fn class?]]
+      [:message :string]]]]))
 
 (def evaluated-expr-schema
   (-> parsed-expr-schema
       (mu/assoc :result :any)
       (mu/assoc :error [:or :nil :map])))
+
+(defn parsed-form->expr-map
+  {:malli/schema [:=> [:cat [:schema [:cat :string :string :string]]]
+                  :map]}
+  [[t form-or-ctrl? form?]]
+  (let [read-results
+        (try (r/read-string (or form? form-or-ctrl?))
+             (catch Exception e
+               {:err
+                (let [em (Throwable->map e)]
+                  (merge
+                   (select-keys (first (:via em)) [:type])
+                   (select-keys
+                    em
+                    [:cause :data])))} ))
+        m (merge {:src (if (vector? form-or-ctrl?) form? form-or-ctrl?)
+                  :display false}
+                 (if (:err read-results)
+                   (assoc read-results :expr nil)))]
+    (cond
+      (:err m) m
+      (not (vector? form-or-ctrl?))
+      (assoc m :exec read-results)
+      :else
+      (case (second form-or-ctrl?)
+        "+" (assoc m :exec read-results :display true)
+        "=" (assoc m :expr read-results)
+        "+=" (assoc m :expr read-results :display true)))))
+
+
+(defn extended-form->form
+  {:malli/schema [:=> [:cat [:schema [:* :string]]] [:* :any]]}
+  [[tag open front-matter & contents]]
+  (let [close (last contents)
+        forms (butlast contents)
+        delims (str open close)
+        parsed-front-matter
+        (if (= "" front-matter) '()
+            (map (fn [e] {:src (str e) :expr e})
+                 (r/read-string (str open front-matter close))))]
+    (cond (= delims "[]") (apply conj [] (concat parsed-front-matter forms))
+          (= delims "()") (concat () parsed-front-matter forms))))
+
+(def parsed-schema
+  "Malli schema describing the elements of a fabricate template after it has been parsed by the Instaparse grammar"
+  (m/schema
+   [:schema
+    {:registry
+     {::txt [:cat {:encode/get {:leave second}} [:= :txt] :string]
+      ::form [:cat {:encode/get {:leave parsed-form->expr-map}}
+              [:= :expr] [:? [:schema [:cat [:= :ctrl] [:enum "=" "+" "+="]]]] [:string]]
+      ::extended-form
+      [:cat
+       {:encode/get {:leave extended-form->form}}
+       [:= :extended-form]
+       [:enum "{" "[" "("]
+       :string
+       [:* [:or [:ref ::txt] [:ref ::form] [:ref ::extended-form]]]
+       [:enum "}" "]" ")"]]}}
+    [:cat
+     [:= {:encode/get {:leave (constantly nil)}} :template]
+     [:*
+      [:or
+       [:ref ::txt]
+       [:ref ::form]
+       [:ref ::extended-form]]]]]))
 
 (defn read-template
   {:malli/schema [:=> [:cat :string] parsed-schema]}
@@ -71,7 +138,8 @@
 
 
 (defn eval-parsed-expr
-  {:malli/schema [:cat parsed-expr-schema :boolean [:fn fn?]]}
+  {:malli/schema [:=> [:cat parsed-expr-schema :boolean [:fn fn?]]
+                  [:or :map :any]]}
   ([{:keys [src expr exec err result display]
      :as expr-map} simplify? post-validator]
    (cond err expr-map
@@ -91,8 +159,11 @@
                                                  [:cause :phase]))}))
                validated (post-validator res)]
            (cond
+             (and display simplify?)
+             [:pre [:code {:class "language-clojure"} src]]
              display
-             (merge expr-map res)
+             (assoc (merge expr-map res)
+                    :result [:pre [:code {:class "language-clojure"} src]])
              (and simplify? (:result res)) ; nil is overloaded here
              (:result res)
              (and (nil? (:result res)) (nil? (:err res)))
@@ -271,70 +342,7 @@
         .toAbsolutePath))))
 
 
-(defn parsed-form->expr-map
-  {:malli/schema [:=> [:cat [:schema [:cat :string :string :string]]]
-                  :map]}
-  [[t form-or-ctrl? form?]]
-  (let [read-results
-        (try (r/read-string (or form? form-or-ctrl?))
-             (catch Exception e
-               {:err
-                (let [em (Throwable->map e)]
-                  (merge
-                   (select-keys (first (:via em)) [:type])
-                   (select-keys
-                    em
-                    [:cause :data])))} ))
-        m (merge {:src (if (vector? form-or-ctrl?) form? form-or-ctrl?)
-                  :display false}
-                 (if (:err read-results)
-                   (assoc read-results :expr nil)))]
-    (cond
-      (:err m) m
-      (not (vector? form-or-ctrl?))
-      (assoc m :exec read-results)
-      :else
-      (case (second form-or-ctrl?)
-        "+" (assoc m :exec read-results :display true)
-        "=" (assoc m :expr read-results)
-        "+=" (assoc m :expr read-results :display true)))))
 
-(defn extended-form->form
-  {:malli/schema [:=> [:cat [:schema [:* :string]]] [:* :any]]}
-  [[tag open front-matter & contents]]
-  (let [close (last contents)
-        forms (butlast contents)
-        delims (str open close)
-        parsed-front-matter
-        (if (= "" front-matter) '()
-            (map (fn [e] {:src (str e) :expr e})
-                 (r/read-string (str open front-matter close))))]
-    (cond (= delims "[]") (apply conj [] (concat parsed-front-matter forms))
-          (= delims "()") (concat () parsed-front-matter forms))))
-
-(def parsed-schema
-  "Malli schema describing the elements of a fabricate template after it has been parsed by the Instaparse grammar"
-  (m/schema
-   [:schema
-    {:registry
-     {::txt [:cat {:encode/get {:leave second}} [:= :txt] :string]
-      ::form [:cat {:encode/get {:leave parsed-form->expr-map}}
-              [:= :expr] [:? [:schema [:cat [:= :ctrl] [:enum "=" "+" "+="]]]] [:string]]
-      ::extended-form
-      [:cat
-       {:encode/get {:leave extended-form->form}}
-       [:= :extended-form]
-       [:enum "{" "[" "("]
-       :string
-       [:* [:or [:ref ::txt] [:ref ::form] [:ref ::extended-form]]]
-       [:enum "}" "]" ")"]]}}
-    [:cat
-     [:= {:encode/get {:leave (constantly nil)}} :template]
-     [:*
-      [:or
-       [:ref ::txt]
-       [:ref ::form]
-       [:ref ::extended-form]]]]]))
 
 (defn parse
   {:malli/schema [:=> [:cat :string [:? [:vector :any]]]

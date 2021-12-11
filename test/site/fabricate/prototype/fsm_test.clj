@@ -1,12 +1,22 @@
 (ns site.fabricate.prototype.fsm-test
   (:require [site.fabricate.prototype.fsm :refer :all]
             [malli.core :as m]
+            [malli.instrument :as mi]
             [clojure.test :as t]))
+
+(defn with-instrumentation [f]
+  (mi/collect!)
+  (mi/instrument!)
+  (f)
+  (mi/unstrument!))
+
+(t/use-fixtures :once with-instrumentation)
 
 (def example-fsm
   {[:enum {:description "state 1"} 1] inc
    [:enum {:description "state 2"} 2] inc
    [:enum {:description "final state"} 3] identity})
+
 
 (t/deftest finite-schema-machines
   (t/testing "schema"

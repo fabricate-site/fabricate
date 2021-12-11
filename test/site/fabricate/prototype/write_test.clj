@@ -48,7 +48,7 @@
            (-> "./README.md.fab"
                slurp
                read/parse
-               read/eval-with-errors
+               read/eval-all
                last)))
 
     (t/is (=  "./README.md.fab"

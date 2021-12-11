@@ -52,7 +52,7 @@
   "Attempts to parse the given string"
   {:malli/schema [:=> [:cat :string :map] [:vector :any]]}
   ([content-str {:keys [page-fn path]
-                 :or {page-fn (comp read/eval-with-errors read/parse)
+                 :or {page-fn (comp read/eval-all read/parse)
                       path "[no file path given]"}}]
    (try
      (page-fn content-str)
@@ -247,7 +247,7 @@
            (populate-page-meta default-site-settings))))
    parsed-state
    (fn [{:keys [parsed-content namespace] :as page-data}]
-     (let [evaluated (read/eval-with-errors parsed-content namespace)]
+     (let [evaluated (read/eval-all parsed-content namespace)]
        (assoc page-data :evaluated-content evaluated
               :namespace
               (if (symbol? namespace)

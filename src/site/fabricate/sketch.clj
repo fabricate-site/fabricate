@@ -11,7 +11,9 @@
    [site.fabricate.prototype.page :as page]
    [site.fabricate.prototype.schema :as schema]))
 
-(defn file? [f] (instance? java.io.File f))
+(defn file?
+  {:malli/schema [:=> [:cat :any] :boolean]}
+  [f] (instance? java.io.File f))
 
 (def page-metadata-schema
   [:map
@@ -99,15 +101,15 @@
    ::fallback #{::written}
    ::skip #{::watch}})
 
-(def live-reload-state-action-behavior
+#_(def live-reload-state-action-behavior
   "State-action behavior map for fabricate's main loop.
   The given function advances the state to the given state."
   {::watch #{['detect-changes ::watch]
              ['detect-changes ::file-changed]}
    ::file-changed #{[read/parse ::read/parsed]
                     [read/parse ::read/read-error]}
-   ::read/parsed #{[read/eval-with-errors ::read/evaluated]
-                   [read/eval-with-errors ::read/eval-error]}
+   ::read/parsed #{[read/eval-all ::read/evaluated]
+                   [read/eval-all ::read/eval-error]}
    ::read/evaluated #{['template->html ::page/rendered]
                       ['template->html ::page/render-error]}
    ::page/rendered #{[spit ::written]
@@ -135,8 +137,8 @@
   a programmable application architecture for users of fabricate."
   {:site.fabricate.prototype.write/file-changed #{[read/parse ::read/parsed]
                                                   [read/parse ::read/read-error]}
-   ::read/parsed #{[read/eval-with-errors ::read/evaluated]
-                   [read/eval-with-errors ::read/eval-error]}
+   ::read/parsed #{[read/eval-all ::read/evaluated]
+                   [read/eval-all ::read/eval-error]}
    ::read/evaluated #{['template->html ::page/rendered]
                       ['template->html ::page/render-error]}
    ::page/rendered #{[spit :site.fabricate.prototype.write/written]
@@ -175,8 +177,8 @@
     the contract/schema/signature of the function's inputs and outputs."
     {:init 'slurp
      'slurp 'read/parse
-     'read/parse 'read/eval-with-errors
-     'read/eval-with-errors 'template->html
+     'read/parse 'read/eval-all
+     'read/eval-all 'template->html
      'template->html 'spit
      'spit :exit}))
 

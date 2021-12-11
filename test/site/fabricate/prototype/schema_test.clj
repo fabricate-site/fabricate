@@ -38,7 +38,7 @@
        :expected (format "namespace %s has full schema coverage"
                          nmspc#)
        :actual  (if (not result#)
-                  (str "uninstrumented functions:\n"
+                  (str "functions without a schema:\n"
                        (->> ns-results#
                             (filter #(false? (:schema? %)))
                             (map :var)
@@ -55,8 +55,10 @@
   (doseq [nmspc '(site.fabricate.prototype.fsm
                   site.fabricate.prototype.html
                   site.fabricate.prototype.read
-                  site.fabricate.prototype.page
                   site.fabricate.prototype.read.grammar
+                  site.fabricate.prototype.page
+                  site.fabricate.sketch
+                  site.fabricate.prototype.schema
                   site.fabricate.prototype.write)]
     (t/testing (str "coverage for namespace " nmspc)
       (let [ns-results (test-ns-schemas nmspc)]
