@@ -45,19 +45,17 @@
           [:meta {:name "locale", :content "en_US" :property "og:locale"}]}
         (into #{}
               (opengraph-enhance opengraph-property-map
-                                 (map ->meta default-metadata-map)))
-        )))
+                                 (map ->meta default-metadata-map))))))
 
   (t/testing "page metadata collection"
-    (t/is (= {:icon "an image"}
+    (t/is (= {:icon "src-url.jpg"}
              (lift-metadata
               [:article {:lang "en" :page/title "Some document"}
                [:p "some text"]
-               (with-meta [:img "src-url.jpg"] {:page/icon "an image"
-                                                "some-prop" "a property"})]
-              {}))))
-
-  )
+               (let [img-url "src-url.jpg"]
+                 (with-meta [:img img-url] {:page/icon img-url
+                                     "some-prop" "a property"}))]
+              {})))))
 
 (def html-newline-gen
   (let [newline-gen
@@ -261,9 +259,8 @@
      (=  [:section [:p "some text"] [:p "with newlines"]]
          (parse-paragraphs [:section "some text\n\nwith newlines"])))))
 
-
 (defspec paragraph-detection-output
   (prop/for-all
-       [html-elem html-newline-gen]
-       (or (m/validate html/atomic-element html-elem)
-           (html/element? (parse-paragraphs html-elem)))))
+   [html-elem html-newline-gen]
+   (or (m/validate html/atomic-element html-elem)
+       (html/element? (parse-paragraphs html-elem)))))

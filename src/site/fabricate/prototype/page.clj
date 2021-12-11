@@ -382,6 +382,7 @@
 
 (defn lift-metadata
   "Lifts the metadata out of the page contents and into the given metadata map."
+  {:malli/schema [:=> [:cat [:vector :any] :map] :map]}
   [page-contents metadata]
   (reduce (fn [m v] (if (meta v) (merge m (rename-meta (meta v)))
                         m))
