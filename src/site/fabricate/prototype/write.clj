@@ -50,8 +50,9 @@
 
 (defn template-str->hiccup
   "Attempts to parse the given string"
+  {:malli/schema [:=> [:cat :string :map] [:vector :any]]}
   ([content-str {:keys [page-fn path]
-                 :or {page-fn (comp read/eval-with-errors read/parse)
+                 :or {page-fn (comp read/eval-all read/parse)
                       path "[no file path given]"}}]
    (try
      (page-fn content-str)
@@ -62,6 +63,7 @@
   ([content-str] (template-str->hiccup content-str {})))
 
 (defn get-output-filename
+  {:malli/schema [:=> [:cat :string :string :string] :string]}
   ([path in-dir out-dir]
    (clojure.string/replace
     path (re-pattern (str "^" in-dir))
@@ -76,30 +78,21 @@
 
          )
 
-(defn hiccup->html-str [[tag head body]]
+(defn hiccup->html-str
+  {:malli/schema [:=> [:cat :keyword
+                       [:fn (::html/head html/element-validators)]
+                       [:fn (::html/body html/element-validators)]]
+                  :string]}
+  [[tag head body]]
   (str "<!DOCTYPE html>\n<html>"
        (hiccup/html {:escape-strings? false} head)
        (hiccup/html body)
        "</html>"))
 
-(defn template->hiccup
-  "Converts a template file to a hiccup data structure for the page."
-  [t]
-  (let [parsed (read/parse t)
-        form-ns (read/yank-ns parsed)
-        evaluated  (read/eval-with-errors
-                    parsed form-ns html/validate-element)
-        page-meta (var-get (ns-resolve form-ns 'metadata))
-        body-content
-        (into [:article {:lang "en"}] evaluated)]
-    [:html
-     (page/doc-header page-meta)
-     [:body
-      body-content
-      [:footer
-       [:div [:a {:href "/"} "Home"]]]]]))
-
-(defn get-template-files [dir suffix]
+(defn get-template-files
+  {:malli/schema [:=> [:cat :string :string]
+                  [:* :string]]}
+  [dir suffix]
   (->> dir
        io/file
        file-seq
@@ -107,8 +100,6 @@
                      (not (.isDirectory %))
                      (.endsWith (.toString %) suffix)))
        (map #(.toString %))))
-
-
 
 
 ;; consider moving this to the page namespace
@@ -256,7 +247,7 @@
            (populate-page-meta default-site-settings))))
    parsed-state
    (fn [{:keys [parsed-content namespace] :as page-data}]
-     (let [evaluated (read/eval-with-errors parsed-content namespace)]
+     (let [evaluated (read/eval-all parsed-content namespace)]
        (assoc page-data :evaluated-content evaluated
               :namespace
               (if (symbol? namespace)
@@ -279,7 +270,9 @@
        (spit output-file rendered-content)
        page-data))})
 
-(defn update-page-map [old-map page-name]
+(defn update-page-map
+  {:malli/schema [:=> [:cat :map :string] :map]}
+  [old-map page-name]
   (try (update old-map page-name
                (fn [_] (fsm/complete operations page-name)))
        (catch Exception e
@@ -289,7 +282,11 @@
 
 
 
-(defn rerender [{:keys [file count action]}]
+(defn rerender
+  {:malli/schema
+   [:=> [:cat [:map [:file :any] [:count :int] [:action :keyword]]]
+    :nil]}
+  [{:keys [file count action]}]
   (if (and (#{:create :modify} action)
            (.endsWith (.toString file)
                       (:template-suffix default-site-settings)))
@@ -306,7 +303,8 @@
    :no-cache true})
 
 (defn draft
-  ([]
+  {:malli/schema [:=> [:cat] [:fn #(.isInstance clojure.lang.Agent %)]]}
+  []
    (do
      ;; (load-deps)
      (doseq [fp (get-template-files
@@ -326,18 +324,22 @@
                                         (close-watcher fw)
                                         (server/stop srv)
                                         (shutdown-agents)))))
-       fw))))
+       fw)))
 
 (defn publish
-  ([{:keys [files dirs]
-     :as opts}]
-   (let [all-files
-         (apply concat files
-                (map #(get-template-files
-                       %
-                       (:template-suffix default-site-settings)) dirs))]
-     (doseq [fp all-files]
-       (fsm/complete operations fp)))))
+  {:malli/schema
+   [:=> [:cat [:map [:files [:* :string]]
+               [:dirs [:* :string]]]]
+    :nil]}
+  [{:keys [files dirs]
+    :as opts}]
+  (let [all-files
+        (apply concat files
+               (map #(get-template-files
+                      %
+                      (:template-suffix default-site-settings)) dirs))]
+    (doseq [fp all-files]
+      (fsm/complete operations fp))))
 
 (comment
   (publish {:dirs ["./pages"]})

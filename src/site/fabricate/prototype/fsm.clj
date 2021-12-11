@@ -11,8 +11,7 @@
             [malli.util :as mu]
             [malli.error :as me]
             [malli.generator :as mg]
-            [site.fabricate.prototype.schema :as schema]
-            [site.fabricate.sketch :as sketch]))
+            [site.fabricate.prototype.schema :as schema]))
 
 
 (def state-action-map
@@ -24,8 +23,7 @@
   In this implementation, states are defined by a malli schema.
 
   See Lamport [2008] - \"Computation and State Machines\""
-  [:map-of [:fn schema/malli?] [:fn fn?]])
-
+  (m/schema [:map-of [:fn schema/malli?] [:fn ifn?]]))
 
 (defn advance
   "Takes a value, matches it against the schema keys defined in the
@@ -49,7 +47,9 @@
                                          :fsm/description))
           (op value))))))
 
-(defn complete [fsm-map value]
+(defn complete
+  {:malli/schema [:=> [:cat state-action-map :any] :any]}
+  [fsm-map value]
   (let [fsm-states (iterate (partial advance fsm-map) value)]
     (reduce (fn [current-state next-state]
               (if (= current-state next-state)

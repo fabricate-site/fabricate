@@ -80,7 +80,7 @@ Set up a live-reloading environment in which pages are republished as the templa
 
 Run the project's tests:
 
-    $ clojure -M:test:runner
+    $ clojure -X:test:runner
 
 ## License
 

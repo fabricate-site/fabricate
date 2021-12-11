@@ -64,7 +64,9 @@ When I was on my 𝑛th refactor of a thread macro with multiple embedded if exp
         (do
           (println "advancing fsm:" (get (m/properties matched-schema)
                                          :fsm/description))
-          (op value))))))</code></pre><pre><code class="language-clojure">(defn complete [fsm-map value]
+          (op value))))))</code></pre><pre><code class="language-clojure">(defn complete
+  {:malli/schema [:=> [:cat state-action-map :any] :any]}
+  [fsm-map value]
   (let [fsm-states (iterate (partial advance fsm-map) value)]
     (reduce (fn [current-state next-state]
               (if (= current-state next-state)
