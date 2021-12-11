@@ -5,6 +5,7 @@
             [malli.error :as me]
             [malli.generator :as mg]
             [clojure.set :as set]
+            [clojure.pprint :as pprint]
             [clojure.test :as t]))
 
 (defmethod t/assert-expr 'valid-schema? [msg form]
@@ -15,7 +16,7 @@
      (t/do-report
       {:type (if result# :pass :fail)
        :message ~msg
-       :expected (str (with-out-str (clojure.pprint/pprint data#))
+       :expected (str (with-out-str (pprint/pprint data#))
                       " conforms to schema for "
                       model-name#)
        :actual  (if (not result#)
@@ -65,7 +66,7 @@
   (t/testing "content models"
 
       (t/is (valid-schema?
-           (->hiccup-schema :p global-attributes
+           (#'site.fabricate.prototype.html/->hiccup-schema :p global-attributes
                             [:* atomic-element])
            [:p {:id "something"} "text in a paragraph"]))
 
