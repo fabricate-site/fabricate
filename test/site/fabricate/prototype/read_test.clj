@@ -59,7 +59,7 @@
                :display false}]
              (parse "✳(+ 2 3)🔚")))
 
-   (t/is (=
+    (t/is (=
            [{:src ":div", :expr :div}
             {:src "{:class \"col\"}", :expr {:class "col"}}
             [:txt "some text"]]
@@ -67,7 +67,19 @@
             [:extended-form
              "["
              ":div {:class \"col\"}"
-             [:txt "some text"] "]"]))))
+             [:txt "some text"] "]"])))
+
+    (t/is (-> "✳=(+ 2 3)🔚"
+              read-template
+              second
+              parsed-form->expr-map
+              meta
+              some?)
+          "Instaparse metadata should be lifted into expr metadata")
+
+    (t/is (some? (meta (first (parse "✳=(+ 2 3)🔚")))))
+
+    )
 
   (t/testing "evaluation of parsed expressions"
     (t/is (= 5 (eval-parsed-expr (first (parse "✳=(+ 2 3)🔚")) true)))

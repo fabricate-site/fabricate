@@ -55,8 +55,10 @@
 (defn parsed-form->expr-map
   {:malli/schema [:=> [:cat [:schema [:cat :string :string :string]]]
                   :map]}
-  [[t form-or-ctrl? form?]]
-  (let [read-results
+  [parsed-form]
+  (let [[t form-or-ctrl? form?]  parsed-form
+        parse-metadata (meta parsed-form)
+        read-results
         (try (r/read-string (or form? form-or-ctrl?))
              (catch Exception e
                {:err
@@ -66,10 +68,12 @@
                    (select-keys
                     em
                     [:cause :data])))} ))
-        m (merge {:src (if (vector? form-or-ctrl?) form? form-or-ctrl?)
-                  :display false}
-                 (if (:err read-results)
-                   (assoc read-results :expr nil)))]
+        m (with-meta
+            (merge {:src (if (vector? form-or-ctrl?) form? form-or-ctrl?)
+                    :display false}
+                   (if (:err read-results)
+                     (assoc read-results :expr nil)))
+            parse-metadata)]
     (cond
       (:err m) m
       (not (vector? form-or-ctrl?))
@@ -79,7 +83,6 @@
         "+" (assoc m :exec read-results :display true)
         "=" (assoc m :expr read-results)
         "+=" (assoc m :expr read-results :display true)))))
-
 
 (defn extended-form->form
   {:malli/schema [:=> [:cat [:schema [:* :string]]] [:* :any]]}
@@ -101,7 +104,7 @@
     {:registry
      {::txt [:cat {:encode/get {:leave second}} [:= :txt] :string]
       ::form [:cat {:encode/get {:leave parsed-form->expr-map}}
-              [:= :expr] [:? [:schema [:cat [:= :ctrl] [:enum "=" "+" "+="]]]] [:string]]
+              [:= :expr] [:? [:schema [:cat [:= :ctrl] [:enum "=" "+" "+="]]]] :string]
       ::extended-form
       [:cat
        {:encode/get {:leave extended-form->form}}
@@ -346,6 +349,7 @@
 
 
 
+
 (defn parse
   {:malli/schema [:=> [:cat :string [:? [:vector :any]]]
                   [:vector :any]]}
@@ -355,3 +359,24 @@
            (rest (m/encode parsed-schema parsed
                            (mt/transformer {:name :get}))))))
   ([src] (parse src [])))
+
+(comment
+  (meta (second (read-template "✳=(+ 2 3)🔚")))
+
+  (parsed-form->expr-map (second (read-template "✳=(+ 2 3)🔚")))
+
+  (meta (first (parse "✳=(+ 2 3)🔚")))
+
+  (meta (m/decode
+         [:schema {:decode/get {:enter identity}} [:cat [:= :start] :map]]
+         (with-meta [:start {:a 2}] {:meta true})
+         (mt/transformer {:name :get})))
+
+  (meta (m/encode
+         [:cat {:encode/get {:enter identity}} [:= :start] :map]
+         (with-meta [:start {:a 2}] {:meta true})
+         (mt/transformer {:name :get})))
+
+  (meta (identity (with-meta [:start {:a 2}] {:meta true})))
+
+  )
