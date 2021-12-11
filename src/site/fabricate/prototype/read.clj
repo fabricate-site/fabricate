@@ -132,6 +132,37 @@
       ;; template (this may be too clever)
       (insta/add-line-and-column-info-to-metadata template-txt attempt))))
 
+
+(defn render-src
+  {:malli/schema [:=> [:cat :any :boolean] :string]}
+  ([src-expr rm-do?]
+   (let [exp (if (and rm-do?
+                      (seq? src-expr)
+                      (= (first src-expr) 'do))
+               (second src-expr) src-expr)]
+     (util/escape-html (with-out-str (pprint exp)))))
+  ([src-expr] (render-src src-expr false)))
+
+(defn form->hiccup
+  "If the form has no errors, return its results.
+  Otherwise, create a hiccup form describing the error."
+  {:malli/schema [:=> [:cat parsed-expr-schema] :any]}
+  [{:keys [src exec expr err result display]
+    :as parsed-expr}]
+  (cond
+    err [:div [:h6 "Error"]
+         [:dl
+          [:dt "Error type"]
+          [:dd [:code (str (:type err))]]
+          [:dt "Error message"]
+          [:dd [:code (str (:cause err))]]
+          [:dt "Error phase"]
+          [:dd [:code (str (:phase err))]]]
+         [:details [:summary "Source expression"]
+          [:pre [:code src]]]]
+    display (list [:pre [:code (render-src (or exec expr) true)]] result)
+    :else result))
+
 ;; post-validator should have the following signature
 ;; if it validates, return the input in a map: {:result input}
 ;; if it doesn't, return a map describing the error
@@ -142,33 +173,34 @@
                   [:or :map :any]]}
   ([{:keys [src expr exec err result display]
      :as expr-map} simplify? post-validator]
-   (cond err expr-map
-         result result
-         :else
-         (let [res (try
-                     {:result
-                      (if exec
-                        (do (eval exec) nil)
-                        (eval expr))
-                      :err nil}
-                     (catch Exception e
-                       {:result nil
-                        :err (merge {:type (.getClass e)
-                                     :message (.getMessage e)}
-                                    (select-keys (Throwable->map e)
-                                                 [:cause :phase]))}))
-               validated (post-validator res)]
-           (cond
-             (and display simplify?)
-             [:pre [:code {:class "language-clojure"} src]]
-             display
-             (assoc (merge expr-map res)
-                    :result [:pre [:code {:class "language-clojure"} src]])
-             (and simplify? (:result res)) ; nil is overloaded here
-             (:result res)
-             (and (nil? (:result res)) (nil? (:err res)))
-             nil
-             :else (merge expr-map res)))))
+   (let [res
+         (if err expr-map
+             (try
+               {:result
+                (if exec
+                  (do (eval exec) nil)
+                  (eval expr))
+                :err nil}
+               (catch Exception e
+                 {:result nil
+                  :err (merge {:type (.getClass e)
+                               :message (.getMessage e)}
+                              (select-keys (Throwable->map e)
+                                           [:cause :phase]))})))
+         validated (post-validator res)]
+     (cond
+       (and err simplify?) (form->hiccup res)
+       err (assoc res :result (form->hiccup res))
+       (and display simplify?)
+       [:pre [:code {:class "language-clojure"} src]]
+       display
+       (assoc (merge expr-map res)
+              :result [:pre [:code {:class "language-clojure"} src]])
+       (and simplify? (:result res))    ; nil is overloaded here
+       (:result res)
+       (and (nil? (:result res)) (nil? (:err res)))
+       nil
+       :else (merge expr-map res))))
   ([expr simplify?] (eval-parsed-expr expr simplify? (fn [e] {:result e})))
   ([expr] (eval-parsed-expr expr false)))
 
@@ -229,36 +261,6 @@
                   i))
         parsed-form))))
   ([parsed-form] (eval-all parsed-form true)))
-
-(defn render-src
-  {:malli/schema [:=> [:cat :any :boolean] :string]}
-  ([src-expr rm-do?]
-   (let [exp (if (and rm-do?
-                      (seq? src-expr)
-                      (= (first src-expr) 'do))
-               (second src-expr) src-expr)]
-     (util/escape-html (with-out-str (pprint exp)))))
-  ([src-expr] (render-src src-expr false)))
-
-(defn form->hiccup
-  "If the form has no errors, return its results.
-  Otherwise, create a hiccup form describing the error."
-  {:malli/schema [:=> [:cat parsed-expr-schema] :any]}
-  [{:keys [src exec expr err result display]
-    :as parsed-expr}]
-  (cond
-    err [:div [:h6 "Error"]
-         [:dl
-          [:dt "Error type"]
-          [:dd [:code (str (:type err))]]
-          [:dt "Error message"]
-          [:dd [:code (str (:cause err))]]
-          [:dt "Error phase"]
-          [:dd [:code (str (:phase err))]]]
-         [:details [:summary "Source expression"]
-          [:pre [:code src]]]]
-    display (list [:pre [:code (render-src (or exec expr) true)]] result)
-    :else result))
 
 (defn include-source
   {:malli/schema [:=> [:cat :map :string] [:vector :any]]}

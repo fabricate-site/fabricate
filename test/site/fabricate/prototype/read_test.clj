@@ -57,7 +57,17 @@
     (t/is (= [{:exec '(+ 2 3)
                :src "(+ 2 3)"
                :display false}]
-             (parse "✳(+ 2 3)🔚"))))
+             (parse "✳(+ 2 3)🔚")))
+
+   (t/is (=
+           [{:src ":div", :expr :div}
+            {:src "{:class \"col\"}", :expr {:class "col"}}
+            [:txt "some text"]]
+           (extended-form->form
+            [:extended-form
+             "["
+             ":div {:class \"col\"}"
+             [:txt "some text"] "]"]))))
 
   (t/testing "evaluation of parsed expressions"
     (t/is (= 5 (eval-parsed-expr (first (parse "✳=(+ 2 3)🔚")) true)))
@@ -78,19 +88,11 @@
                  first
                  (eval-parsed-expr false))))
 
-    (t/is (=
-           [{:src ":div", :expr :div}
-            {:src "{:class \"col\"}", :expr {:class "col"}}
-            [:txt "some text"]]
-           (extended-form->form
-            [:extended-form
-             "["
-             ":div {:class \"col\"}"
-             [:txt "some text"] "]"])))
-
-    (t/is (and
-           (not (nil? (:err (eval-parsed-expr (first (parse "✳=((+ 2 3)🔚")) false))))
-           (not (nil? (:err (eval-parsed-expr (first (parse "✳=((+ 2 3)🔚")) true)))))))
+    (t/is
+     (= [:div [:h6 "Error"] [:dl [:dt "Error type"] [:dd [:code "clojure.lang.ExceptionInfo"]] [:dt "Error message"] [:dd [:code "Unexpected EOF while reading item 1 of list."]] [:dt "Error phase"] [:dd [:code ""]]] [:details [:summary "Source expression"] [:pre [:code "((+ 2 3)"]]]]
+        (eval-parsed-expr (first (parse "✳((+ 2 3)🔚")) true))
+     "Expression parsing errors should be surfaced in the output")
+    (t/is (not (nil? (:err (eval-parsed-expr (first (parse "✳=((+ 2 3)🔚")) false))))))
 
   (t/testing "namespace retrieval"
 
