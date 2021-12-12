@@ -67,7 +67,7 @@
             [:extended-form
              "["
              ":div {:class \"col\"}"
-             [:txt "some text"] "]"])))
+             [:form-contents [:txt "some text"]] "]"])))
 
     (t/is (-> "✳=(+ 2 3)🔚"
               read-template
@@ -79,7 +79,7 @@
 
     (t/is (some? (meta (first (parse "✳=(+ 2 3)🔚")))))
 
-    )
+    (t/is (some? (meta (first (parse "✳//[:div \n more text ]//🔚"))))))
 
   (t/testing "evaluation of parsed expressions"
     (t/is (= 5 (eval-parsed-expr (first (parse "✳=(+ 2 3)🔚")) true)))

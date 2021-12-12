@@ -11,12 +11,13 @@
             [malli.instrument :as mi]
             [clojure.test :as t]))
 
-(defn setup [f]
+(defn with-instrumentation [f]
+  (mi/collect!)
   (mi/instrument!)
   (f)
   (mi/unstrument!))
 
-(t/use-fixtures :once setup)
+(t/use-fixtures :once with-instrumentation)
 
 (t/deftest page-creation
   (t/testing "html helper fns"

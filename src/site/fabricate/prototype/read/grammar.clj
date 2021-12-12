@@ -56,8 +56,8 @@
     txt = #'%s'
 
     (* extended forms allow arbitrary nesting without breaking the flow *)
-
-    extended-form = (<initial> <'//'> '[' #'[^\n✳🔚]*' <'\n'> (expr|txt|extended-form)+ ']' <'//'> <terminal>) |
-                    (<initial> <'//'> '(' #'[^\n✳🔚]*' <'\n'> (expr|txt|extended-form)+ ')' <'//'> <terminal>) |
-                    (<initial> <'//'> '{' #'[^\n✳🔚]*' <'\n'> (expr|txt|extended-form)+ '}' <'//'> <terminal>)"
+    form-contents = (expr|txt|extended-form)+
+    extended-form = (<initial> <'//'> '[' #'[^\n✳🔚]*' <'\n'> form-contents ']' <'//'> <terminal>) |
+                    (<initial> <'//'> '(' #'[^\n✳🔚]*' <'\n'> form-contents ')' <'//'> <terminal>) |
+                    (<initial> <'//'> '{' #'[^\n✳🔚]*' <'\n'> form-contents '}' <'//'> <terminal>)"
     txt-insta-regex)))

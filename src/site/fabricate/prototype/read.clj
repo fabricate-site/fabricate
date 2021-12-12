@@ -86,32 +86,36 @@
 
 (defn extended-form->form
   {:malli/schema [:=> [:cat [:schema [:* :string]]] [:* :any]]}
-  [[tag open front-matter & contents]]
-  (let [close (last contents)
-        forms (butlast contents)
-        delims (str open close)
+  [[tag open front-matter [_ forms] close :as ext-form]]
+  (let [delims (str open close)
         parsed-front-matter
         (if (= "" front-matter) '()
             (map (fn [e] {:src (str e) :expr e})
                  (r/read-string (str open front-matter close))))]
-    (cond (= delims "[]") (apply conj [] (concat parsed-front-matter forms))
-          (= delims "()") (concat () parsed-front-matter forms))))
+    (with-meta (cond (= delims "[]") (apply conj [] (concat parsed-front-matter [forms]))
+                     (= delims "()") (concat () parsed-front-matter forms))
+      (meta ext-form))))
 
 (def parsed-schema
   "Malli schema describing the elements of a fabricate template after it has been parsed by the Instaparse grammar"
   (m/schema
    [:schema
     {:registry
-     {::txt [:cat {:encode/get {:leave second}} [:= :txt] :string]
-      ::form [:cat {:encode/get {:leave parsed-form->expr-map}}
-              [:= :expr] [:? [:schema [:cat [:= :ctrl] [:enum "=" "+" "+="]]]] :string]
+     {::txt [:tuple {:encode/get {:leave second}} [:= :txt] :string]
+      ::form
+      [:or [:tuple {:encode/get {:leave parsed-form->expr-map}}
+            [:= :expr] [:tuple [:= :ctrl] [:enum "=" "+" "+="]] :string]
+       [:tuple {:encode/get {:leave parsed-form->expr-map}}
+              [:= :expr] :string]]
       ::extended-form
-      [:cat
+      [:tuple
        {:encode/get {:leave extended-form->form}}
        [:= :extended-form]
        [:enum "{" "[" "("]
        :string
-       [:* [:or [:ref ::txt] [:ref ::form] [:ref ::extended-form]]]
+       [:cat
+        [:= :form-contents]
+        [:* [:or [:ref ::txt] [:ref ::form] [:ref ::extended-form]]]]
        [:enum "}" "]" ")"]]}}
     [:cat
      [:= {:encode/get {:leave (constantly nil)}} :template]
@@ -120,6 +124,22 @@
        [:ref ::txt]
        [:ref ::form]
        [:ref ::extended-form]]]]]))
+
+(comment  (read-template "✳=(+ 2 3)🔚")
+          (read-template "✳//[:div \n more text ]//🔚")
+
+          (m/explain [:tuple :keyword [:? :map] :string]
+                     [:a {:a 2} "abc"])
+
+          (m/validate parsed-schema
+                      [:template [:expr [:ctrl "="] "(+ 2 3)"]]
+                      )
+
+          (m/explain parsed-schema
+                     [:template [:expr [:ctrl "="] "(+ 2 3)"]]
+                     )
+
+          )
 
 (defn read-template
   {:malli/schema [:=> [:cat :string] parsed-schema]}
@@ -376,6 +396,13 @@
          [:cat {:encode/get {:enter identity}} [:= :start] :map]
          (with-meta [:start {:a 2}] {:meta true})
          (mt/transformer {:name :get})))
+
+  (meta (m/encode
+         [:tuple {:encode/get {:enter identity}} [:= :start] :map]
+         (with-meta [:start {:a 2}] {:meta true})
+         (mt/transformer {:name :get})))
+
+  (m/validate [:tuple :keyword [:* :int]] [:k [2]])
 
   (meta (identity (with-meta [:start {:a 2}] {:meta true})))
 
