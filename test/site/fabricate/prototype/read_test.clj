@@ -79,6 +79,10 @@
 
     (t/is (some? (meta (first (parse "✳=(+ 2 3)🔚")))))
 
+    (t/is (some?
+           (meta (first (eval-all (parse "✳=(unbound-fn nil)🔚") false))))
+          "metadata should be retained after evaluation")
+
     (t/is (some? (meta (first (parse "✳//[:div \n more text ]//🔚"))))))
 
   (t/testing "evaluation of parsed expressions"
@@ -101,7 +105,13 @@
                  (eval-parsed-expr false))))
 
     (t/is
-     (= [:div [:h6 "Error"] [:dl [:dt "Error type"] [:dd [:code "clojure.lang.ExceptionInfo"]] [:dt "Error message"] [:dd [:code "Unexpected EOF while reading item 1 of list."]] [:dt "Error phase"] [:dd [:code ""]]] [:details [:summary "Source expression"] [:pre [:code "((+ 2 3)"]]]]
+     (= [:div [:h6 "Error"]
+         [:dl [:dt "Error type"] [:dd [:code "clojure.lang.ExceptionInfo"]] [:dt "Error message"] [:dd [:code "Unexpected EOF while reading item 1 of list."]]
+          [:dt "Error phase"] [:dd [:code ""]]
+          [:dt "Location"]
+          [:dd
+           '("Line " [:strong 1] ", " "Columns " [:strong 1 "-" 12])]]
+         [:details [:summary "Source expression"] [:pre [:code "((+ 2 3)"]]]]
         (eval-parsed-expr (first (parse "✳((+ 2 3)🔚")) true))
      "Expression parsing errors should be surfaced in the output")
     (t/is (not (nil? (:err (eval-parsed-expr (first (parse "✳=((+ 2 3)🔚")) false))))))

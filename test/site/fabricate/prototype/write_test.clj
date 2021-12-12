@@ -103,6 +103,21 @@
 
 
 
+    (let [sample-error
+          (->> {:input-file (io/file "content/test/some-file.txt.fab")
+                :unparsed-content "✳=(unbound-fn nil)🔚"}
+               (fsm/complete (dissoc operations
+                                     rendered-state
+                                     html-state
+                                     markdown-state))
+               :evaluated-content
+               first)]
+      (t/is
+       (and (= :div (first sample-error))
+            (= [:h6 "Error"] (second sample-error))
+            (some? (second (nth (nth sample-error 2) 8))))
+       "Errors should be correctly surfaced in output"))
+
 
     (t/is (contains?
            (fsm/complete (dissoc operations

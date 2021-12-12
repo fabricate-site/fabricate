@@ -125,22 +125,6 @@
        [:ref ::form]
        [:ref ::extended-form]]]]]))
 
-(comment  (read-template "✳=(+ 2 3)🔚")
-          (read-template "✳//[:div \n more text ]//🔚")
-
-          (m/explain [:tuple :keyword [:? :map] :string]
-                     [:a {:a 2} "abc"])
-
-          (m/validate parsed-schema
-                      [:template [:expr [:ctrl "="] "(+ 2 3)"]]
-                      )
-
-          (m/explain parsed-schema
-                     [:template [:expr [:ctrl "="] "(+ 2 3)"]]
-                     )
-
-          )
-
 (defn read-template
   {:malli/schema [:=> [:cat :string] parsed-schema]}
   [template-txt]
@@ -166,6 +150,19 @@
      (util/escape-html (with-out-str (pprint exp)))))
   ([src-expr] (render-src src-expr false)))
 
+(defn- lines->msg [form-meta]
+  (let [line-info
+        (if (= (:instaparse.gll/start-line form-meta)
+               (:instaparse.gll/end-line form-meta))
+          (list "Line " [:strong (:instaparse.gll/end-line form-meta)])
+          (list "Lines " [:strong (:instaparse.gll/start-line form-meta) "-" (:instaparse.gll/end-line form-meta)]))
+        column-info
+        (if (= (:instaparse.gll/start-column form-meta)
+               (:instaparse.gll/end-column form-meta))
+          (list "Column " [:strong (:instaparse.gll/end-column form-meta)])
+          (list "Columns " [:strong (:instaparse.gll/start-column form-meta) "-" (:instaparse.gll/end-column form-meta)]))]
+    (concat line-info [", "] column-info)))
+
 (defn form->hiccup
   "If the form has no errors, return its results.
   Otherwise, create a hiccup form describing the error."
@@ -180,7 +177,9 @@
           [:dt "Error message"]
           [:dd [:code (str (:cause err))]]
           [:dt "Error phase"]
-          [:dd [:code (str (:phase err))]]]
+          [:dd [:code (str (:phase err))]]
+          [:dt "Location"]
+          [:dd (lines->msg (meta parsed-expr))]]
          [:details [:summary "Source expression"]
           [:pre [:code src]]]]
     display (list [:pre [:code (render-src (or exec expr) true)]] result)
@@ -197,23 +196,27 @@
   ([{:keys [src expr exec err result display]
      :as expr-map} simplify? post-validator]
    (let [res
-         (if err expr-map
-             (try
-               {:result
-                (if exec
-                  (do (eval exec) nil)
-                  (eval expr))
-                :err nil}
-               (catch Exception e
-                 {:result nil
-                  :err (merge {:type (.getClass e)
-                               :message (.getMessage e)}
-                              (select-keys (Throwable->map e)
-                                           [:cause :phase]))})))
+         (with-meta (if err expr-map
+                        (try
+                          (assoc
+                           expr-map
+                           :result
+                           (if exec
+                             (do (eval exec) nil)
+                             (eval expr))
+                           :err nil)
+                          (catch Exception e
+                            (assoc expr-map
+                                   :result nil
+                                   :err (merge {:type (.getClass e)
+                                                :message (.getMessage e)}
+                                               (select-keys (Throwable->map e)
+                                                            [:cause :phase]))))))
+           (meta expr-map))
          validated (post-validator res)]
      (cond
-       (and err simplify?) (form->hiccup res)
-       err (assoc res :result (form->hiccup res))
+       (and (or err (:err res)) simplify?) (form->hiccup res)
+       (or err (:err res)) (assoc res :result (form->hiccup res))
        (and display simplify?)
        [:pre [:code {:class "language-clojure"} src]]
        display
