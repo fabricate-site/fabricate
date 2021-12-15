@@ -115,7 +115,7 @@
   {:doc "For each string in the element split it by the given regex, and insert the result into the original element. Leaves sub-elements as is and inserts them into the preceding paragraph."
    :deprecated true
    :malli/schema [:=> [:cat [:? [:fn seq?]]
-                        [:? schema/regex]]
+                       [:? schema/regex]]
                   html/element]}
   ([seq re]
    (let [v? (vector? seq)
@@ -263,14 +263,11 @@
 (comment
   (non-hiccup-seq? [:p "some text\n\nwith newlines"])
 
-    (parse-paragraphs [:section "some text\n\nwith newlines"])
-
+  (parse-paragraphs [:section "some text\n\nwith newlines"])
 
   (parse-paragraphs [:p "some text\n\nwith newlines"])
 
-  (split-paragraphs "some text\n\nwith linebreak")
-
-  )
+  (split-paragraphs "some text\n\nwith linebreak"))
 
 (defn ->meta
   {:malli/schema
@@ -278,7 +275,7 @@
     [:cat [:= :meta] :map]]}
   [[k v]]
   (let [attrs (if (map? v) v {:content v})]
-    [:meta (merge {:name k} attrs)]))
+    [:meta (merge {:name (if (keyword? k) (str (name k)) k)} attrs)]))
 
 (comment
 
@@ -288,9 +285,7 @@
   (parse-paragraphs
    [:b [:dfn "some\n\n"]])
 
-  (html/element? (parse-paragraphs [:del "some\n\n"]))
-
-  )
+  (html/element? (parse-paragraphs [:del "some\n\n"])))
 
 (defn metadata-map->head-elements
   "Return the contents of the metadata map as a sequence of Hiccup elements"
@@ -309,6 +304,8 @@
 
   See https://stackoverflow.com/a/22984013 for more context on combining these attributes in
   a single HTML <meta> element."
+  {:malli/schema [:=> [:cat [:map [:* [:schema [:cat [:= :meta] :map]]]]]
+                  [:* [:cat [:= :meta] :map]]]}
   [prop-names items]
   (map (fn [[t attr]]
          (let [meta-name (:name attr)]
@@ -329,12 +326,15 @@
   (list [:meta {:charset "utf-8"}]
         [:meta {:http-equiv "X-UA-Compatible" :content "IE=edge"}]))
 
-
 (def opengraph-property-map
   {:title "og:title"
+   "title" "og:title"
    :description "og:description"
+   "description" "og:description"
    :locale "og:locale"
-   :site-name "og:site_name"})
+   "locale" "og:locale"
+   :site-name "og:site_name"
+   "site-name" "og:site_name"})
 
 (comment
   (map ->meta default-metadata)
@@ -344,9 +344,7 @@
                       [:meta {:name "title" :content "demo"}]])
 
   (opengraph-enhance {"description" "og:description"}
-                     (map ->meta default-metadata))
-
-  )
+                     (map ->meta default-metadata)))
 
 (def ogp-properties
   {:title "og:title"
@@ -373,3 +371,20 @@
                    default-metadata
                    (if scripts scripts)
                    (if page-style [[:style page-style]])))))
+
+(defn- rename-meta [m]
+  (reduce
+   (fn [m [k v]]
+     (if (and (keyword? k) (= "page" (namespace k))) (assoc m (keyword (name k)) v)
+         m))
+   {}
+   m))
+
+(defn lift-metadata
+  "Lifts the metadata out of the page contents and into the given metadata map."
+  {:malli/schema [:=> [:cat [:vector :any] :map] :map]}
+  [page-contents metadata]
+  (reduce (fn [m v] (if (meta v) (merge m (rename-meta (meta v)))
+                        m))
+          metadata
+          (tree-seq sequential? identity page-contents)))

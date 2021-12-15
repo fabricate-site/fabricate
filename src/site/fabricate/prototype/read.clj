@@ -55,8 +55,10 @@
 (defn parsed-form->expr-map
   {:malli/schema [:=> [:cat [:schema [:cat :string :string :string]]]
                   :map]}
-  [[t form-or-ctrl? form?]]
-  (let [read-results
+  [parsed-form]
+  (let [[t form-or-ctrl? form?]  parsed-form
+        parse-metadata (meta parsed-form)
+        read-results
         (try (r/read-string (or form? form-or-ctrl?))
              (catch Exception e
                {:err
@@ -65,11 +67,13 @@
                    (select-keys (first (:via em)) [:type])
                    (select-keys
                     em
-                    [:cause :data])))} ))
-        m (merge {:src (if (vector? form-or-ctrl?) form? form-or-ctrl?)
-                  :display false}
-                 (if (:err read-results)
-                   (assoc read-results :expr nil)))]
+                    [:cause :data])))}))
+        m (with-meta
+            (merge {:src (if (vector? form-or-ctrl?) form? form-or-ctrl?)
+                    :display false}
+                   (if (:err read-results)
+                     (assoc read-results :expr nil)))
+            parse-metadata)]
     (cond
       (:err m) m
       (not (vector? form-or-ctrl?))
@@ -80,35 +84,38 @@
         "=" (assoc m :expr read-results)
         "+=" (assoc m :expr read-results :display true)))))
 
-
 (defn extended-form->form
   {:malli/schema [:=> [:cat [:schema [:* :string]]] [:* :any]]}
-  [[tag open front-matter & contents]]
-  (let [close (last contents)
-        forms (butlast contents)
-        delims (str open close)
+  [[tag open front-matter [_ forms] close :as ext-form]]
+  (let [delims (str open close)
         parsed-front-matter
         (if (= "" front-matter) '()
             (map (fn [e] {:src (str e) :expr e})
                  (r/read-string (str open front-matter close))))]
-    (cond (= delims "[]") (apply conj [] (concat parsed-front-matter forms))
-          (= delims "()") (concat () parsed-front-matter forms))))
+    (with-meta (cond (= delims "[]") (apply conj [] (concat parsed-front-matter [forms]))
+                     (= delims "()") (concat () parsed-front-matter forms))
+      (meta ext-form))))
 
 (def parsed-schema
   "Malli schema describing the elements of a fabricate template after it has been parsed by the Instaparse grammar"
   (m/schema
    [:schema
     {:registry
-     {::txt [:cat {:encode/get {:leave second}} [:= :txt] :string]
-      ::form [:cat {:encode/get {:leave parsed-form->expr-map}}
-              [:= :expr] [:? [:schema [:cat [:= :ctrl] [:enum "=" "+" "+="]]]] [:string]]
+     {::txt [:tuple {:encode/get {:leave second}} [:= :txt] :string]
+      ::form
+      [:or [:tuple {:encode/get {:leave parsed-form->expr-map}}
+            [:= :expr] [:tuple [:= :ctrl] [:enum "=" "+" "+="]] :string]
+       [:tuple {:encode/get {:leave parsed-form->expr-map}}
+        [:= :expr] :string]]
       ::extended-form
-      [:cat
+      [:tuple
        {:encode/get {:leave extended-form->form}}
        [:= :extended-form]
        [:enum "{" "[" "("]
        :string
-       [:* [:or [:ref ::txt] [:ref ::form] [:ref ::extended-form]]]
+       [:cat
+        [:= :form-contents]
+        [:* [:or [:ref ::txt] [:ref ::form] [:ref ::extended-form]]]]
        [:enum "}" "]" ")"]]}}
     [:cat
      [:= {:encode/get {:leave (constantly nil)}} :template]
@@ -132,7 +139,6 @@
       ;; template (this may be too clever)
       (insta/add-line-and-column-info-to-metadata template-txt attempt))))
 
-
 (defn render-src
   {:malli/schema [:=> [:cat :any :boolean] :string]}
   ([src-expr rm-do?]
@@ -142,6 +148,19 @@
                (second src-expr) src-expr)]
      (util/escape-html (with-out-str (pprint exp)))))
   ([src-expr] (render-src src-expr false)))
+
+(defn- lines->msg [form-meta]
+  (let [line-info
+        (if (= (:instaparse.gll/start-line form-meta)
+               (:instaparse.gll/end-line form-meta))
+          (list "Line " [:strong (:instaparse.gll/end-line form-meta)])
+          (list "Lines " [:strong (:instaparse.gll/start-line form-meta) "-" (:instaparse.gll/end-line form-meta)]))
+        column-info
+        (if (= (:instaparse.gll/start-column form-meta)
+               (:instaparse.gll/end-column form-meta))
+          (list "Column " [:strong (:instaparse.gll/end-column form-meta)])
+          (list "Columns " [:strong (:instaparse.gll/start-column form-meta) "-" (:instaparse.gll/end-column form-meta)]))]
+    (concat line-info [", "] column-info)))
 
 (defn form->hiccup
   "If the form has no errors, return its results.
@@ -157,7 +176,9 @@
           [:dt "Error message"]
           [:dd [:code (str (:cause err))]]
           [:dt "Error phase"]
-          [:dd [:code (str (:phase err))]]]
+          [:dd [:code (str (:phase err))]]
+          [:dt "Location"]
+          [:dd (lines->msg (meta parsed-expr))]]
          [:details [:summary "Source expression"]
           [:pre [:code src]]]]
     display (list [:pre [:code (render-src (or exec expr) true)]] result)
@@ -167,30 +188,33 @@
 ;; if it validates, return the input in a map: {:result input}
 ;; if it doesn't, return a map describing the error
 
-
 (defn eval-parsed-expr
   {:malli/schema [:=> [:cat parsed-expr-schema :boolean [:fn fn?]]
                   [:or :map :any]]}
   ([{:keys [src expr exec err result display]
      :as expr-map} simplify? post-validator]
    (let [res
-         (if err expr-map
-             (try
-               {:result
-                (if exec
-                  (do (eval exec) nil)
-                  (eval expr))
-                :err nil}
-               (catch Exception e
-                 {:result nil
-                  :err (merge {:type (.getClass e)
-                               :message (.getMessage e)}
-                              (select-keys (Throwable->map e)
-                                           [:cause :phase]))})))
+         (with-meta (if err expr-map
+                        (try
+                          (assoc
+                           expr-map
+                           :result
+                           (if exec
+                             (do (eval exec) nil)
+                             (eval expr))
+                           :err nil)
+                          (catch Exception e
+                            (assoc expr-map
+                                   :result nil
+                                   :err (merge {:type (.getClass e)
+                                                :message (.getMessage e)}
+                                               (select-keys (Throwable->map e)
+                                                            [:cause :phase]))))))
+           (meta expr-map))
          validated (post-validator res)]
      (cond
-       (and err simplify?) (form->hiccup res)
-       err (assoc res :result (form->hiccup res))
+       (and (or err (:err res)) simplify?) (form->hiccup res)
+       (or err (:err res)) (assoc res :result (form->hiccup res))
        (and display simplify?)
        [:pre [:code {:class "language-clojure"} src]]
        display
@@ -248,9 +272,10 @@
        :exec))
 
 (defn eval-all
-  {:malli/schema [:=> [:cat parsed-schema [:? :boolean]]
-                  [:vector :any]]}
-  ([parsed-form simplify?]
+  {:malli/schema
+   [:=> [:cat parsed-schema [:? :boolean] [:? :symbol]]
+    [:vector :any]]}
+  ([parsed-form simplify? nmspc]
    (let [form-nmspc (yank-ns parsed-form)
          nmspc (if form-nmspc (create-ns form-nmspc) *ns*)]
      (binding [*ns* nmspc]
@@ -260,6 +285,7 @@
                   (eval-parsed-expr i simplify?)
                   i))
         parsed-form))))
+  ([parsed-form simplify?] (eval-all parsed-form simplify? *ns*))
   ([parsed-form] (eval-all parsed-form true)))
 
 (defn include-source
@@ -272,7 +298,6 @@
                        [:pre [:code source-code]])
          [:pre [:code source-code]])))
   ([file-path] (include-source {} file-path)))
-
 
 (defn include-def
   "Excerpts the source code of the given symbol in the given file."
@@ -343,9 +368,6 @@
         .toPath
         .toAbsolutePath))))
 
-
-
-
 (defn parse
   {:malli/schema [:=> [:cat :string [:? [:vector :any]]]
                   [:vector :any]]}
@@ -355,3 +377,29 @@
            (rest (m/encode parsed-schema parsed
                            (mt/transformer {:name :get}))))))
   ([src] (parse src [])))
+
+(comment
+  (meta (second (read-template "✳=(+ 2 3)🔚")))
+
+  (parsed-form->expr-map (second (read-template "✳=(+ 2 3)🔚")))
+
+  (meta (first (parse "✳=(+ 2 3)🔚")))
+
+  (meta (m/decode
+         [:schema {:decode/get {:enter identity}} [:cat [:= :start] :map]]
+         (with-meta [:start {:a 2}] {:meta true})
+         (mt/transformer {:name :get})))
+
+  (meta (m/encode
+         [:cat {:encode/get {:enter identity}} [:= :start] :map]
+         (with-meta [:start {:a 2}] {:meta true})
+         (mt/transformer {:name :get})))
+
+  (meta (m/encode
+         [:tuple {:encode/get {:enter identity}} [:= :start] :map]
+         (with-meta [:start {:a 2}] {:meta true})
+         (mt/transformer {:name :get})))
+
+  (m/validate [:tuple :keyword [:* :int]] [:k [2]])
+
+  (meta (identity (with-meta [:start {:a 2}] {:meta true}))))

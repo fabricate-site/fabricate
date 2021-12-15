@@ -1,5 +1,5 @@
 (ns site.fabricate.prototype.page-test
-  (:require [site.fabricate.prototype.page :refer :all ]
+  (:require [site.fabricate.prototype.page :refer :all]
             [site.fabricate.prototype.html :as html]
             [site.fabricate.prototype.html-test.generators :as html-gen]
             [hiccup2.core :as hiccup]
@@ -8,7 +8,16 @@
             [clojure.test.check :as check]
             [clojure.test.check.clojure-test :refer [defspec]]
             [malli.core :as m]
+            [malli.instrument :as mi]
             [clojure.test :as t]))
+
+(defn with-instrumentation [f]
+  (mi/collect!)
+  (mi/instrument!)
+  (f)
+  (mi/unstrument!))
+
+(t/use-fixtures :once with-instrumentation)
 
 (t/deftest page-creation
   (t/testing "html helper fns"
@@ -28,33 +37,44 @@
              (-> {"meta" {:content "something"
                           :property "some-prop"}}
                  seq first ->meta)))
-    #_(t/is
-     (= '([:meta {:name "title", :content "Fabricate"}]
+    (t/is
+     (= #{[:meta {:name "site-name" :property "og:site_name" :content "fabricate.site"}]
+          [:meta {:name "title", :content "Fabricate" :property "og:title"}]
+          [:meta {:name "site-title", :content "Fabricate"}]
           [:meta {:name "description", :content "Fabricate: static website generation for Clojure", :property "og:description"}]
-          [:meta {:name "viewport", :content "width=device-width, initial-scale=1.0, user-scalable=no"}]
-          [:meta {:name "HTTP Attributes", :charset "utf-8", :http-equiv "X-UA-Compatible", :content "IE=edge,chrome=1"}])
-      (opengraph-enhance {"description" "og:description"}
-                         (map ->meta default-metadata))))
+          [:meta {:name "viewport", :content "width=device-width, initial-scale=1.0"}]
+          [:meta {:name "locale", :content "en_US" :property "og:locale"}]}
+        (into #{}
+              (opengraph-enhance opengraph-property-map
+                                 (map ->meta default-metadata-map))))))
 
-    ))
+  (t/testing "page metadata collection"
+    (t/is (= {:icon "src-url.jpg"}
+             (lift-metadata
+              [:article {:lang "en" :page/title "Some document"}
+               [:p "some text"]
+               (let [img-url "src-url.jpg"]
+                 (with-meta [:img img-url] {:page/icon img-url
+                                     "some-prop" "a property"}))]
+              {})))))
 
 (def html-newline-gen
   (let [newline-gen
         (gen/vector
          (gen/let
-             [a (gen/vector
-                 (gen/one-of
-                  [(gen/elements ["\n"]) gen/string-alphanumeric])
-                 5)
-              b (gen/vector
-                 (gen/one-of
-                  [(gen/elements ["\n\n" "\n"]) gen/string-alphanumeric])
-                 5)
-              c (gen/vector
-                 (gen/one-of
-                  [(gen/elements ["\n\n" "\n" "\n\n\n"]) gen/string-alphanumeric])
-                 5)]
-             (apply str (interleave a b c)))
+          [a (gen/vector
+              (gen/one-of
+               [(gen/elements ["\n"]) gen/string-alphanumeric])
+              5)
+           b (gen/vector
+              (gen/one-of
+               [(gen/elements ["\n\n" "\n"]) gen/string-alphanumeric])
+              5)
+           c (gen/vector
+              (gen/one-of
+               [(gen/elements ["\n\n" "\n" "\n\n\n"]) gen/string-alphanumeric])
+              5)]
+           (apply str (interleave a b c)))
          2 5)]
     (gen/such-that
      html/element?
@@ -64,14 +84,11 @@
        :contents-gen newline-gen})
      250)))
 
-
-
 (comment
 
   (hiccup/html [:em "some text\n\nwith double linebreak"])
 
   (parse-paragraphs [:em "some text\n\nwith newlines"] #"\n\n")
-
 
   (parse-paragraphs
    [:p {:class "steel"} false]
@@ -79,8 +96,6 @@
 
   (html/phrasing?
    [:p {:class "steel"} false])
-
-
 
   (parse-paragraphs
    (first
@@ -91,19 +106,14 @@
        [html-elem html-newline-gen]
        (or (m/validate html/atomic-element html-elem)
            (html/element? (parse-paragraphs html-elem #"\n\n")))))
-     [:shrunk :smallest])))
-
-  )
+     [:shrunk :smallest]))))
 
 (comment
-  (html/phrasing? false)
-
-  )
+  (html/phrasing? false))
 
 (t/deftest transforms
 
   (t/testing "Paragraph detection"
-
 
     (t/is (= [:div [:p "some"] [:p "text"]]
              (parse-paragraphs [:div "some\n\ntext"])))
@@ -229,7 +239,6 @@
         [:code {:class "ws-normal navy"} "noms"]
         " DB alongside the code that is affected by that configuration in a way that reliably links the two."])))
 
-
     (t/is
      (=
       [:div
@@ -243,19 +252,16 @@
         [:em "with emphasis added"]
         "and\n\nlinebreak"])))
 
-
     (t/is
      (=  [:p "some text" [:br] "with newlines"]
          (parse-paragraphs [:p "some text\n\nwith newlines"])))
 
     (t/is
      (=  [:section [:p "some text"] [:p "with newlines"]]
-         (parse-paragraphs [:section "some text\n\nwith newlines"])))
-
-    ))
+         (parse-paragraphs [:section "some text\n\nwith newlines"])))))
 
 (defspec paragraph-detection-output
   (prop/for-all
-       [html-elem html-newline-gen]
-       (or (m/validate html/atomic-element html-elem)
-           (html/element? (parse-paragraphs html-elem)))))
+   [html-elem html-newline-gen]
+   (or (m/validate html/atomic-element html-elem)
+       (html/element? (parse-paragraphs html-elem)))))

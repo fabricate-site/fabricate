@@ -11,7 +11,7 @@
 
 (t/deftest file-utils
   #_(t/testing "suffix regex"
-    (t/is (re-matches template-suffix-regex "test-file.txt.fab")))
+      (t/is (re-matches template-suffix-regex "test-file.txt.fab")))
   (t/testing "output path fn"
     (t/is (= "./docs/test-file.txt"
              (get-output-filename "./pages/test-file.txt"
@@ -32,7 +32,7 @@
                (populate-page-meta
                 {:parsed-content [{:exec '(ns test-ns)
                                    :src "(ns test-ns)"}]
-                 :input-file (io/file "./content/test-file.txt.fab") }
+                 :input-file (io/file "./content/test-file.txt.fab")}
                 {:output-dir "./pages"
                  :input-dir "./content"})))))
 
@@ -48,7 +48,7 @@
            (-> "./README.md.fab"
                slurp
                read/parse
-               read/eval-all
+               (read/eval-all true 'site.fabricate.docs.readme)
                last)))
 
     (t/is (=  "./README.md.fab"
@@ -101,8 +101,32 @@
                                    :output-file "public/test/some-file.txt"}
                                   default-site-settings))))
 
+    (let [meta-post
+          (fsm/complete
+           (dissoc operations
+                   rendered-state
+                   html-state
+                   markdown-state)
+           {:input-file (io/file "content/test/some-file.txt.fab")
+            :unparsed-content "✳=(with-meta [:div \"text\"] {:page/title \"text\"})🔚"})]
+      (t/is
+       (and (:metadata meta-post)
+            (contains? (:metadata meta-post) :title))))
 
-
+    (let [sample-error
+          (->> {:input-file (io/file "content/test/some-file.txt.fab")
+                :unparsed-content "✳=(unbound-fn nil)🔚"}
+               (fsm/complete (dissoc operations
+                                     rendered-state
+                                     html-state
+                                     markdown-state))
+               :evaluated-content
+               first)]
+      (t/is
+       (and (= :div (first sample-error))
+            (= [:h6 "Error"] (second sample-error))
+            (some? (second (nth (nth sample-error 2) 8))))
+       "Errors should be correctly surfaced in output"))
 
     (t/is (contains?
            (fsm/complete (dissoc operations
