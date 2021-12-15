@@ -230,6 +230,7 @@
     [:rendered-content :string]]))
 
 (defn eval-parsed-page
+  {:malli/schema [:=> [:cat parsed-state] evaluated-state]}
   [{:keys [parsed-content namespace] :as page-data}]
   (let [nmspc (create-ns namespace)
         evaluated (read/eval-all parsed-content true nmspc)
