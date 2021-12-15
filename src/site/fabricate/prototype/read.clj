@@ -67,7 +67,7 @@
                    (select-keys (first (:via em)) [:type])
                    (select-keys
                     em
-                    [:cause :data])))} ))
+                    [:cause :data])))}))
         m (with-meta
             (merge {:src (if (vector? form-or-ctrl?) form? form-or-ctrl?)
                     :display false}
@@ -106,7 +106,7 @@
       [:or [:tuple {:encode/get {:leave parsed-form->expr-map}}
             [:= :expr] [:tuple [:= :ctrl] [:enum "=" "+" "+="]] :string]
        [:tuple {:encode/get {:leave parsed-form->expr-map}}
-              [:= :expr] :string]]
+        [:= :expr] :string]]
       ::extended-form
       [:tuple
        {:encode/get {:leave extended-form->form}}
@@ -138,7 +138,6 @@
       ;; points of a paragraph (after detection) in the source
       ;; template (this may be too clever)
       (insta/add-line-and-column-info-to-metadata template-txt attempt))))
-
 
 (defn render-src
   {:malli/schema [:=> [:cat :any :boolean] :string]}
@@ -188,7 +187,6 @@
 ;; post-validator should have the following signature
 ;; if it validates, return the input in a map: {:result input}
 ;; if it doesn't, return a map describing the error
-
 
 (defn eval-parsed-expr
   {:malli/schema [:=> [:cat parsed-expr-schema :boolean [:fn fn?]]
@@ -274,9 +272,10 @@
        :exec))
 
 (defn eval-all
-  {:malli/schema [:=> [:cat parsed-schema [:? :boolean]]
-                  [:vector :any]]}
-  ([parsed-form simplify?]
+  {:malli/schema
+   [:=> [:cat parsed-schema [:? :boolean] [:? :symbol]]
+    [:vector :any]]}
+  ([parsed-form simplify? nmspc]
    (let [form-nmspc (yank-ns parsed-form)
          nmspc (if form-nmspc (create-ns form-nmspc) *ns*)]
      (binding [*ns* nmspc]
@@ -286,6 +285,7 @@
                   (eval-parsed-expr i simplify?)
                   i))
         parsed-form))))
+  ([parsed-form simplify?] (eval-all parsed-form simplify? *ns*))
   ([parsed-form] (eval-all parsed-form true)))
 
 (defn include-source
@@ -298,7 +298,6 @@
                        [:pre [:code source-code]])
          [:pre [:code source-code]])))
   ([file-path] (include-source {} file-path)))
-
 
 (defn include-def
   "Excerpts the source code of the given symbol in the given file."
@@ -369,10 +368,6 @@
         .toPath
         .toAbsolutePath))))
 
-
-
-
-
 (defn parse
   {:malli/schema [:=> [:cat :string [:? [:vector :any]]]
                   [:vector :any]]}
@@ -407,6 +402,4 @@
 
   (m/validate [:tuple :keyword [:* :int]] [:k [2]])
 
-  (meta (identity (with-meta [:start {:a 2}] {:meta true})))
-
-  )
+  (meta (identity (with-meta [:start {:a 2}] {:meta true}))))

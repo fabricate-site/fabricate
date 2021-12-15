@@ -1,7 +1,8 @@
+✳ (ns site.fabricate.docs.readme) 🔚
+
 ✳ (def metadata
     {:title "fabricate.site"
-     :output-file "./README.md"
-     :namespace '(ns site.fabricate.docs.readme)}) 🔚
+     :output-file "./README.md"}) 🔚
                  
 # ` ✳= (:title metadata) 🔚 `
 

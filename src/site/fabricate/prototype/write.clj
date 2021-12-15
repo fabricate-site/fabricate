@@ -74,9 +74,7 @@
 
          (get-output-filename "./content/test-file.txt.fab"
                               "./content"
-                              "./docs")
-
-         )
+                              "./docs"))
 
 (defn hiccup->html-str
   {:malli/schema [:=> [:cat :keyword
@@ -101,7 +99,6 @@
                      (.endsWith (.toString %) suffix)))
        (map #(.toString %))))
 
-
 ;; consider moving this to the page namespace
 (defn populate-page-meta
   {:malli/schema
@@ -112,8 +109,7 @@
    (-> page-data
        (assoc :namespace (or (read/yank-ns parsed-content)
                              namespace
-                             (symbol (str "tmp-ns." (Math/abs (hash parsed-content)))))
-              )
+                             (symbol (str "tmp-ns." (Math/abs (hash parsed-content))))))
        (merge (read/get-file-metadata (.getPath input-file)))
        (merge (-> parsed-content
                   read/get-metadata
@@ -131,9 +127,7 @@
   (def =>populate-page-meta
     [:=> [[sketch/page-metadata-schema [:? :map]]] sketch/page-metadata-schema])
 
-  (meta (var populate-page-meta))
-
-  )
+  (meta (var populate-page-meta)))
 
 ;; fsm based implementation here
 ;;
@@ -145,7 +139,7 @@
   [:and {:fsm/description "Fabricate input path represented as string"}
    :string [:fn #(.endsWith % ".fab")]])
 
-(comment (m/validate input-state "./README.md.fab") )
+(comment (m/validate input-state "./README.md.fab"))
 
 (def file-state
   [:map {:closed true
@@ -188,6 +182,7 @@
    [:filename :string]
    [:file-extension :string]
    [:namespace :symbol]
+   [:metadata [:map {:closed false}]]
    [:page-style {:optional true} :string]
    [:title {:optional true} :string]
    [:output-file {:optional true}
@@ -201,7 +196,7 @@
     evaluated-state
     [:map {:closed true
            :fsm/description "Fabricate input evaluated as hiccup vector"}
-     [:file-extension [:enum  "html" ]]])))
+     [:file-extension [:enum  "html"]]])))
 
 (def markdown-state
   (mu/closed-schema
@@ -215,10 +210,9 @@
   "Takes the evaluated contents and turns them into a well-formed
    hiccup data structure."
   {:malli/schema [:=> [:cat evaluated-state] :map]}
-  [{:keys [namespace evaluated-content]
+  [{:keys [namespace metadata evaluated-content]
     :as page-data}]
-  (let [metadata (var-get (ns-resolve namespace 'metadata))
-        body-content (into [:article {:lang "en"}]
+  (let [body-content (into [:article {:lang "en"}]
                            (page/parse-paragraphs
                             evaluated-content))]
     (list
@@ -235,6 +229,21 @@
           :fsm/state :fsm/exit}         ; indicating the exit state
     [:rendered-content :string]]))
 
+(defn eval-parsed-page
+  [{:keys [parsed-content namespace] :as page-data}]
+  (let [nmspc (create-ns namespace)
+        evaluated (read/eval-all parsed-content true nmspc)
+        page-meta (let [m (ns-resolve nmspc 'metadata)]
+                    (if (nil? m) {} (var-get m)))
+        metadata
+        (page/lift-metadata evaluated page-meta)]
+    (assoc page-data :evaluated-content evaluated
+           :namespace
+           (if (symbol? namespace)
+             namespace
+             (second (second namespace)))
+           :metadata metadata)))
+
 (def operations
   {input-state (fn [f] {:input-file (io/as-file f)})
    file-state (fn [{:keys [input-file] :as page-data}]
@@ -245,14 +254,7 @@
        (-> page-data
            (assoc :parsed-content parsed)
            (populate-page-meta default-site-settings))))
-   parsed-state
-   (fn [{:keys [parsed-content namespace] :as page-data}]
-     (let [evaluated (read/eval-all parsed-content namespace)]
-       (assoc page-data :evaluated-content evaluated
-              :namespace
-              (if (symbol? namespace)
-                namespace
-                (second (second namespace))))))
+   parsed-state eval-parsed-page
    markdown-state
    (fn [{:keys [evaluated-content] :as page-data}]
      (assoc page-data :rendered-content (apply str evaluated-content)))
@@ -280,8 +282,6 @@
          (println "Parse error detected, skipping")
          old-map)))
 
-
-
 (defn rerender
   {:malli/schema
    [:=> [:cat [:map [:file :any] [:count :int] [:action :keyword]]]
@@ -305,26 +305,26 @@
 (defn draft
   {:malli/schema [:=> [:cat] [:fn #(.isInstance clojure.lang.Agent %)]]}
   []
-   (do
+  (do
      ;; (load-deps)
-     (doseq [fp (get-template-files
-                 (:input-dir default-site-settings)
-                 (:template-suffix
-                  default-site-settings))]
-       (swap! pages #(update-page-map % fp)))
-     (let [srv (do
-                 (println "launching server")
-                 (server/start default-server-opts))
-           fw (do
-                (println "establishing file watch")
-                (watch-dir rerender (io/file (:input-dir default-site-settings))))]
-       (.addShutdownHook (java.lang.Runtime/getRuntime)
-                         (Thread. (fn []
-                                    (do (println "shutting down")
-                                        (close-watcher fw)
-                                        (server/stop srv)
-                                        (shutdown-agents)))))
-       fw)))
+    (doseq [fp (get-template-files
+                (:input-dir default-site-settings)
+                (:template-suffix
+                 default-site-settings))]
+      (swap! pages #(update-page-map % fp)))
+    (let [srv (do
+                (println "launching server")
+                (server/start default-server-opts))
+          fw (do
+               (println "establishing file watch")
+               (watch-dir rerender (io/file (:input-dir default-site-settings))))]
+      (.addShutdownHook (java.lang.Runtime/getRuntime)
+                        (Thread. (fn []
+                                   (do (println "shutting down")
+                                       (close-watcher fw)
+                                       (server/stop srv)
+                                       (shutdown-agents)))))
+      fw)))
 
 (defn publish
   {:malli/schema
@@ -346,12 +346,7 @@
 
   (def drafts (draft))
 
-  (close-watcher drafts)
-
-  )
-
-
-
+  (close-watcher drafts))
 
 (comment
   ;; to update pages manually, do this:
@@ -376,6 +371,4 @@
   (keys fsm-post-data)
 
   (:evaluated-content fsm-post-data)
-  (hp/html5 (list [:head [:title "something"] [:body "something else"]]))
-
-  )
+  (hp/html5 (list [:head [:title "something"] [:body "something else"]])))
