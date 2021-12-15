@@ -41,6 +41,8 @@
         terminal-lookahead "(?=\\Z|(?:[\\]})]//🔚|✳|🔚))"]
     (str fast-possessive "|(" reluctant-txt terminal-lookahead ")")))
 
+(def delimiters ["✳" "🔚"])
+
 (def template
   "The formal grammar for Fabricate templates."
   (insta/parser

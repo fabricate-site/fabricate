@@ -162,10 +162,15 @@
           (list "Columns " [:strong (:instaparse.gll/start-column form-meta) "-" (:instaparse.gll/end-column form-meta)]))]
     (concat line-info [", "] column-info)))
 
+(def error-form-schema
+  [:tuple [:= :div] [:= [:h6 "Error"]]
+   [:schema [:cat [:= :dl] [:* :any]]]
+   [:schema [:cat [:= :details] [:* :any]]]])
+
 (defn form->hiccup
   "If the form has no errors, return its results.
   Otherwise, create a hiccup form describing the error."
-  {:malli/schema [:=> [:cat parsed-expr-schema] :any]}
+  {:malli/schema [:=> [:cat parsed-expr-schema] [:or error-form-schema :any]]}
   [{:keys [src exec expr err result display]
     :as parsed-expr}]
   (cond

@@ -25,8 +25,8 @@ That sounds pretty complicated, but it's actually not. If you want to add a titl
 ```
 Some basic text
 
-✳= (str (first site.fabricate.prototype.read/delimiters) "=[:h2 \"A title\"]"
-        (second site.fabricate.prototype.read/delimiters)) 🔚
+✳= (str (first site.fabricate.prototype.read.grammar/delimiters) "=[:h2 \"A title\"]"
+        (second site.fabricate.prototype.read.grammar/delimiters)) 🔚
 
 Some more text
 ```
