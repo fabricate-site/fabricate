@@ -58,6 +58,20 @@
                   (get :input-file)
                   .getPath)))
 
+    (let [evaluated
+          (:evaluated-content
+           (fsm/complete
+            (dissoc operations
+                    markdown-state
+                    rendered-state)
+            "./README.md.fab"))
+          errors
+          (filter #(m/validate read/error-form-schema %)
+                  (tree-seq vector? rest evaluated))]
+      (t/is (= (count errors) 0) "The README should not have errors in it")
+      (when (not= (count errors) 0)
+        (println errors)))
+
     (t/is (= (slurp "./README.md.fab")
              (get
               (fsm/complete

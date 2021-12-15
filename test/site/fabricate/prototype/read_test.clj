@@ -104,6 +104,16 @@
                  first
                  (eval-parsed-expr false))))
 
+    (t/is (m/validate
+           error-form-schema
+           [:div [:h6 "Error"]
+            [:dl [:dt "Error type"] [:dd [:code "clojure.lang.ExceptionInfo"]] [:dt "Error message"] [:dd [:code "Unexpected EOF while reading item 1 of list."]]
+             [:dt "Error phase"] [:dd [:code ""]]
+             [:dt "Location"]
+             [:dd
+              '("Line " [:strong 1] ", " "Columns " [:strong 1 "-" 12])]]
+            [:details [:summary "Source expression"] [:pre [:code "((+ 2 3)"]]]]))
+
     (t/is
      (= [:div [:h6 "Error"]
          [:dl [:dt "Error type"] [:dd [:code "clojure.lang.ExceptionInfo"]] [:dt "Error message"] [:dd [:code "Unexpected EOF while reading item 1 of list."]]
