@@ -278,7 +278,9 @@
 
 (defn eval-all
   {:malli/schema
-   [:=> [:cat parsed-schema [:? :boolean] [:? :symbol]]
+   [:=> [:or [:cat parsed-schema :boolean :symbol]
+         [:cat parsed-schema :boolean ]
+         [:cat parsed-schema ]]
     [:vector :any]]}
   ([parsed-form simplify? nmspc]
    (let [form-nmspc (yank-ns parsed-form)
@@ -306,10 +308,11 @@
 
 (defn include-def
   "Excerpts the source code of the given symbol in the given file."
-  {:malli/schema [:=> [:cat [:? [:map [:render-fn [:fn fn?]]
-                                 [:def-syms [:set :symbol]]
-                                 [:container [:vector :any]]]]
-                       :symbol :string]
+  {:malli/schema [:=> [:or [:cat [:map [:render-fn [:fn fn?]]
+                                  [:def-syms [:set :symbol]]
+                                  [:container [:vector :any]]]
+                            :symbol :string]
+                       [:cat :symbol :string]]
                   [:vector :any]]}
   ([{:keys [render-fn def-syms container]
      :or {render-fn render-src
@@ -373,14 +376,17 @@
         .toPath
         .toAbsolutePath))))
 
+(def parsed-encoder
+  (m/encoder parsed-schema
+             (mt/transformer {:name :get})))
+
 (defn parse
-  {:malli/schema [:=> [:cat :string [:? [:vector :any]]]
+  {:malli/schema [:=> [:or [:cat :string [:vector :any]]
+                       [:cat :string ]]
                   [:vector :any]]}
   ([src start-seq]
    (let [parsed (read-template src)]
-     (into []
-           (rest (m/encode parsed-schema parsed
-                           (mt/transformer {:name :get}))))))
+     (into [] (rest (parsed-encoder parsed)))))
   ([src] (parse src [])))
 
 (comment
