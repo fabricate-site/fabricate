@@ -200,7 +200,7 @@
               current-paragraph? (or current-paragraph? (= :p (first acc)))
               permitted-contents
               (if (html/phrasing? acc) ::html/phrasing-content
-                  (html/permitted-contents
+                  (html/tag-contents
                    (let [f (first acc)]
                      (if (keyword? f) f :div))))]
           (cond

@@ -837,3 +837,14 @@
                     (ns-kw 'site.fabricate.prototype.html tag))]
         (last
          (flatten (last (get-in (m/properties html) [:registry tag])))))))
+
+(def tag-contents
+  (->> (concat phrasing-tags flow-tags heading-tags sectioning-tags
+               metadata-tags)
+       (map (fn [t] [t (permitted-contents t)]))
+       (into {})))
+
+(comment
+  tag-contents
+
+  )
