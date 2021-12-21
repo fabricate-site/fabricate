@@ -9,6 +9,7 @@
             [clojure.tools.reader :as r]
             [malli.core :as m]
             [malli.util :as mu]
+            [malli.generator :as mg]
             [malli.transform :as mt]
             [site.fabricate.prototype.schema :as schema]
             [site.fabricate.prototype.read.grammar :refer [template]]
@@ -276,12 +277,32 @@
        first
        :exec))
 
+(comment
+  (m/schema
+   [:function
+    [:=> [:cat [:sequential :int]] :any]
+    [:=> [:cat [:sequential :int] :boolean] :any]])
+
+  (m/schema
+   [:function
+    [:=> [:cat :boolean [:* :int] ] :any]
+    [:=> [:cat [:* :int]] :any]])
+
+  (m/validate [:sequential [:cat :int]] [[1 2]])
+
+  (mg/generate [:cat [:schema [:cat [:* :int]]] :boolean])
+
+  (mg/generate [:cat [:schema [:cat [:* :int]]]]))
+
 (defn eval-all
   {:malli/schema
-   [:=> [:or [:cat parsed-schema :boolean :symbol]
-         [:cat parsed-schema :boolean ]
-         [:cat parsed-schema ]]
-    [:vector :any]]}
+   (m/schema
+    [:function
+     [:=> [:cat #_[:schema parsed-schema] [:vector :any]] [:vector :any]]
+     [:=> [:cat #_[:schema parsed-schema] [:vector :any] :boolean] [:vector :any]]
+     [:=> [:cat #_[:schema parsed-schema] [:vector :any] :boolean :symbol]
+      [:vector :any]]])}
+
   ([parsed-form simplify? nmspc]
    (let [form-nmspc (yank-ns parsed-form)
          nmspc (if form-nmspc (create-ns form-nmspc) *ns*)]
@@ -308,12 +329,14 @@
 
 (defn include-def
   "Excerpts the source code of the given symbol in the given file."
-  {:malli/schema [:=> [:or [:cat [:map [:render-fn [:fn fn?]]
-                                  [:def-syms [:set :symbol]]
-                                  [:container [:vector :any]]]
-                            :symbol :string]
-                       [:cat :symbol :string]]
-                  [:vector :any]]}
+  {:malli/schema
+   [:function
+    [:=> [:cat [:map [:render-fn [:fn fn?]]
+                [:def-syms [:set :symbol]]
+                [:container [:vector :any]]]
+          :symbol :string]
+     [:vector :any]]
+    [:=> [:cat :symbol :string] [:vector :any]]]}
   ([{:keys [render-fn def-syms container]
      :or {render-fn render-src
           def-syms #{'def 'defn}
@@ -376,14 +399,15 @@
         .toPath
         .toAbsolutePath))))
 
-(def parsed-encoder
+(def ^:private parsed-encoder
   (m/encoder parsed-schema
              (mt/transformer {:name :get})))
 
 (defn parse
-  {:malli/schema [:=> [:or [:cat :string [:vector :any]]
-                       [:cat :string ]]
-                  [:vector :any]]}
+  {:malli/schema
+   [:function
+    [:=> [:cat :string [:vector :any]] [:vector :any]]
+    [:=> [:cat :string] [:vector :any]]]}
   ([src start-seq]
    (let [parsed (read-template src)]
      (into [] (rest (parsed-encoder parsed)))))
