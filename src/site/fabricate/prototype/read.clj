@@ -46,7 +46,9 @@
             :doc "An expression intended be evaluated for side effects or definitions."} :any]
     [::parse-error {:optional true :doc ""}
      [:map [:type [:fn class?]]
-      [:message :string]]]]))
+      [:message :string]]]
+    [:file {:optional true :doc "The source file of the expression"}
+     :string]]))
 
 (def evaluated-expr-schema
   (-> parsed-expr-schema
@@ -205,9 +207,11 @@
                           (assoc
                            expr-map
                            :result
-                           (if exec
-                             (do (eval exec) nil)
-                             (eval expr))
+                           (let [res (eval (or exec expr))]
+                             (if (var? res)
+                               (alter-meta!
+                                res merge (meta expr-map)))
+                             (if exec nil res))
                            :err nil)
                           (catch Exception e
                             (assoc expr-map
@@ -406,12 +410,20 @@
 (defn parse
   {:malli/schema
    [:function
-    [:=> [:cat :string [:vector :any]] [:vector :any]]
+    [:=> [:cat :string
+          [:map
+           [:start-seq {:optional? true} [:vector :any]]
+           [:filename {:optional? true} :string]]] [:vector :any]]
     [:=> [:cat :string] [:vector :any]]]}
-  ([src start-seq]
+  ([src {:keys [start-seq filename]
+         :or {start-seq [] filename ""}}]
    (let [parsed (read-template src)]
-     (into [] (rest (parsed-encoder parsed)))))
-  ([src] (parse src [])))
+     (into start-seq
+           (map #(try (with-meta %
+                        (merge (meta %) {:file filename}))
+                      (catch Exception e %))
+                (rest (parsed-encoder parsed))))))
+  ([src] (parse src {})))
 
 (comment
   (meta (second (read-template "✳=(+ 2 3)🔚")))
