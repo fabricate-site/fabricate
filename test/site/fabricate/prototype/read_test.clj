@@ -156,6 +156,16 @@
                (let [parsed (parse "✳(ns test-form-ns)🔚 baz ✳(def var 3)🔚 foo ✳=var🔚")]
                  (eval-all parsed)))
             "In-form defs should be evaluated successfully.")
+      (let [ex-file (-> "pages/fabricate.html.fab"
+                        slurp
+                        (parse {:filename "pages/fabricate.html.fab"})
+                        eval-all)
+            src-info (-> 'site.fabricate.docs.fabricate/ns->hiccup
+                         resolve
+                         meta
+                         :file)]
+        (t/is (= src-info "pages/fabricate.html.fab")
+              "Vars should preserve information about their source files"))
 
       (t/is (= (parse-eval "✳=(site.fabricate.prototype.page/em 3)🔚")
                [[:em 3]])
