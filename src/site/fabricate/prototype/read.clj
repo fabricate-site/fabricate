@@ -257,18 +257,12 @@
 ;; special and required as the first fabricate form, make the metadata map
 ;; special and just put the unevaluated ns form within it.
 
-(def metadata-model
+(def metadata-schema
   "Malli schema for unevaluated metadata form/map"
   [:catn
    [:def [:= 'def]]
    [:name [:= 'metadata]]
-   [:meta-map map?]])
-
-(def metadata-expr-model
-  [:catn
-   [:do [:= 'do]]
-   [:metadata-form [:schema metadata-model]]
-   [:nil nil?]])
+   [:meta-map :map]])
 
 (defn get-metadata
   "Get the metadata form from the parse tree"
@@ -277,7 +271,7 @@
   (->> expr-tree
        (tree-seq vector? identity)
        (filter #(and (m/validate parsed-expr-schema %)
-                     (m/validate metadata-model (:exec %))))
+                     (m/validate metadata-schema (:exec %))))
        first
        :exec))
 

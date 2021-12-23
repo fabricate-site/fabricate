@@ -135,17 +135,17 @@
   atomic-element?
   (m/validator atomic-element))
 
-(defn- ->hiccup-schema [tag attr-model content-model]
+(defn- ->hiccup-schema [tag attr-schema content-schema]
   (let [head
         [:catn
          [:tag [:= tag]]
-         [:attrs (if (schema/has-reqd? attr-model)
-                   attr-model
-                   [:? attr-model])]]]
+         [:attrs (if (schema/has-reqd? attr-schema)
+                   attr-schema
+                   [:? attr-schema])]]]
     ;; [:and vector?
-    (if (nil? content-model)
+    (if (nil? content-schema)
       head
-      (conj head [:contents content-model]))
+      (conj head [:contents content-schema]))
     ;;  ]
     ))
 

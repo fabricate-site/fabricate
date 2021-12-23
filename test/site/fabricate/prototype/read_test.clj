@@ -19,7 +19,7 @@
 
 (t/deftest parser
 
-  (t/testing "parsed element model"
+  (t/testing "parsed element schema"
     (t/is
      (m/validate parsed-expr-schema
                  {:src "(+ 3 4)"

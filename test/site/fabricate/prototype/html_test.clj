@@ -9,23 +9,23 @@
             [clojure.test :as t]))
 
 (defmethod t/assert-expr 'valid-schema? [msg form]
-  `(let [model# ~(nth form 1)
+  `(let [schema# ~(nth form 1)
          data# ~(nth form 2)
-         result# (m/validate model# data#)
-         model-name# (last model#)]
+         result# (m/validate schema# data#)
+         schema-name# (last schema#)]
      (t/do-report
       {:type (if result# :pass :fail)
        :message ~msg
        :expected (str (with-out-str (pprint/pprint data#))
                       " conforms to schema for "
-                      model-name#)
+                      schema-name#)
        :actual  (if (not result#)
-                   (m/explain model# data#)
+                   (m/explain schema# data#)
                   result#)})
      result#))
 
 (def example-forms
-  "Some forms used to test the validity of the HTML models"
+  "Some forms used to test the validity of the HTML schema"
   {:a [:a {:href "http://www.archive.org"} "a link"]
    :data [:data {:value "0311ab"} "A sample post"]
    :del [:del "some deleted text"]
@@ -59,11 +59,8 @@
    :article [:article [:section "something"]]})
 
 (t/deftest schema
-  (t/testing "model constructors"
 
-)
-
-  (t/testing "content models"
+  (t/testing "content schemas"
 
       (t/is (valid-schema?
            (#'site.fabricate.prototype.html/->hiccup-schema :p global-attributes
@@ -123,7 +120,7 @@
 
 
     (doseq [elem (set/union flow-tags phrasing-tags heading-tags)]
-      (t/testing (str "model for element: <" (name elem) ">")
+      (t/testing (str "schema for element: <" (name elem) ">")
         (let [data (get example-forms elem
                         [elem "sample string"])
               schema (schema/subschema
@@ -133,17 +130,13 @@
     (t/is (palpable? [:p "text"]))
     (t/is (not (palpable? [:p])))
 
-    (t/is (valid-schema? (schema/subschema html ::html/element) [:div [:div [:div [:p "text"]]]]))
-    ;; (t/is (valid-model element-m [:em "something"]))
-    ;; h/with-condition isn't working on this?
-    ;; (t/is (valid-model (->element-model :element) [:em]))
-    )
+    (t/is (valid-schema? (schema/subschema html ::html/element) [:div [:div [:div [:p "text"]]]])))
 
 
   (t/testing "example forms"
     (doseq [[k v] example-forms]
       (let [schema (schema/subschema html (ns-kw 'site.fabricate.prototype.html k))]
-        (t/testing (str "model for element: <" (symbol k) ">")
+        (t/testing (str "schema for element: <" (symbol k) ">")
           (t/is (valid-schema? schema v))))))
 
   (comment
@@ -152,7 +145,6 @@
       )
 
   (t/testing "atomic elements"
-
 
     (t/is (m/validate global-attributes {:class "a"
                                          :href "http://google.com"}))
