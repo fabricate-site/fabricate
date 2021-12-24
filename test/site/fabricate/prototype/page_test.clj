@@ -19,15 +19,14 @@
 
 (t/use-fixtures :once with-instrumentation)
 
-(t/deftest page-creation
+(t/deftest content-transforms
   (t/testing "html helper fns"
-
     (t/is (= "<em>help</em>" (str (hiccup/html (em "help"))))
           "emphasis should be added")
     (t/is (= "<em>help</em>" (str (hiccup/html (em "help"))))
           "emphasis should be added")))
 
-(t/deftest metadata
+(t/deftest metadata-transforms
   (t/testing "Metadata transformation"
     (t/is (= [:meta {:name "meta" :content "something"}]
              (-> {"meta" "something"} seq first ->meta)))
@@ -84,35 +83,7 @@
        :contents-gen newline-gen})
      250)))
 
-(comment
-
-  (hiccup/html [:em "some text\n\nwith double linebreak"])
-
-  (parse-paragraphs [:em "some text\n\nwith newlines"] #"\n\n")
-
-  (parse-paragraphs
-   [:p {:class "steel"} false]
-   #"\n\n")
-
-  (html/phrasing?
-   [:p {:class "steel"} false])
-
-  (parse-paragraphs
-   (first
-    (get-in
-     (check/quick-check
-      10
-      (prop/for-all
-       [html-elem html-newline-gen]
-       (or (m/validate html/atomic-element html-elem)
-           (html/element? (parse-paragraphs html-elem #"\n\n")))))
-     [:shrunk :smallest]))))
-
-(comment
-  (html/phrasing? false))
-
-(t/deftest transforms
-
+(t/deftest content-transforms
   (t/testing "Paragraph detection"
 
     (t/is (= [:div [:p "some"] [:p "text"]]

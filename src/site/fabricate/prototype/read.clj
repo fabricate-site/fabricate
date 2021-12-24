@@ -202,24 +202,25 @@
   ([{:keys [src expr exec err result display]
      :as expr-map} simplify? post-validator]
    (let [res
-         (with-meta (if err expr-map
-                        (try
-                          (assoc
-                           expr-map
-                           :result
-                           (let [res (eval (or exec expr))]
-                             (if (var? res)
-                               (alter-meta!
-                                res merge (meta expr-map)))
-                             (if exec nil res))
-                           :err nil)
-                          (catch Exception e
-                            (assoc expr-map
-                                   :result nil
-                                   :err (merge {:type (.getClass e)
-                                                :message (.getMessage e)}
-                                               (select-keys (Throwable->map e)
-                                                            [:cause :phase]))))))
+         (with-meta
+           (if err expr-map
+               (try
+                 (assoc
+                  expr-map
+                  :result
+                  (let [res (eval (or exec expr))]
+                    (if (var? res)
+                      (alter-meta!
+                       res merge (meta expr-map)))
+                    (if exec nil res))
+                  :err nil)
+                 (catch Exception e
+                   (assoc expr-map
+                          :result nil
+                          :err (merge {:type (.getClass e)
+                                       :message (.getMessage e)}
+                                      (select-keys (Throwable->map e)
+                                                   [:cause :phase]))))))
            (meta expr-map))
          validated (post-validator res)]
      (cond
@@ -283,7 +284,7 @@
 
   (m/schema
    [:function
-    [:=> [:cat :boolean [:* :int] ] :any]
+    [:=> [:cat :boolean [:* :int]] :any]
     [:=> [:cat [:* :int]] :any]])
 
   (m/validate [:sequential [:cat :int]] [[1 2]])

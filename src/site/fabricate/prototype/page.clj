@@ -39,7 +39,7 @@
 
 (defn in-code
   {:malli/schema [:=> [:cat [:* :any]]
-    [:cat [:= :code] [:* :any]]]}
+                  [:cat [:= :code] [:* :any]]]}
   [& contents] (apply conj [:code] contents))
 
 (defn aside {:malli/schema [:=> [:cat [:* :any]]
@@ -81,6 +81,7 @@
     [:cat [:= :ul] [:* [:schema [:cat [:= :li] :any]]]]]}
   [& contents]
   (apply conj [:ul] (map (fn [i] [:li i]) contents)))
+
 (defn ol
   {:malli/schema
    [:=> [:cat [:* :any]]
@@ -267,17 +268,7 @@
 
   (parse-paragraphs [:p "some text\n\nwith newlines"])
 
-  (split-paragraphs "some text\n\nwith linebreak"))
-
-(defn ->meta
-  {:malli/schema
-   [:=> [:cat [:schema [:cat :any :any]]]
-    [:cat [:= :meta] :map]]}
-  [[k v]]
-  (let [attrs (if (map? v) v {:content v})]
-    [:meta (merge {:name (if (keyword? k) (str (name k)) k)} attrs)]))
-
-(comment
+  (split-paragraphs "some text\n\nwith linebreak")
 
   (parse-paragraphs
    [:b [:dfn [:del "some\n\n"] "text"]])
@@ -287,13 +278,20 @@
 
   (html/element? (parse-paragraphs [:del "some\n\n"])))
 
+(defn ->meta
+  {:malli/schema
+   [:=> [:cat [:schema [:cat :any :any]]]
+    [:cat [:= :meta] :map]]}
+  [[k v]]
+  (let [attrs (if (map? v) v {:content v})]
+    [:meta (merge {:name (if (keyword? k) (str (name k)) k)} attrs)]))
+
 (defn metadata-map->head-elements
   "Return the contents of the metadata map as a sequence of Hiccup elements"
   {:malli/schema [:=> [:cat :map] [:vector :any]]}
   [{:keys [page-style scripts title]    ; some keys are special
     :as metadata}]
   (let [rest (dissoc metadata :page-style :scripts)]
-    []
     (apply read/conj-non-nil
            (map ->meta rest)
            page-style
