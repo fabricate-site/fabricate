@@ -10,9 +10,10 @@
 
 (defmethod t/assert-expr 'valid-schema? [msg form]
   `(let [schema# ~(nth form 1)
+         form# (m/form schema#)
          data# ~(nth form 2)
          result# (m/validate schema# data#)
-         schema-name# (last schema#)]
+         schema-name# (last form#)]
      (t/do-report
       {:type (if result# :pass :fail)
        :message ~msg
@@ -20,7 +21,7 @@
                       " conforms to schema for "
                       schema-name#)
        :actual  (if (not result#)
-                   (m/explain schema# data#)
+                  (m/explain schema# data#)
                   result#)})
      result#))
 
@@ -40,10 +41,10 @@
    :img [:img {:src "/sample.jpg"}]
    :head [:head [:title "a page"] [:script {:type "text/javascript" :src "/intro.js"}] [:style "h1 {size: 3rem}"]]
    :span [:span [:img {:src "/sample.jpg"}]]
-   #_ #_:script [:script {:type "text/javascript" :src "code.js"}]
+   #_#_:script [:script {:type "text/javascript" :src "code.js"}]
    :q [:q {:cite "Anonymous"} "If you can't convince, confuse!"]
    :script [:script {:src "/resources/klipse.js" :type "text/javascript"} ""]
-   #_ #_ :wbr [:wbr]
+   #_#_:wbr [:wbr]
    :hr [:hr]
    :br [:br]
    :abbr [:abbr {:title "ACME Corporation"} "ACME"]
@@ -62,9 +63,9 @@
 
   (t/testing "content schemas"
 
-      (t/is (valid-schema?
+    (t/is (valid-schema?
            (#'site.fabricate.prototype.html/->hiccup-schema :p global-attributes
-                            [:* atomic-element])
+                                                            [:* atomic-element])
            [:p {:id "something"} "text in a paragraph"]))
 
     (t/is (valid-schema? (schema/subschema html ::html/p)
@@ -118,6 +119,9 @@
            (schema/subschema html ::html/em)
            [:em "text" [:br] "more text"]))
 
+    (t/is (valid-schema?
+           (schema/subschema html ::html/em)
+           [:em {:id "something"} "text" "more text"]))
 
     (doseq [elem (set/union flow-tags phrasing-tags heading-tags)]
       (t/testing (str "schema for element: <" (name elem) ">")
@@ -132,7 +136,6 @@
 
     (t/is (valid-schema? (schema/subschema html ::html/element) [:div [:div [:div [:p "text"]]]])))
 
-
   (t/testing "example forms"
     (doseq [[k v] example-forms]
       (let [schema (schema/subschema html (ns-kw 'site.fabricate.prototype.html k))]
@@ -140,9 +143,7 @@
           (t/is (valid-schema? schema v))))))
 
   (comment
-      (map (fn [[k v]] [k (valid-schema? htmls v)]) example-forms)
-
-      )
+    (map (fn [[k v]] [k (valid-schema? htmls v)]) example-forms))
 
   (t/testing "atomic elements"
 

@@ -413,8 +413,8 @@
    [:function
     [:=> [:cat :string
           [:map
-           [:start-seq {:optional? true} [:vector :any]]
-           [:filename {:optional? true} :string]]] [:vector :any]]
+           [:start-seq {:optional true} [:vector :any]]
+           [:filename {:optional true} :string]]] [:vector :any]]
     [:=> [:cat :string] [:vector :any]]]}
   ([src {:keys [start-seq filename]
          :or {start-seq [] filename ""}}]

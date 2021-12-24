@@ -15,13 +15,14 @@
     (t/is (malli? (m/schema :any)))
     (t/is (malli? [:cat [:* :string] :int]))
 
-    (t/is (has-reqd? [:map [:a {:optional? true} :string]
+    (t/is (has-reqd? [:map [:a {:optional true} :string]
                       [:b :string]]))
 
-    (t/is (not (has-reqd? [:map [:a {:optional? true} :string]
-                           [:b {:optional? true} :string]])))
+    (t/is (has-reqd? [:map [:a :string]]))
 
-    )
+    (t/is (false? (has-reqd?
+                   [:map [:a {:optional true} :string]
+                    [:b {:optional true} :string]]))))
 
   (t/testing "malli schema transforms"
     (t/is (malli?
@@ -29,7 +30,7 @@
             [:schema {:registry {::ping [:maybe [:tuple [:= "ping"] [:ref ::pong]]]
                                  ::pong [:maybe [:tuple [:= "pong"] [:ref ::ping]]]}}
              ::ping]
-            ::pong) ))
+            ::pong)))
 
     (t/is (malli?
            (subschema

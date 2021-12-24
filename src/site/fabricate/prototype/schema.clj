@@ -19,10 +19,10 @@
         entries (m/children schema)]
     (and
      (= :map s-type)
-     (some (fn [[k props type]]
-             (or (nil? props)
-                 (not (get props :optional?))))
-           entries))))
+     (some? (some (fn [[k props type]]
+                    (or (nil? props)
+                        (not (get props :optional))))
+                  entries)))))
 
 (defn subschema
   {:malli/schema (m/schema [:=> [:cat [:fn malli?] [:or :keyword :string]] [:fn malli?]])}
