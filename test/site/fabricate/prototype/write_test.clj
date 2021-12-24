@@ -10,8 +10,6 @@
             [clojure.test :as t]))
 
 (t/deftest file-utils
-  #_(t/testing "suffix regex"
-      (t/is (re-matches template-suffix-regex "test-file.txt.fab")))
   (t/testing "output path fn"
     (t/is (= "./docs/test-file.txt"
              (get-output-filename "./pages/test-file.txt"
@@ -34,13 +32,13 @@
                                    :src "(ns test-ns)"}]
                  :input-file (io/file "./content/test-file.txt.fab")}
                 {:output-dir "./pages"
-                 :input-dir "./content"})))))
+                 :input-dir "./content"}))))
 
-  (t/is (m/validate (-> populate-page-meta
-                        var
-                        meta
-                        :malli/schema)
-                    populate-page-meta)))
+    (t/is (m/validate (-> populate-page-meta
+                          var
+                          meta
+                          :malli/schema)
+                      populate-page-meta))))
 
 (t/deftest doc-rendering
   (t/testing "readme"

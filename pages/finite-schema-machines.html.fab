@@ -2,7 +2,6 @@
                  (:require [site.fabricate.prototype.page :refer :all]
 [site.fabricate.prototype.read :as read]
                            [clojure.repl :as repl]
-                           [couplet.core :as cp]
                            [garden.core :as garden]
 [garden.stylesheet :refer [at-import]]))🔚
 

@@ -9,23 +9,24 @@
             [clojure.test :as t]))
 
 (defmethod t/assert-expr 'valid-schema? [msg form]
-  `(let [model# ~(nth form 1)
+  `(let [schema# ~(nth form 1)
+         form# (m/form schema#)
          data# ~(nth form 2)
-         result# (m/validate model# data#)
-         model-name# (last model#)]
+         result# (m/validate schema# data#)
+         schema-name# (last form#)]
      (t/do-report
       {:type (if result# :pass :fail)
        :message ~msg
        :expected (str (with-out-str (pprint/pprint data#))
                       " conforms to schema for "
-                      model-name#)
+                      schema-name#)
        :actual  (if (not result#)
-                   (m/explain model# data#)
+                  (m/explain schema# data#)
                   result#)})
      result#))
 
 (def example-forms
-  "Some forms used to test the validity of the HTML models"
+  "Some forms used to test the validity of the HTML schema"
   {:a [:a {:href "http://www.archive.org"} "a link"]
    :data [:data {:value "0311ab"} "A sample post"]
    :del [:del "some deleted text"]
@@ -40,10 +41,10 @@
    :img [:img {:src "/sample.jpg"}]
    :head [:head [:title "a page"] [:script {:type "text/javascript" :src "/intro.js"}] [:style "h1 {size: 3rem}"]]
    :span [:span [:img {:src "/sample.jpg"}]]
-   #_ #_:script [:script {:type "text/javascript" :src "code.js"}]
+   #_#_:script [:script {:type "text/javascript" :src "code.js"}]
    :q [:q {:cite "Anonymous"} "If you can't convince, confuse!"]
    :script [:script {:src "/resources/klipse.js" :type "text/javascript"} ""]
-   #_ #_ :wbr [:wbr]
+   #_#_:wbr [:wbr]
    :hr [:hr]
    :br [:br]
    :abbr [:abbr {:title "ACME Corporation"} "ACME"]
@@ -59,15 +60,12 @@
    :article [:article [:section "something"]]})
 
 (t/deftest schema
-  (t/testing "model constructors"
 
-)
+  (t/testing "content schemas"
 
-  (t/testing "content models"
-
-      (t/is (valid-schema?
+    (t/is (valid-schema?
            (#'site.fabricate.prototype.html/->hiccup-schema :p global-attributes
-                            [:* atomic-element])
+                                                            [:* atomic-element])
            [:p {:id "something"} "text in a paragraph"]))
 
     (t/is (valid-schema? (schema/subschema html ::html/p)
@@ -121,9 +119,12 @@
            (schema/subschema html ::html/em)
            [:em "text" [:br] "more text"]))
 
+    (t/is (valid-schema?
+           (schema/subschema html ::html/em)
+           [:em {:id "something"} "text" "more text"]))
 
     (doseq [elem (set/union flow-tags phrasing-tags heading-tags)]
-      (t/testing (str "model for element: <" (name elem) ">")
+      (t/testing (str "schema for element: <" (name elem) ">")
         (let [data (get example-forms elem
                         [elem "sample string"])
               schema (schema/subschema
@@ -133,26 +134,25 @@
     (t/is (palpable? [:p "text"]))
     (t/is (not (palpable? [:p])))
 
-    (t/is (valid-schema? (schema/subschema html ::html/element) [:div [:div [:div [:p "text"]]]]))
-    ;; (t/is (valid-model element-m [:em "something"]))
-    ;; h/with-condition isn't working on this?
-    ;; (t/is (valid-model (->element-model :element) [:em]))
-    )
-
+    (t/is (valid-schema? (schema/subschema html ::html/element) [:div [:div [:div [:p "text"]]]])))
 
   (t/testing "example forms"
     (doseq [[k v] example-forms]
       (let [schema (schema/subschema html (ns-kw 'site.fabricate.prototype.html k))]
-        (t/testing (str "model for element: <" (symbol k) ">")
+        (t/testing (str "schema for element: <" (symbol k) ">")
           (t/is (valid-schema? schema v))))))
 
-  (comment
-      (map (fn [[k v]] [k (valid-schema? htmls v)]) example-forms)
+  (t/testing "page structure"
+    (doseq [[tag element] example-forms]
+      (let [example-page [:html [:head] [:body element]]]
+        (t/testing (str "schema for element: <" (symbol tag) ">")
+          (when (not= :head tag)
+            (t/is (valid-schema? html example-page)))))))
 
-      )
+  (comment
+    (map (fn [[k v]] [k (valid-schema? htmls v)]) example-forms))
 
   (t/testing "atomic elements"
-
 
     (t/is (m/validate global-attributes {:class "a"
                                          :href "http://google.com"}))

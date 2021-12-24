@@ -135,17 +135,17 @@
   atomic-element?
   (m/validator atomic-element))
 
-(defn- ->hiccup-schema [tag attr-model content-model]
+(defn- ->hiccup-schema [tag attr-schema content-schema]
   (let [head
         [:catn
          [:tag [:= tag]]
-         [:attrs (if (schema/has-reqd? attr-model)
-                   attr-model
-                   [:? attr-model])]]]
+         [:attrs (if (schema/has-reqd? attr-schema)
+                   attr-schema
+                   [:? attr-schema])]]]
     ;; [:and vector?
-    (if (nil? content-model)
+    (if (nil? content-schema)
       head
-      (conj head [:contents content-model]))
+      (conj head [:contents content-schema]))
     ;;  ]
     ))
 
@@ -837,3 +837,9 @@
                     (ns-kw 'site.fabricate.prototype.html tag))]
         (last
          (flatten (last (get-in (m/properties html) [:registry tag])))))))
+
+(def tag-contents
+  (->> (concat phrasing-tags flow-tags heading-tags sectioning-tags
+               metadata-tags)
+       (map (fn [t] [t (permitted-contents t)]))
+       (into {})))

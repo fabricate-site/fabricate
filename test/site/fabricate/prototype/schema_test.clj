@@ -1,12 +1,57 @@
 (ns site.fabricate.prototype.schema-test
-  (:require [site.fabricate.prototype.schema :refer [malli?]]
+  (:require [site.fabricate.prototype.schema :refer :all]
             [site.fabricate.prototype.html]
             [site.fabricate.prototype.page]
             [site.fabricate.prototype.fsm]
             [site.fabricate.prototype.read]
             [site.fabricate.prototype.read.grammar]
             [site.fabricate.prototype.write]
+            [malli.core :as m]
             [clojure.test :as t]))
+
+(t/deftest schema-utils
+  (t/testing "malli schema predicates"
+    (t/is (malli? :any))
+    (t/is (malli? (m/schema :any)))
+    (t/is (malli? [:cat [:* :string] :int]))
+
+    (t/is (has-reqd? [:map [:a {:optional true} :string]
+                      [:b :string]]))
+
+    (t/is (has-reqd? [:map [:a :string]]))
+
+    (t/is (false? (has-reqd?
+                   [:map [:a {:optional true} :string]
+                    [:b {:optional true} :string]]))))
+
+  (t/testing "malli schema transforms"
+    (t/is (malli?
+           (subschema
+            [:schema {:registry {::ping [:maybe [:tuple [:= "ping"] [:ref ::pong]]]
+                                 ::pong [:maybe [:tuple [:= "pong"] [:ref ::ping]]]}}
+             ::ping]
+            ::pong)))
+
+    (t/is (malli?
+           (subschema
+            (m/schema [:schema
+                       {:registry {::ping [:maybe [:tuple [:= "ping"] [:ref ::pong]]]
+                                   ::pong [:maybe [:tuple [:= "pong"] [:ref ::ping]]]}}
+                       ::ping])
+            ::pong)))
+
+    (t/is (thrown? clojure.lang.ExceptionInfo
+                   (subschema
+                    (m/schema [:schema
+                               {:registry {::ping [:maybe [:tuple [:= "ping"] [:ref ::pong]]]
+                                           ::pong [:maybe [:tuple [:= "pong"] [:ref ::ping]]]}}
+                               ::ping])
+                    ::pung))
+          "Attempting to construct a subschema with an invalid key should throw an exception.")
+
+    (t/is (malli? (unify [:int :string])))
+    (t/is (= [0 23] (m/parse (unify [:int :string]) 23)))
+    (t/is (= [1 "this"] (m/parse (unify [:int :string]) "this")))))
 
 (defn has-schema? [v]
   (let [var-schema (:malli/schema (meta v))
@@ -18,8 +63,7 @@
 
 (comment
   (has-schema?  #'site.fabricate.prototype.html/element-flat-explainer)
-  (has-schema?  #'site.fabricate.prototype.page/em)
-  )
+  (has-schema?  #'site.fabricate.prototype.page/em))
 
 (defn test-ns-schemas [nmspc]
   (for [[sym value] (ns-publics nmspc)]

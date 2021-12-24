@@ -9,6 +9,7 @@
             [clojure.tools.reader :as r]
             [malli.core :as m]
             [malli.util :as mu]
+            [malli.generator :as mg]
             [malli.transform :as mt]
             [site.fabricate.prototype.schema :as schema]
             [site.fabricate.prototype.read.grammar :refer [template]]
@@ -45,7 +46,9 @@
             :doc "An expression intended be evaluated for side effects or definitions."} :any]
     [::parse-error {:optional true :doc ""}
      [:map [:type [:fn class?]]
-      [:message :string]]]]))
+      [:message :string]]]
+    [:file {:optional true :doc "The source file of the expression"}
+     :string]]))
 
 (def evaluated-expr-schema
   (-> parsed-expr-schema
@@ -199,22 +202,31 @@
   ([{:keys [src expr exec err result display]
      :as expr-map} simplify? post-validator]
    (let [res
-         (with-meta (if err expr-map
-                        (try
-                          (assoc
-                           expr-map
-                           :result
-                           (if exec
-                             (do (eval exec) nil)
-                             (eval expr))
-                           :err nil)
-                          (catch Exception e
-                            (assoc expr-map
-                                   :result nil
-                                   :err (merge {:type (.getClass e)
-                                                :message (.getMessage e)}
-                                               (select-keys (Throwable->map e)
-                                                            [:cause :phase]))))))
+         (with-meta
+           (if err expr-map
+               (try
+                 (assoc
+                  expr-map
+                  :result
+                  (let [res (eval (or exec expr))]
+                    (if (var? res)
+                      (alter-meta!
+                       res
+                       (fn [var-meta form-meta]
+                         (-> var-meta
+                             (merge form-meta)
+                             (#(assoc % :column (% :instaparse.gll/start-column)
+                                      :line (% :instaparse.gll/start-line)))))
+                       (meta expr-map)))
+                    (if exec nil res))
+                  :err nil)
+                 (catch Exception e
+                   (assoc expr-map
+                          :result nil
+                          :err (merge {:type (.getClass e)
+                                       :message (.getMessage e)}
+                                      (select-keys (Throwable->map e)
+                                                   [:cause :phase]))))))
            (meta expr-map))
          validated (post-validator res)]
      (cond
@@ -252,18 +264,12 @@
 ;; special and required as the first fabricate form, make the metadata map
 ;; special and just put the unevaluated ns form within it.
 
-(def metadata-model
+(def metadata-schema
   "Malli schema for unevaluated metadata form/map"
   [:catn
    [:def [:= 'def]]
    [:name [:= 'metadata]]
-   [:meta-map map?]])
-
-(def metadata-expr-model
-  [:catn
-   [:do [:= 'do]]
-   [:metadata-form [:schema metadata-model]]
-   [:nil nil?]])
+   [:meta-map :map]])
 
 (defn get-metadata
   "Get the metadata form from the parse tree"
@@ -272,14 +278,36 @@
   (->> expr-tree
        (tree-seq vector? identity)
        (filter #(and (m/validate parsed-expr-schema %)
-                     (m/validate metadata-model (:exec %))))
+                     (m/validate metadata-schema (:exec %))))
        first
        :exec))
 
+(comment
+  (m/schema
+   [:function
+    [:=> [:cat [:sequential :int]] :any]
+    [:=> [:cat [:sequential :int] :boolean] :any]])
+
+  (m/schema
+   [:function
+    [:=> [:cat :boolean [:* :int]] :any]
+    [:=> [:cat [:* :int]] :any]])
+
+  (m/validate [:sequential [:cat :int]] [[1 2]])
+
+  (mg/generate [:cat [:schema [:cat [:* :int]]] :boolean])
+
+  (mg/generate [:cat [:schema [:cat [:* :int]]]]))
+
 (defn eval-all
   {:malli/schema
-   [:=> [:cat parsed-schema [:? :boolean] [:? :symbol]]
-    [:vector :any]]}
+   (m/schema
+    [:function
+     [:=> [:cat #_[:schema parsed-schema] [:vector :any]] [:vector :any]]
+     [:=> [:cat #_[:schema parsed-schema] [:vector :any] :boolean] [:vector :any]]
+     [:=> [:cat #_[:schema parsed-schema] [:vector :any] :boolean :symbol]
+      [:vector :any]]])}
+
   ([parsed-form simplify? nmspc]
    (let [form-nmspc (yank-ns parsed-form)
          nmspc (if form-nmspc (create-ns form-nmspc) *ns*)]
@@ -306,11 +334,14 @@
 
 (defn include-def
   "Excerpts the source code of the given symbol in the given file."
-  {:malli/schema [:=> [:cat [:? [:map [:render-fn [:fn fn?]]
-                                 [:def-syms [:set :symbol]]
-                                 [:container [:vector :any]]]]
-                       :symbol :string]
-                  [:vector :any]]}
+  {:malli/schema
+   [:function
+    [:=> [:cat [:map [:render-fn [:fn fn?]]
+                [:def-syms [:set :symbol]]
+                [:container [:vector :any]]]
+          :symbol :string]
+     [:vector :any]]
+    [:=> [:cat :symbol :string] [:vector :any]]]}
   ([{:keys [render-fn def-syms container]
      :or {render-fn render-src
           def-syms #{'def 'defn}
@@ -373,15 +404,27 @@
         .toPath
         .toAbsolutePath))))
 
+(def ^:private parsed-encoder
+  (m/encoder parsed-schema
+             (mt/transformer {:name :get})))
+
 (defn parse
-  {:malli/schema [:=> [:cat :string [:? [:vector :any]]]
-                  [:vector :any]]}
-  ([src start-seq]
+  {:malli/schema
+   [:function
+    [:=> [:cat :string
+          [:map
+           [:start-seq {:optional true} [:vector :any]]
+           [:filename {:optional true} :string]]] [:vector :any]]
+    [:=> [:cat :string] [:vector :any]]]}
+  ([src {:keys [start-seq filename]
+         :or {start-seq [] filename ""}}]
    (let [parsed (read-template src)]
-     (into []
-           (rest (m/encode parsed-schema parsed
-                           (mt/transformer {:name :get}))))))
-  ([src] (parse src [])))
+     (into start-seq
+           (map #(try (with-meta %
+                        (merge (meta %) {:file filename}))
+                      (catch Exception e %))
+                (rest (parsed-encoder parsed))))))
+  ([src] (parse src {})))
 
 (comment
   (meta (second (read-template "✳=(+ 2 3)🔚")))
