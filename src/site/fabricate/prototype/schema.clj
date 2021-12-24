@@ -9,25 +9,27 @@
   {:malli/schema (m/schema [:=> [:cat :any] :boolean])}
   [form]
   (try (do (m/schema form) true)
-       (catch Exception e
-         #_(prn (Throwable->map e))
-         false)))
+       (catch Exception e false)))
 
 (defn has-reqd?
   "Checks to see if at least one entry in the given map schema has required keys"
   {:malli/schema (m/schema [:=> [:cat [:fn malli?]] :boolean])}
   [schema]
-  (let [[s-type & entries] (m/form schema)]
+  (let [s-type  (first (m/form schema))
+        entries (m/children schema)]
     (and
      (= :map s-type)
-     (some (fn [e] (not (and (map? (second e))
-                             (get (second e) :optional))))
+     (some (fn [[k props type]]
+             (or (nil? props)
+                 (not (get props :optional?))))
            entries))))
 
 (defn subschema
-  {:malli/schema (m/schema [:=> [:cat [:fn malli?] :any] [:fn malli?]])}
-  [[_ meta-map orig-ref] new-ref]
-  [:schema meta-map new-ref])
+  {:malli/schema (m/schema [:=> [:cat [:fn malli?] [:or :keyword :string]] [:fn malli?]])}
+  [schema new-ref]
+  (let [{:keys [registry]
+         :as props} (m/properties schema)]
+    (m/schema [:schema props new-ref])))
 
 (def regex [:fn #(instance? java.util.regex.Pattern %)])
 
@@ -46,25 +48,10 @@
        :ns-clauses :clojure.core.specs.alpha/ns-clauses)
       form))))
 
-(defn or->orn
-  "Transforms a unnamed :or schema into an indexed :orn (courtesy of Tommi Reiman)"
-  {:malli/schema (m/schema [:=> [:cat [:fn malli?]] [:fn malli?]])}
-  [s]
-  (m/into-schema :orn (m/properties s) (map-indexed vector (m/children s))))
-
-;; (comment
-;;   (assert (or->orn [:or :int :boolean])
-
-;;           [:orn [0 :int] [1 :boolean]])
-
-;;   )
-
-
-
 (defn unify
   "A lighter-weight version of malli's own unify/merge that's
   more compatible with number-based indexing/item access"
   {:malli/schema (m/schema [:=> [:cat [:* [:fn malli?]]]
                             [:fn malli?]])}
   [schemas]
-  (into [:orn] (map-indexed vector schemas)))
+  (m/into-schema :orn {} (map-indexed vector schemas)))

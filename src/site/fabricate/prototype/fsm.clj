@@ -13,7 +13,6 @@
             [malli.generator :as mg]
             [site.fabricate.prototype.schema :as schema]))
 
-
 (def state-action-map
   "Malli schema for the map where each entry is a ⟨s,α⟩ tuple,
   \"where s is a state states and α is an action.\"
