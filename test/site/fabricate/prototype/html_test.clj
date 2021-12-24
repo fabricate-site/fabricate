@@ -142,6 +142,13 @@
         (t/testing (str "schema for element: <" (symbol k) ">")
           (t/is (valid-schema? schema v))))))
 
+  (t/testing "page structure"
+    (doseq [[tag element] example-forms]
+      (let [example-page [:html [:head] [:body element]]]
+        (t/testing (str "schema for element: <" (symbol tag) ">")
+          (when (not= :head tag)
+            (t/is (valid-schema? html example-page)))))))
+
   (comment
     (map (fn [[k v]] [k (valid-schema? htmls v)]) example-forms))
 

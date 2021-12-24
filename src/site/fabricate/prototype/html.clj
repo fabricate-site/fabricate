@@ -843,8 +843,3 @@
                metadata-tags)
        (map (fn [t] [t (permitted-contents t)]))
        (into {})))
-
-(comment
-  tag-contents
-
-  )
