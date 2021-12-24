@@ -204,11 +204,13 @@
                         slurp
                         (parse {:filename "README.md.fab"})
                         eval-all)
-            src-info (-> 'site.fabricate.docs.readme/metadata
+            ex-meta (-> 'site.fabricate.docs.readme/metadata
                          resolve
                          meta
-                         :file)]
-        (t/is (= src-info "README.md.fab")
+                         (select-keys [:file :ns :column]))]
+        (t/is (=  {:file "README.md.fab" :ns (find-ns 'site.fabricate.docs.readme)
+                   :column 1}
+                  ex-meta)
               "Vars should preserve information about their source files"))
 
       (t/is (= (parse-eval "✳=(site.fabricate.prototype.page/em 3)🔚")

@@ -211,7 +211,13 @@
                   (let [res (eval (or exec expr))]
                     (if (var? res)
                       (alter-meta!
-                       res merge (meta expr-map)))
+                       res
+                       (fn [var-meta form-meta]
+                         (-> var-meta
+                             (merge form-meta)
+                             (#(assoc % :column (% :instaparse.gll/start-column)
+                                      :line (% :instaparse.gll/start-line)))))
+                       (meta expr-map)))
                     (if exec nil res))
                   :err nil)
                  (catch Exception e
