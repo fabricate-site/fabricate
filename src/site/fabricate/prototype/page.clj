@@ -1,5 +1,5 @@
 (ns site.fabricate.prototype.page
-  "Utility functions for working with Hiccup elements."
+  "Functions for transforming processed page contents."
   (:require
    [site.fabricate.prototype.html :as html]
    [hiccup2.core :as hiccup]
