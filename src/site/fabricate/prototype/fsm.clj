@@ -38,9 +38,12 @@
                  (me/humanize (m/explain union-schema val)))
         value)
       (let [matched-schema (-> union-schema
-                               (nth (inc (first parsed)))
+                               m/children
+                               (nth (first parsed) #_(inc (first parsed)))
                                last)
-            op (get fsm-map matched-schema)]
+            op (get fsm-map matched-schema
+                    (get fsm-map (m/form matched-schema)
+                         (fn [v] (println "unmatched value") v)))]
         (do
           (println "advancing fsm:" (get (m/properties matched-schema)
                                          :fsm/description))
