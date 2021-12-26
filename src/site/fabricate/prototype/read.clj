@@ -361,11 +361,11 @@
 (def file-metadata-schema
   (m/schema
    [:map {:description "File metadata used by fabricate"}
-    [:filename {:description "The title of the file, absent any prefixes"} :string]
-    [:file-extension {:description "The extension of the output format of the file"} :string]
-    [:fabricate/suffix {:description "The suffix following the output file extension"} :string]
-    [:created {:optional true :description "When the file was created"} :string]
-    [:modified {:optional true :description "When the file was modified"} :string]]))
+    [:site.fabricate.file/filename {:description "The title of the template file, absent any prefixes"} :string]
+    [:site.fabricate.file/output-extension {:description "The extension of the output format of the file"} :string]
+    [:site.fabricate.file/template-suffix {:description "The suffix following the output file extension"} :string]
+    [:site.fabricate.file/created {:optional true :description "When the file was created"} :string]
+    [:site.fabricate.file/modified {:optional true :description "When the file was modified"} :string]]))
 
 (defn get-file-metadata
   {:malli/schema [:=> [:cat :string] file-metadata-schema]}
@@ -384,9 +384,9 @@
                   li)))
         [fname output-extension suffix]
         (string/split (.toString (.getFileName local-f)) (re-pattern "\\."))]
-    {:filename (if (= "" local-subdir) fname (str local-subdir "/" fname))
-     :file-extension output-extension
-     :fabricate/suffix (str "." suffix)}))
+    {:site.fabricate.file/filename (if (= "" local-subdir) fname (str local-subdir "/" fname))
+     :site.fabricate.file/output-extension output-extension
+     :site.fabricate.file/template-suffix (str "." suffix)}))
 
 (defn ->dir-local-path
   {:malli/schema [:=> [:cat [:fn #(.isInstance java.io.File %)]]
