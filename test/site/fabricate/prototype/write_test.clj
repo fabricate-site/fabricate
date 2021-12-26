@@ -19,20 +19,21 @@
 (t/deftest page-fsm
   (t/testing "page metadata"
     (let [ex-file (io/file "./content/test-file.txt.fab")]
-      (t/is (= {:namespace (symbol 'test-ns)
-                :parsed-content [{:exec '(ns test-ns)
-                                  :src "(ns test-ns)"}]
-                :filename "content/test-file"
-                :file-extension "txt"
-                :fabricate/suffix ".fab"
-                :output-file "./pages/test-file.txt"
-                :input-file ex-file}
+      (t/is (= {:site.fabricate.page/namespace (symbol 'test-ns)
+                :site.fabricate.page/parsed-content
+                [{:exec '(ns test-ns)
+                  :src "(ns test-ns)"}]
+                :site.fabricate.file/filename "content/test-file"
+                :site.fabricate.file/output-extension "txt"
+                :site.fabricate.file/template-suffix ".fab"
+                :site.fabricate.file/output-file "./pages/test-file.txt"
+                :site.fabricate.file/input-file ex-file}
                (populate-page-meta
-                {:parsed-content [{:exec '(ns test-ns)
-                                   :src "(ns test-ns)"}]
-                 :input-file (io/file "./content/test-file.txt.fab")}
-                {:output-dir "./pages"
-                 :input-dir "./content"}))))
+                {:site.fabricate.page/parsed-content [{:exec '(ns test-ns)
+                                                       :src "(ns test-ns)"}]
+                 :site.fabricate.file/input-file ex-file}
+                {:site.fabricate.file/output-dir "./pages"
+                 :site.fabricate.file/input-dir "./content"}))))
 
     (t/is (m/validate (-> populate-page-meta
                           var
@@ -53,11 +54,11 @@
               (-> (fsm/complete
                    (select-keys operations [input-state])
                    "./README.md.fab")
-                  (get :input-file)
+                  (get :site.fabricate.file/input-file)
                   .getPath)))
 
     (let [evaluated
-          (:evaluated-content
+          (:site.fabricate.page/evaluated-content
            (fsm/complete
             (dissoc operations
                     markdown-state
@@ -75,18 +76,18 @@
               (fsm/complete
                (select-keys operations [input-state file-state])
                "./README.md.fab")
-              :unparsed-content)))
+              :site.fabricate.page/unparsed-content)))
 
     (t/is
      (m/validate
-      (-> sketch/page-metadata-schema
-          (mu/dissoc :output-file)
-          (mu/dissoc :title)
-          (mu/dissoc :namespace)
-          (mu/dissoc :page-style)
-          (mu/dissoc :parsed-content)
-          (mu/dissoc :hiccup-content)
-          (mu/dissoc :rendered-content))
+      (-> page-metadata-schema
+          (mu/dissoc :site.fabricate.file/output-file)
+          (mu/dissoc :site.fabricate.page/title)
+          (mu/dissoc :site.fabricate.page/namespace)
+          (mu/dissoc :site.fabricate.page/stylesheet)
+          (mu/dissoc :site.fabricate.page/parsed-content)
+          (mu/dissoc :site.fabricate.page/hiccup-content)
+          (mu/dissoc :site.fabricate.page/rendered-content))
       (fsm/complete
        (select-keys operations [input-state file-state])
        "./README.md.fab")))
@@ -96,21 +97,20 @@
            (select-keys operations [input-state file-state read-state])
            "./README.md.fab")
           out-keys  (->> output keys (into #{}))
-          out-file (:output-file output)]
+          out-file (:site.fabricate.file/output-file output)]
       (println out-keys)
       (println out-file)
-      (t/is
-       (and (set/subset?
-             #{:parsed-content :namespace}
+      (t/is (set/subset?
+             #{:site.fabricate.page/parsed-content
+               :site.fabricate.page/namespace}
              out-keys)
-            (= "./README.md" out-file))
-
-       "Metadata should be properly populated"))
+            "Metadata should be properly populated")
+      (t/is (= "./README.md" out-file)))
 
     (t/is (= "public/test/some-file.txt"
-             (:output-file
-              (populate-page-meta {:input-file (io/file "content/test/some-file.txt.fab")
-                                   :output-file "public/test/some-file.txt"}
+             (:site.fabricate.file/output-file
+              (populate-page-meta {:site.fabricate.file/input-file (io/file "content/test/some-file.txt.fab")
+                                   :site.fabricate.file/output-file "public/test/some-file.txt"}
                                   default-site-settings))))
 
     (let [meta-post
@@ -119,20 +119,22 @@
                    rendered-state
                    html-state
                    markdown-state)
-           {:input-file (io/file "content/test/some-file.txt.fab")
-            :unparsed-content "✳=(with-meta [:div \"text\"] {:page/title \"text\"})🔚"})]
+           {:site.fabricate.file/input-file (io/file "content/test/some-file.txt.fab")
+            :site.fabricate.file/filename "content/test/some-file.txt.fab"
+            :site.fabricate.page/unparsed-content "✳=(with-meta [:div \"text\"] {:page/title \"text\"})🔚"})]
       (t/is
-       (and (:metadata meta-post)
-            (contains? (:metadata meta-post) :title))))
+       (and (:site.fabricate.page/metadata meta-post)
+            (or (contains? (:site.fabricate.page/metadata meta-post) :title)))))
 
     (let [sample-error
-          (->> {:input-file (io/file "content/test/some-file.txt.fab")
-                :unparsed-content "✳=(unbound-fn nil)🔚"}
+          (->> {:site.fabricate.file/input-file (io/file "content/test/some-file.txt.fab")
+                :site.fabricate.file/filename "content/test/some-file.txt.fab"
+                :site.fabricate.page/unparsed-content "✳=(unbound-fn nil)🔚"}
                (fsm/complete (dissoc operations
                                      rendered-state
                                      html-state
                                      markdown-state))
-               :evaluated-content
+               :site.fabricate.page/evaluated-content
                first)]
       (t/is
        (and (= :div (first sample-error))
@@ -146,7 +148,7 @@
                                  html-state
                                  rendered-state)
                          "./README.md.fab")
-           :evaluated-content))
+           :site.fabricate.page/evaluated-content))
 
     (t/is
      (m/validate rendered-state
@@ -167,13 +169,3 @@
       (doseq [page-path (get-template-files "./pages" ".fab")]
         (println "testing" page-path)
         (fsm/complete operations page-path)))))
-
-(comment
-  (let [operations
-        (dissoc operations
-                rendered-state
-                html-state)]
-
-    (evaluated->hiccup
-     (fsm/complete operations
-                   "./pages/fabricate.html.fab"))))
