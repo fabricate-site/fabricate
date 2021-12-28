@@ -7,7 +7,9 @@
             [clojure.set :as set]
             [malli.core :as m]
             [malli.util :as mu]
-            [clojure.test :as t]))
+            [http.server :as server]
+            [clojure.test :as t]
+            [babashka.curl :as curl]))
 
 (t/deftest file-utils
   (t/testing "output path fn"
@@ -169,3 +171,44 @@
       (doseq [page-path (get-template-files "./pages" ".fab")]
         (println "testing" page-path)
         (fsm/complete operations page-path)))))
+
+
+(comment
+  (:status (curl/get "https://respatialized.github.io/"))
+
+  (let [srv (server/start {:port 9800})]
+    (server/stop srv))
+
+  )
+
+(t/deftest application-state
+  (t/testing "ability to manage server state using send and draft!"
+    (let [test-state (agent initial-state)
+          config {:port 9125
+                  :dir (str (System/getProperty "user.dir") "/docs")}
+          url (str "http://localhost:" (:port config))
+          drft
+          (fn [state-map]
+            (println "launching server with config:")
+            (println config)
+            (assoc state-map
+                   :site.fabricate.app/server
+                   (server/start config)))
+          stp
+          (fn [state-map]
+            (println "stopping server")
+            (update state-map
+                    :site.fabricate.app/server
+                    #(do (server/stop %) nil)))]
+      (send test-state drft)
+      (Thread/sleep 100)
+      (t/is (#{200 304} (:status (curl/get url)))
+            "Server should start via agent")
+      (Thread/sleep 100)
+      (send test-state stp)
+      (Thread/sleep 100)
+      (t/is (nil? (:site.fabricate.app/server @test-state))
+            "Server state should return nil after shutdown command")
+      (t/is (nil? (:status (curl/get url {:throw false})))
+            "Server should shutdown via agent")
+      )))

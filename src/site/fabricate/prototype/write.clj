@@ -417,15 +417,16 @@
   "Shuts down fabricate's stateful components."
   [application-state-map]
   (-> application-state-map
-      (update :site.fabricate.file/watcher
+      (update :site.fabricate.app/watcher
               #(do
                  (println "closing file watcher")
                  (try (do (when (instance? clojure.lang.Agent %)  (close-watcher %)) nil)
                       (catch Exception e nil))))
-      (update :site.fabricate/server
+      (update :site.fabricate.app/server
               #(do
                  (println "stopping Aleph server")
-                 (try (do (server/stop %) nil)
+                 (when % (do (server/stop %) nil))
+                 #_(try (do (server/stop %) nil)
                       (catch Exception e nil))))))
 
 (.addShutdownHook (java.lang.Runtime/getRuntime)
@@ -446,6 +447,8 @@
   (restart-agent state initial-state)
 
   (send state stop!)
+
+  @state
 
   )
 
