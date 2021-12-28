@@ -45,12 +45,33 @@
 (def default-site-settings
   {:site.fabricate.file/template-suffix ".fab"
    :site.fabricate.file/input-dir "./pages"
-   :site.fabricate.file/output-dir "./docs"})
+   :site.fabricate.file/output-dir "./docs"
+   :site.fabricate.server/config
+   {:cors-allow-headers nil
+    :dir (str (System/getProperty "user.dir") "/docs")
+    :port 8002
+    :no-cache true}})
+
+(def state-schema
+  "Schema for the agent containing the state of fabricate."
+  [:map
+   [:site.fabricate/settings
+    [:map
+     [:site.fabricate.file/input-dir :string]
+     [:site.fabricate.file/output-dir :string]
+     [:site.fabricate.file/template-suffix :string]
+     [:site.fabricate.server/config :map]]]
+   [:site.fabricate/pages [:map-of :string page-metadata-schema]]
+   [:site.fabricate.app/watcher {:optional true}
+    [:fn #(instance? clojure.lang.Agent %)]]
+   [:site.fabricate.app/server {:optional true} :any]])
+
+(def initial-state {:site.fabricate/settings default-site-settings
+                    :site.fabricate/pages {}})
 
 (def state
-  "This atom holds the current state of all the pages created
-   by fabricate and the application settings."
-  (atom {}))
+  "This agent holds the current state of all the pages created by fabricate, the application settings, and the state of the application itself"
+  (agent initial-state))
 
 (def template-suffix-regex
   (let [suffix (:site.fabricate.file/template-suffix default-site-settings)]
@@ -277,6 +298,8 @@
              (second (second namespace)))
            :site.fabricate.page/metadata metadata)))
 
+;; to make the state runtime reconfigurable, rewrite all these functions
+;; to accept both a page map and a settings map
 (def operations
   {input-state (fn [f] {:site.fabricate.file/input-file (io/as-file f)
                         :site.fabricate.file/filename f})
@@ -296,7 +319,8 @@
                 evaluated->hiccup
                 (#(hp/html5 {:lang "en"} %)))))
    rendered-state
-   (fn [{:keys [rendered-content output-file] :as page-data}]
+   (fn [{:keys [site.fabricate.page/rendered-content
+                site.fabricate.file/output-file] :as page-data}]
      (do
        (println "writing page content to" output-file)
        (spit output-file rendered-content)
@@ -314,49 +338,67 @@
 
 (defn rerender
   {:malli/schema
-   [:=> [:cat [:map [:file :any] [:count :int] [:action :keyword]]]
-    :nil]}
-  [{:keys [file count action]}]
+   [:=> [:cat [:map [:file :any] [:count :int] [:action :keyword]]
+         state-schema]
+    state-schema]}
+  [{:keys [site.fabricate/settings site.fabricate/pages]
+    :as application-state-map}
+   {:keys [file count action]}]
   (if (and (#{:create :modify} action)
            (.endsWith (.toString file)
-                      (:template-suffix default-site-settings)))
-    (let [local-file (read/->dir-local-path file)]
+                      (:site.fabricate.file/template-suffix settings)))
+    (let [local-file
+          (-> file
+              read/->dir-local-path
+              (#(do (println "re-rendering") % %)))
+          updated-page (fsm/complete operations local-file)]
       (do
-        (println "re-rendering" local-file)
-        (swap! state #(update-page-map % local-file))
-        (println "rendered")))))
+        (println "rendered")
+        (assoc-in application-state-map
+                  [:site.fabricate/pages local-file]
+                  updated-page)))))
 
-(def default-server-opts
-  {:cors-allow-headers nil,
-   :dir (str (System/getProperty "user.dir") "/docs"),
-   :port 8000,
-   :no-cache true})
+(comment
+  (fsm/complete
+   operations
+   (first
+    (get-template-files
+     (:site.fabricate.file/input-dir default-site-settings)
+     (:site.fabricate.file/template-suffix default-site-settings))))
 
-(defn draft
-  {:malli/schema [:=> [:cat] [:fn #(.isInstance clojure.lang.Agent %)]]}
-  []
-  (do
-     ;; (load-deps)
-    (doseq [fp (get-template-files
-                (:input-dir default-site-settings)
-                (:template-suffix
-                 default-site-settings))]
-      (swap! state #(update-page-map % fp)))
-    (let [srv (do
-                (println "launching server")
-                (server/start default-server-opts))
-          fw (do
-               (println "establishing file watch")
-               (watch-dir rerender (io/file (:input-dir default-site-settings))))]
-      (.addShutdownHook (java.lang.Runtime/getRuntime)
-                        (Thread. (fn []
-                                   (do (println "shutting down")
-                                       (close-watcher fw)
-                                       (server/stop srv)
-                                       (shutdown-agents)))))
-      fw)))
+  (def example-srv (server/start {:port 8015}))
 
-(defn publish
+  (clojure.repl/doc server/start)
+
+  (server/stop example-srv)
+
+  )
+
+(defn draft!
+  {:malli/schema [:=> [:cat state-schema] state-schema]}
+  [{:keys [site.fabricate/settings site.fabricate/pages]
+    :as application-state-map}]
+  (let [written-pages
+        (into {}
+              (for [fp (get-template-files
+                        (:site.fabricate.file/input-dir settings)
+                        (:site.fabricate.file/template-suffix settings)) ]
+                [fp (fsm/complete operations fp)]))
+        fw (do
+             (println "establishing file watch")
+             (watch-dir (fn [f]
+                          (send state rerender f))
+                        (io/file (:site.fabricate.file/input-dir settings))))
+        srv (do
+              (println "launching server")
+              (server/start (:site.fabricate.server/config settings)))]
+    (assoc
+     application-state-map
+     :site.fabricate/pages written-pages
+     :site.fabricate.app/watcher fw
+     :site.fabricate.app/server srv)))
+
+(defn publish!
   {:malli/schema
    [:=> [:cat [:map [:files [:* :string]]
                [:dirs [:* :string]]]]
@@ -371,12 +413,41 @@
     (doseq [fp all-files]
       (fsm/complete operations fp))))
 
+(defn stop!
+  "Shuts down fabricate's stateful components."
+  [application-state-map]
+  (-> application-state-map
+      (update :site.fabricate.file/watcher
+              #(do
+                 (println "closing file watcher")
+                 (try (do (when (instance? clojure.lang.Agent %)  (close-watcher %)) nil)
+                      (catch Exception e nil))))
+      (update :site.fabricate/server
+              #(do
+                 (println "stopping Aleph server")
+                 (try (do (server/stop %) nil)
+                      (catch Exception e nil))))))
+
+(.addShutdownHook (java.lang.Runtime/getRuntime)
+                  (Thread. (fn []
+                             (do (println "shutting down")
+                                 (send stop! state)
+                                 (shutdown-agents)))))
+
 (comment
   (publish {:dirs ["./pages"]})
 
-  (def drafts (draft))
+  (send state draft!)
 
-  (close-watcher drafts))
+  (keys @state)
+
+  (type (:site.fabricate.app/server @state))
+
+  (restart-agent state initial-state)
+
+  (send state stop!)
+
+  )
 
 (comment
   ;; to update pages manually, do this:
