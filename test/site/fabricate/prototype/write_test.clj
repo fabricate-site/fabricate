@@ -192,34 +192,75 @@
 
   )
 
+(defn delete-directory-recursive
+  "Recursively delete a directory."
+  [^java.io.File file]
+  ;; when `file` is a directory, list its entries and call this
+  ;; function with each entry. can't `recur` here as it's not a tail
+  ;; position, sadly. could cause a stack overflow for many entries?
+  ;; thanks to @nikolavojicic for the idea to use `run!` instead of
+  ;; `doseq` :)
+  (when (.isDirectory file)
+    (run! delete-directory-recursive (.listFiles file)))
+  ;; delete the file or directory. if it it's a file, it's easily
+  ;; deletable. if it's a directory, we already have deleted all its
+  ;; contents with the code above (remember?)
+  (io/delete-file file))
+
 (t/deftest application-state
   (t/testing "ability to manage server state using send and draft!"
-    (let [test-state (agent initial-state)
-          config {:port 9125
-                  :dir (str (System/getProperty "user.dir") "/docs")}
-          url (str "http://localhost:" (:port config))
-          drft
-          (fn [state-map]
-            (println "launching server with config:")
-            (println config)
-            (assoc state-map
-                   :site.fabricate.app/server
-                   (server/start config)))
-          stp
-          (fn [state-map]
-            (println "stopping server")
-            (update state-map
-                    :site.fabricate.app/server
-                    #(do (server/stop %) nil)))]
-      (send test-state drft)
-      (Thread/sleep 100)
+
+    (let [test-config
+          (-> initial-state
+              (assoc-in [:site.fabricate/settings
+                         :site.fabricate.file/input-dir]
+                        "./test-resources/fab/inputs/")
+              (assoc-in [:site.fabricate/settings
+                         :site.fabricate.file/output-dir]
+                        "./test-resources/fab/outputs/")
+              (assoc-in [:site.fabricate/settings
+                         :site.fabricate.server/config]
+                        {:dir "./test-resources/fab/outputs/"
+                         :port 9223}))
+          url "http://localhost:9223"
+          test-fabricate-str
+          "✳(ns site.fabricate.prototype.write-test.post)🔚
+✳(def metadata {:title \"an example post\"})🔚
+Some plaintext
+✳=[:h1 (:title metadata)]🔚
+Some more text"
+          extra-content-str "\n\n Three plus four is: ✳=[:strong (+ 3 4)]🔚"
+          test-state (agent test-config)]
+      (println "starting up")
+      #_(try (restart-agent test-state test-config)
+           (catch Exception e nil))
+      (io/make-parents "./test-resources/fab/outputs/.nothing")
+      (io/make-parents "./test-resources/fab/inputs/.nothing")
+      (send test-state draft!)
+      (Thread/sleep 1500)
       (t/is (#{200 304} (:status (curl/get url)))
             "Server should start via agent")
-      (Thread/sleep 100)
-      (send test-state stp)
-      (Thread/sleep 100)
-      (t/is (nil? (:site.fabricate.app/server @test-state))
-            "Server state should return nil after shutdown command")
+      (spit "./test-resources/fab/inputs/test-file.html.fab"
+            test-fabricate-str)
+      (Thread/sleep 250)
+      (let [response (curl/get url)]
+        (t/is (re-find #"test\-file\.html" (:body response))
+              "File should display in list of files after rendering"))
+      (t/is (#{200 304} (:status (curl/get (str url "/test-file.html"))))
+            "File should be visible on server")
+      (Thread/sleep 250)
+
+      (spit "./test-resources/fab/inputs/test-file.html.fab"
+            extra-content-str
+            :append true)
+
+      (Thread/sleep 250)
+      (t/is (re-find #"four" (:body (curl/get (str url "/test-file.html"))))
+            "File should have contents updated by filewatcher")
+
+      (send test-state stop!)
+      (delete-directory-recursive (io/file "test-resources/fab"))
+
+      (Thread/sleep 500)
       (t/is (nil? (:status (curl/get url {:throw false})))
-            "Server should shutdown via agent")
-      )))
+            "Server should shutdown via agent"))))

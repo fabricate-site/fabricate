@@ -42,15 +42,6 @@
      [:path :string]
      [:file [:fn sketch/file?]]]]])
 
-(def default-site-settings
-  {:site.fabricate.file/template-suffix ".fab"
-   :site.fabricate.file/input-dir "./pages"
-   :site.fabricate.file/output-dir "./docs"
-   :site.fabricate.server/config
-   {:cors-allow-headers nil
-    :dir (str (System/getProperty "user.dir") "/docs")
-    :port 8002
-    :no-cache true}})
 
 (def state-schema
   "Schema for the agent containing the state of fabricate."
@@ -65,6 +56,16 @@
    [:site.fabricate.app/watcher {:optional true}
     [:fn #(instance? clojure.lang.Agent %)]]
    [:site.fabricate.app/server {:optional true} :any]])
+
+(def default-site-settings
+  {:site.fabricate.file/template-suffix ".fab"
+   :site.fabricate.file/input-dir "./pages"
+   :site.fabricate.file/output-dir "./docs"
+   :site.fabricate.server/config
+   {:cors-allow-headers nil
+    :dir (str (System/getProperty "user.dir") "/docs")
+    :port 8002
+    :no-cache true}})
 
 ;; make this var less ambiguous
 (def initial-state {:site.fabricate/settings default-site-settings
@@ -211,26 +212,6 @@
        :fsm/description "Fabricate contents evaluated after parsing"}
       [:site.fabricate.page/evaluated-content [:fn vector?]]
       [:site.fabricate.page/metadata {:optional true} [:map {:closed false}]]]))))
-
-#_(def evaluated-state
-  [:map {:closed true
-         :fsm/description "Fabricate evaluated under :evaluated-content"}
-   [:input-file [:fn sketch/file?]]
-   [:unparsed-content :string]
-   [:parsed-content [:fn vector?]]
-   [:evaluated-content [:fn vector?]]
-   [:site.fabricate.page/file-suffix
-    [:enum (:site.fabricate.page/file-suffix default-site-settings)]]
-   [:filename :string]
-   [:file-extension :string]
-   [:namespace :symbol]
-   [:metadata [:map {:closed false}]]
-   [:page-style {:optional true} :string]
-   [:title {:optional true} :string]
-   [:output-file {:optional true}
-    [:orn
-     [:path :string]
-     [:file [:fn sketch/file?]]]]])
 
 (def html-state
   (mu/closed-schema
@@ -489,6 +470,8 @@
   (def fsm-post-data (get @pages "pages/finite-schema-machines.html.fab"))
 
   (keys fsm-post-data)
+
+  (keys  @state)
 
   (:evaluated-content fsm-post-data)
   (hp/html5 (list [:head [:title "something"] [:body "something else"]])))
