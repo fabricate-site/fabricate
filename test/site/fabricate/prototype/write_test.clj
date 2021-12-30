@@ -55,7 +55,8 @@
     (t/is (=  "./README.md.fab"
               (-> (fsm/complete
                    (select-keys operations [input-state])
-                   "./README.md.fab")
+                   "./README.md.fab"
+                   initial-state)
                   (get :site.fabricate.file/input-file)
                   .getPath)))
 
@@ -65,6 +66,7 @@
             (dissoc operations
                     markdown-state
                     rendered-state)
+            initial-state
             "./README.md.fab"))
           errors
           (filter #(m/validate read/error-form-schema %)
@@ -77,7 +79,8 @@
              (get
               (fsm/complete
                (select-keys operations [input-state file-state])
-               "./README.md.fab")
+               "./README.md.fab"
+               initial-state)
               :site.fabricate.page/unparsed-content)))
 
     (t/is
@@ -92,12 +95,14 @@
           (mu/dissoc :site.fabricate.page/rendered-content))
       (fsm/complete
        (select-keys operations [input-state file-state])
-       "./README.md.fab")))
+       "./README.md.fab"
+       initial-state)))
 
     (let [output
           (fsm/complete
            (select-keys operations [input-state file-state read-state])
-           "./README.md.fab")
+           "./README.md.fab"
+           initial-state)
           out-keys  (->> output keys (into #{}))
           out-file (:site.fabricate.file/output-file output)]
       (println out-keys)
@@ -123,7 +128,8 @@
                    markdown-state)
            {:site.fabricate.file/input-file (io/file "content/test/some-file.txt.fab")
             :site.fabricate.file/filename "content/test/some-file.txt.fab"
-            :site.fabricate.page/unparsed-content "✳=(with-meta [:div \"text\"] {:page/title \"text\"})🔚"})]
+            :site.fabricate.page/unparsed-content "✳=(with-meta [:div \"text\"] {:page/title \"text\"})🔚"}
+           initial-state)]
       (t/is
        (and (:site.fabricate.page/metadata meta-post)
             (or (contains? (:site.fabricate.page/metadata meta-post) :title)))))
@@ -132,10 +138,12 @@
           (->> {:site.fabricate.file/input-file (io/file "content/test/some-file.txt.fab")
                 :site.fabricate.file/filename "content/test/some-file.txt.fab"
                 :site.fabricate.page/unparsed-content "✳=(unbound-fn nil)🔚"}
-               (fsm/complete (dissoc operations
-                                     rendered-state
-                                     html-state
-                                     markdown-state))
+               (#(fsm/complete (dissoc operations
+                                       rendered-state
+                                       html-state
+                                       markdown-state)
+                               %
+                               initial-state))
                :site.fabricate.page/evaluated-content
                first)]
       (t/is
@@ -149,7 +157,8 @@
                                  markdown-state
                                  html-state
                                  rendered-state)
-                         "./README.md.fab")
+                         "./README.md.fab"
+                         initial-state)
            :site.fabricate.page/evaluated-content))
 
     (t/is
@@ -157,21 +166,23 @@
                  (fsm/complete (dissoc operations
                                        html-state
                                        rendered-state)
-                               "./README.md.fab"))))
+                               "./README.md.fab"
+                               initial-state)))))
 
+(t/deftest existing-pages
   (t/testing "existing pages"
     (let [operations
           (assoc operations
                  rendered-state
-                 (fn [{:keys [rendered-content]
-                       :as page-data}]
+                 (fn [{:keys [site.fabricate.page/rendered-content]
+                       :as page-data}
+                      settings]
                    (do
                      (t/is (any? rendered-content))
                      page-data)))]
       (doseq [page-path (get-template-files "./pages" ".fab")]
         (println "testing" page-path)
-        (fsm/complete operations page-path)))))
-
+        (fsm/complete operations page-path initial-state)))))
 
 (comment
   (:status (curl/get "https://respatialized.github.io/"))

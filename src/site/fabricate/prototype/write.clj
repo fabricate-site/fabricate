@@ -66,6 +66,7 @@
     [:fn #(instance? clojure.lang.Agent %)]]
    [:site.fabricate.app/server {:optional true} :any]])
 
+;; make this var less ambiguous
 (def initial-state {:site.fabricate/settings default-site-settings
                     :site.fabricate/pages {}})
 
@@ -164,6 +165,7 @@
 ;; describing the desired states, and the functions
 ;; that produce that particular succession of states
 
+;; maybe make these state schema var names less ambiguous
 (def input-state
   [:and {:fsm/description "Fabricate input path represented as string"}
    :string [:fn #(.endsWith % ".fab")]])
@@ -253,7 +255,8 @@
   [{:keys [site.fabricate.page/namespace
            site.fabricate.page/metadata
            site.fabricate.page/evaluated-content]
-    :as page-data}]
+    :as page-data}
+   settings]
   (let [body-content (into [:article {:lang "en"}]
                            (page/parse-paragraphs
                             evaluated-content))]
@@ -299,28 +302,39 @@
            :site.fabricate.page/metadata metadata)))
 
 ;; to make the state runtime reconfigurable, rewrite all these functions
-;; to accept both a page map and a settings map
+;; to accept both a page map and a settings map - or just the entire state
+;;
+;; and also include these operations in the state map
 (def operations
-  {input-state (fn [f] {:site.fabricate.file/input-file (io/as-file f)
-                        :site.fabricate.file/filename f})
-   file-state (fn [{:keys [site.fabricate.file/input-file] :as page-data}]
+  {input-state (fn [f _] {:site.fabricate.file/input-file (io/as-file f)
+                          :site.fabricate.file/filename f})
+   file-state (fn [{:keys [site.fabricate.file/input-file] :as page-data} _]
                 (assoc page-data :site.fabricate.page/unparsed-content
                        (slurp input-file)))
-   read-state parse-page
-   parsed-state eval-parsed-page
-   markdown-state
-   (fn [{:keys [site.fabricate.page/evaluated-content] :as page-data}]
-     (assoc page-data :site.fabricate.page/rendered-content (reduce str evaluated-content)))
-   html-state
-   (fn [page-data]
-     (assoc page-data
-            :site.fabricate.page/rendered-content
-            (-> page-data
-                evaluated->hiccup
-                (#(hp/html5 {:lang "en"} %)))))
+   read-state
+   (fn [{:keys [site.fabricate.page/unparsed-content
+                site.fabricate.file/filename]
+         :as page-data}
+        {:keys [site.fabricate/settings]}]
+     (-> page-data
+         (assoc :site.fabricate.page/parsed-content
+                (read/parse unparsed-content {:filename filename}))
+         (populate-page-meta settings)))
+   parsed-state (fn [m _] (eval-parsed-page m))
+   markdown-state (fn [{:keys [site.fabricate.page/evaluated-content]
+                        :as page-data} _]
+                    (assoc page-data :site.fabricate.page/rendered-content
+                           (reduce str evaluated-content)))
+   html-state (fn [page-data state]
+                (assoc page-data
+                       :site.fabricate.page/rendered-content
+                       (-> page-data
+                           (evaluated->hiccup state)
+                           (#(hp/html5 {:lang :en-us} %)))))
    rendered-state
    (fn [{:keys [site.fabricate.page/rendered-content
-                site.fabricate.file/output-file] :as page-data}]
+                site.fabricate.file/output-file] :as page-data}
+        settings]
      (do
        (println "writing page content to" output-file)
        (spit output-file rendered-content)
@@ -351,7 +365,9 @@
           (-> file
               read/->dir-local-path
               (#(do (println "re-rendering") % %)))
-          updated-page (fsm/complete operations local-file)]
+          updated-page (fsm/complete operations
+                                     local-file
+                                     application-state-map)]
       (do
         (println "rendered")
         (assoc-in application-state-map
@@ -383,7 +399,7 @@
               (for [fp (get-template-files
                         (:site.fabricate.file/input-dir settings)
                         (:site.fabricate.file/template-suffix settings)) ]
-                [fp (fsm/complete operations fp)]))
+                [fp (fsm/complete operations fp application-state-map)]))
         fw (do
              (println "establishing file watch")
              (watch-dir (fn [f]
@@ -424,7 +440,7 @@
                       (catch Exception e nil))))
       (update :site.fabricate.app/server
               #(do
-                 (println "stopping Aleph server")
+                 (println "stopping file server")
                  (when % (do (server/stop %) nil))
                  #_(try (do (server/stop %) nil)
                       (catch Exception e nil))))))
