@@ -339,21 +339,26 @@
   [{:keys [site.fabricate/settings site.fabricate/pages]
     :as application-state-map}
    {:keys [file count action]}]
-  (if (and (#{:create :modify} action)
-           (.endsWith (.toString file)
-                      (:site.fabricate.file/template-suffix settings)))
-    (let [local-file
-          (-> file
-              read/->dir-local-path
-              (#(do (println "re-rendering") % %)))
-          updated-page (fsm/complete operations
-                                     local-file
-                                     application-state-map)]
-      (do
-        (println "rendered")
-        (assoc-in application-state-map
-                  [:site.fabricate/pages local-file]
-                  updated-page)))))
+  (let [{:keys  [site.fabricate.file/template-suffix
+                 site.fabricate.file/output-dir]}
+        settings]
+    #_(println "rerendering from state:")
+    #_(prn application-state-map)
+    (if (and (#{:create :modify} action)
+             (.endsWith (.toString file) template-suffix))
+      (let [local-file
+            (-> file
+                read/->dir-local-path
+                (#(do (println "re-rendering") % %)))
+            updated-page
+            (fsm/complete operations
+                          local-file
+                          application-state-map)]
+        (do
+          (println "rendered")
+          (assoc-in application-state-map
+                    [:site.fabricate/pages local-file]
+                    updated-page))))))
 
 (comment
   (fsm/complete
@@ -383,9 +388,14 @@
                 [fp (fsm/complete operations fp application-state-map)]))
         fw (do
              (println "establishing file watch")
-             (watch-dir (fn [f]
-                          (send state rerender f))
-                        (io/file (:site.fabricate.file/input-dir settings))))
+             (let [fw (watch-dir (fn [f]
+                                   ;; this is the problem expr in the tests;
+                                   ;; the state isn't rebound to the test
+                                   ;; state
+                                   (send state rerender f))
+                                 (io/file (:site.fabricate.file/input-dir settings)))]
+               #_(set-error-mode! fw :continue)
+               fw))
         srv (do
               (println "launching server")
               (server/start (:site.fabricate.server/config settings)))]

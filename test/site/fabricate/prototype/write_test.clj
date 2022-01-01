@@ -5,11 +5,13 @@
             [site.fabricate.sketch :as sketch]
             [clojure.java.io :as io]
             [clojure.set :as set]
+            [clojure.data]
             [malli.core :as m]
             [malli.util :as mu]
             [http.server :as server]
             [clojure.test :as t]
             [babashka.curl :as curl]))
+
 
 (t/deftest file-utils
   (t/testing "output path fn"
@@ -188,9 +190,7 @@
   (:status (curl/get "https://respatialized.github.io/"))
 
   (let [srv (server/start {:port 9800})]
-    (server/stop srv))
-
-  )
+    (server/stop srv)))
 
 (defn delete-directory-recursive
   "Recursively delete a directory."
@@ -207,60 +207,108 @@
   ;; contents with the code above (remember?)
   (io/delete-file file))
 
-(t/deftest application-state
-  (t/testing "ability to manage server state using send and draft!"
-
-    (let [test-config
-          (-> initial-state
-              (assoc-in [:site.fabricate/settings
-                         :site.fabricate.file/input-dir]
-                        "./test-resources/fab/inputs/")
-              (assoc-in [:site.fabricate/settings
-                         :site.fabricate.file/output-dir]
-                        "./test-resources/fab/outputs/")
-              (assoc-in [:site.fabricate/settings
-                         :site.fabricate.server/config]
-                        {:dir "./test-resources/fab/outputs/"
-                         :port 9223}))
-          url "http://localhost:9223"
-          test-fabricate-str
-          "✳(ns site.fabricate.prototype.write-test.post)🔚
+(def test-fabricate-str
+  "✳(ns site.fabricate.prototype.write-test.post)🔚
 ✳(def metadata {:title \"an example post\"})🔚
 Some plaintext
 ✳=[:h1 (:title metadata)]🔚
-Some more text"
-          extra-content-str "\n\n Three plus four is: ✳=[:strong (+ 3 4)]🔚"
+Some more text")
+
+(def extra-content-str "\n\n Three plus four is: ✳=[:strong (+ 3 4)]🔚")
+
+(def test-config
+  (-> initial-state
+      (assoc-in [:site.fabricate/settings
+                 :site.fabricate.file/input-dir]
+                "./test-resources/fab/inputs/")
+      (assoc-in [:site.fabricate/settings
+                 :site.fabricate.file/output-dir]
+                "./test-resources/fab/outputs/")
+      (assoc-in [:site.fabricate/settings
+                 :site.fabricate.server/config]
+                {:dir "./test-resources/fab/outputs/"
+                 :port 9223})))
+
+(t/deftest application-state
+  (println "creating test dir")
+  (io/make-parents "./test-resources/fab/outputs/.nothing")
+  (io/make-parents "./test-resources/fab/inputs/.nothing")
+
+  (t/testing "rerender fn"
+    (let [f (do (spit "./test-resources/fab/inputs/test-file.html.fab"
+                      test-fabricate-str)
+                "./test-resources/fab/inputs/test-file.html.fab")
+          res (rerender test-config
+                        {:file (io/file f) :count 1 :action :create})
+          rendered-str (get-in res [:site.fabricate/pages
+                                    "test-resources/fab/inputs/test-file.html.fab"
+                                    :site.fabricate.page/rendered-content])]
+      (t/is
+       (re-find #"example" rendered-str))
+
+      (t/is (= rendered-str (slurp "./test-resources/fab/outputs/test-file.html")))
+
+      (io/delete-file (io/file "./test-resources/fab/inputs/test-file.html.fab"))
+      (io/delete-file (io/file "./test-resources/fab/outputs/test-file.html"))))
+
+  ;; the rerender fn works when tested in isolation, but not
+  ;; when used via send!
+
+  (t/testing "ability to manage server state using send and draft!"
+    (let [url "http://localhost:9223"
           test-state (agent test-config)]
-      (println "starting up")
-      #_(try (restart-agent test-state test-config)
-           (catch Exception e nil))
-      (io/make-parents "./test-resources/fab/outputs/.nothing")
-      (io/make-parents "./test-resources/fab/inputs/.nothing")
-      (send test-state draft!)
-      (Thread/sleep 1500)
-      (t/is (#{200 304} (:status (curl/get url)))
-            "Server should start via agent")
-      (spit "./test-resources/fab/inputs/test-file.html.fab"
-            test-fabricate-str)
-      (Thread/sleep 250)
-      (let [response (curl/get url)]
-        (t/is (re-find #"test\-file\.html" (:body response))
-              "File should display in list of files after rendering"))
-      (t/is (#{200 304} (:status (curl/get (str url "/test-file.html"))))
-            "File should be visible on server")
-      (Thread/sleep 250)
 
-      (spit "./test-resources/fab/inputs/test-file.html.fab"
-            extra-content-str
-            :append true)
+      (with-redefs [state test-state]
+        #_ (add-watch test-state :watcher
+                      (fn [key agent old-state new-state]
+                        (prn "-- Agent Changed --")
+                        (prn "key" key)
+                        (prn "agent" agent)
+                        (prn "old-state" old-state)
+                        (prn "new-state" new-state)
+                        (prn "diff" (clojure.data/diff old-state new-state))
+                        (prn "error" (agent-error agent))))
 
-      (Thread/sleep 250)
-      (t/is (re-find #"four" (:body (curl/get (str url "/test-file.html"))))
-            "File should have contents updated by filewatcher")
+        (println "1. starting application")
+        (send test-state draft!)
+        (await test-state)
+        (t/is (#{200 304} (:status (curl/get url)))
+              "Server should start via agent")
 
-      (send test-state stop!)
-      (delete-directory-recursive (io/file "test-resources/fab"))
+        (println "2. initial write")
+        (spit "./test-resources/fab/inputs/test-file.html.fab"
+              test-fabricate-str)
+        (await test-state)
+        (await (:site.fabricate.app/watcher @test-state))
+        (t/is (not (agent-error test-state))
+              "File writing should not cause errors in state agent")
+        (t/is (not (agent-error (:site.fabricate.app/watcher @test-state)))
+              "File writing should not cause errors in watcher agent")
 
-      (Thread/sleep 500)
-      (t/is (nil? (:status (curl/get url {:throw false})))
-            "Server should shutdown via agent"))))
+        (Thread/sleep 250)
+        (let [response (curl/get url)]
+          (t/is (re-find #"test\-file\.html" (:body response))
+                "File should display in list of files after rendering"))
+        (t/is (#{200 304} (:status (curl/get (str url "/test-file.html"))))
+              "File should be visible on server")
+        (Thread/sleep 250)
+        (println "3. file update")
+        (spit "./test-resources/fab/inputs/test-file.html.fab"
+              extra-content-str
+              :append true)
+        (await test-state)
+        (Thread/sleep 250)
+        (t/is (re-find #"four" (:body (curl/get (str url "/test-file.html"))))
+              "File should have contents updated by filewatcher")
+
+        (Thread/sleep 250)
+        (println "4. shutdown")
+        (send test-state stop!)
+
+        (await test-state)
+
+        (t/is (nil? (:status (curl/get url {:throw false})))
+              "Server should shutdown via agent"))))
+
+  (println "deleting test dir")
+  (delete-directory-recursive (io/file "test-resources/fab")))
