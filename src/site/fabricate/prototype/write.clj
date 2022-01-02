@@ -53,7 +53,8 @@
      [:site.fabricate.file/output-dir :string]
      [:site.fabricate.file/template-suffix :string]
      [:site.fabricate.server/config :map]
-     [:site.fabricate.file/operations fsm/state-action-map]]]
+     [:site.fabricate.file/operations fsm/state-action-map]
+     [:site.fabricate.page/doc-header ifn?]]]
    [:site.fabricate/pages [:map-of :string page-metadata-schema]]
    [:site.fabricate.app/watcher {:optional true}
     [:fn #(instance? clojure.lang.Agent %)]]
@@ -213,17 +214,19 @@
 (defn evaluated->hiccup
   "Takes the evaluated contents and turns them into a well-formed
    hiccup data structure."
-  {:malli/schema [:=> [:cat evaluated-state] :map]}
+  {:malli/schema [:=> [:cat evaluated-state state-schema] :map]}
   [{:keys [site.fabricate.page/namespace
            site.fabricate.page/metadata
            site.fabricate.page/evaluated-content]
     :as page-data}
-   settings]
-  (let [body-content (into [:article {:lang "en"}]
+   {:keys [site.fabricate/settings]
+    :as state}]
+  (let [{:keys [site.fabricate.page/doc-header]} settings
+        body-content (into [:article {:lang "en"}]
                            (page/parse-paragraphs
                             evaluated-content))]
     (list
-     (page/doc-header metadata)
+     (doc-header metadata)
      [:article body-content]
      [:footer
       [:div [:a {:href "/"} "Home"]]])))
@@ -298,13 +301,13 @@
    :site.fabricate.file/input-dir "./pages"
    :site.fabricate.file/output-dir "./docs"
    :site.fabricate.file/operations default-operations
+   :site.fabricate.page/doc-header page/doc-header
    :site.fabricate.server/config
    {:cors-allow-headers nil
     :dir (str (System/getProperty "user.dir") "/docs")
     :port 8002
     :no-cache true}})
 
-;; make this var less ambiguous
 (def initial-state {:site.fabricate/settings default-site-settings
                     :site.fabricate/pages {}})
 
@@ -423,7 +426,6 @@
                   (Thread. (fn []
                              (do (println "shutting down")
                                  (send-off state stop!)
-                                 (await state)
                                  (shutdown-agents)))))
 
 (comment
@@ -474,6 +476,9 @@
   (keys fsm-post-data)
 
   (keys  @state)
+
+  (:site.fabricate.page/doc-header
+   (:site.fabricate/settings initial-state))
 
   (:evaluated-content fsm-post-data)
   (hp/html5 (list [:head [:title "something"] [:body "something else"]])))
