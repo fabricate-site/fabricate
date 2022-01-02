@@ -27,9 +27,12 @@
 (defn advance
   "Takes a value, matches it against the schema keys defined in the
    input state-action map, and calls the appropriate function to advance
-   the value to the next state."
-  {:malli/schema [:=> [:cat state-action-map :any] :any]}
-  [fsm-map value]
+   the value to the next state.
+
+  Additional arguments to the function can be supplied via & args; they will be
+  appended to the arguments passed to the matched function via apply."
+  {:malli/schema [:=> [:cat state-action-map :any [:* :any]] :any]}
+  [fsm-map value & args]
   (let [union-schema (schema/unify (keys fsm-map))
         parsed (m/parse union-schema value)]
     (if (= :malli.core/invalid parsed)
@@ -47,12 +50,13 @@
         (do
           (println "advancing fsm:" (get (m/properties matched-schema)
                                          :fsm/description))
-          (op value))))))
+          (apply op value args))))))
 
 (defn complete
-  {:malli/schema [:=> [:cat state-action-map :any] :any]}
-  [fsm-map value]
-  (let [fsm-states (iterate (partial advance fsm-map) value)]
+  "Completes the fsm by advancing through states until the same value is produced twice."
+  {:malli/schema [:=> [:cat state-action-map :any [:* :any]] :any]}
+  [fsm-map value & args]
+  (let [fsm-states (iterate #(apply advance fsm-map % args) value)]
     (reduce (fn [current-state next-state]
               (if (= current-state next-state)
                 (reduced current-state)

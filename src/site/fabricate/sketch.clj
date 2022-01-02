@@ -15,30 +15,12 @@
   {:malli/schema [:=> [:cat :any] :boolean]}
   [f] (instance? java.io.File f))
 
-(def page-metadata-schema
-  [:map
-   [:input-file [:orn [:path :string]
-                 [:file [:fn file?]]]]
-   [:unparsed-content {:optional true} :string]
-   [:parsed-content {:optional true} [:fn vector?]]
-   [:title {:optional true} :string]
-   [:namespace {:optional true}
-    [:orn
-     [:name symbol?]
-     [:form [:fn schema/ns-form?]]]]
-   [:page-style {:optional true} :string]
-   [:output-file {:optional true}
-    [:orn [:undefined nil?]
-     [:path :string]
-     [:file [:fn file?]]]]
-   [:hiccup-content {:optional true} html/html]
-   [:rendered-content {:optional true} :string]])
-
-(def published-page-metadata-schema
-  (mu/required-keys page-metadata-schema
-                    [:output-file :namespace :page-content]))
 
 (comment
+  (def published-page-metadata-schema
+    (mu/required-keys site.fabricate.prototype.write/page-metadata-schema
+                      [:output-file :namespace :page-content]))
+
   (m/validate page-metadata-schema {:title "Example post"
                                     :input-file "./content/example.html.fab"})
   (m/validate published-page-metadata-schema {:title "Example post"})

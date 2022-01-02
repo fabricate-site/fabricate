@@ -2,12 +2,18 @@
   (:require [site.fabricate.prototype.write :refer :all]
             [site.fabricate.prototype.read :as read]
             [site.fabricate.prototype.fsm :as fsm]
+            [site.fabricate.prototype.test-utils :refer [with-instrumentation]]
             [site.fabricate.sketch :as sketch]
             [clojure.java.io :as io]
             [clojure.set :as set]
+            [clojure.data]
             [malli.core :as m]
             [malli.util :as mu]
-            [clojure.test :as t]))
+            [http.server :as server]
+            [clojure.test :as t]
+            [babashka.curl :as curl]))
+
+(t/use-fixtures :once with-instrumentation)
 
 (t/deftest file-utils
   (t/testing "output path fn"
@@ -19,20 +25,21 @@
 (t/deftest page-fsm
   (t/testing "page metadata"
     (let [ex-file (io/file "./content/test-file.txt.fab")]
-      (t/is (= {:namespace (symbol 'test-ns)
-                :parsed-content [{:exec '(ns test-ns)
-                                  :src "(ns test-ns)"}]
-                :filename "content/test-file"
-                :file-extension "txt"
-                :fabricate/suffix ".fab"
-                :output-file "./pages/test-file.txt"
-                :input-file ex-file}
+      (t/is (= {:site.fabricate.page/namespace (symbol 'test-ns)
+                :site.fabricate.page/parsed-content
+                [{:exec '(ns test-ns)
+                  :src "(ns test-ns)"}]
+                :site.fabricate.file/filename "content/test-file"
+                :site.fabricate.file/output-extension "txt"
+                :site.fabricate.file/template-suffix ".fab"
+                :site.fabricate.file/output-file "./pages/test-file.txt"
+                :site.fabricate.file/input-file ex-file}
                (populate-page-meta
-                {:parsed-content [{:exec '(ns test-ns)
-                                   :src "(ns test-ns)"}]
-                 :input-file (io/file "./content/test-file.txt.fab")}
-                {:output-dir "./pages"
-                 :input-dir "./content"}))))
+                {:site.fabricate.page/parsed-content [{:exec '(ns test-ns)
+                                                       :src "(ns test-ns)"}]
+                 :site.fabricate.file/input-file ex-file}
+                {:site.fabricate.file/output-dir "./pages"
+                 :site.fabricate.file/input-dir "./content"}))))
 
     (t/is (m/validate (-> populate-page-meta
                           var
@@ -51,17 +58,19 @@
 
     (t/is (=  "./README.md.fab"
               (-> (fsm/complete
-                   (select-keys operations [input-state])
-                   "./README.md.fab")
-                  (get :input-file)
+                   (select-keys default-operations [input-state])
+                   "./README.md.fab"
+                   initial-state)
+                  (get :site.fabricate.file/input-file)
                   .getPath)))
 
     (let [evaluated
-          (:evaluated-content
+          (:site.fabricate.page/evaluated-content
            (fsm/complete
-            (dissoc operations
+            (dissoc default-operations
                     markdown-state
                     rendered-state)
+            initial-state
             "./README.md.fab"))
           errors
           (filter #(m/validate read/error-form-schema %)
@@ -73,66 +82,73 @@
     (t/is (= (slurp "./README.md.fab")
              (get
               (fsm/complete
-               (select-keys operations [input-state file-state])
-               "./README.md.fab")
-              :unparsed-content)))
+               (select-keys default-operations [input-state file-state])
+               "./README.md.fab"
+               initial-state)
+              :site.fabricate.page/unparsed-content)))
 
     (t/is
      (m/validate
-      (-> sketch/page-metadata-schema
-          (mu/dissoc :output-file)
-          (mu/dissoc :title)
-          (mu/dissoc :namespace)
-          (mu/dissoc :page-style)
-          (mu/dissoc :parsed-content)
-          (mu/dissoc :hiccup-content)
-          (mu/dissoc :rendered-content))
+      (-> page-metadata-schema
+          (mu/dissoc :site.fabricate.file/output-file)
+          (mu/dissoc :site.fabricate.page/title)
+          (mu/dissoc :site.fabricate.page/namespace)
+          (mu/dissoc :site.fabricate.page/stylesheet)
+          (mu/dissoc :site.fabricate.page/parsed-content)
+          (mu/dissoc :site.fabricate.page/hiccup-content)
+          (mu/dissoc :site.fabricate.page/rendered-content))
       (fsm/complete
-       (select-keys operations [input-state file-state])
-       "./README.md.fab")))
+       (select-keys default-operations [input-state file-state])
+       "./README.md.fab"
+       initial-state)))
 
     (let [output
           (fsm/complete
-           (select-keys operations [input-state file-state read-state])
-           "./README.md.fab")
+           (select-keys default-operations [input-state file-state read-state])
+           "./README.md.fab"
+           initial-state)
           out-keys  (->> output keys (into #{}))
-          out-file (:output-file output)]
+          out-file (:site.fabricate.file/output-file output)]
       (println out-keys)
       (println out-file)
-      (t/is
-       (and (set/subset?
-             #{:parsed-content :namespace}
+      (t/is (set/subset?
+             #{:site.fabricate.page/parsed-content
+               :site.fabricate.page/namespace}
              out-keys)
-            (= "./README.md" out-file))
-
-       "Metadata should be properly populated"))
+            "Metadata should be properly populated")
+      (t/is (= "./README.md" out-file)))
 
     (t/is (= "public/test/some-file.txt"
-             (:output-file
-              (populate-page-meta {:input-file (io/file "content/test/some-file.txt.fab")
-                                   :output-file "public/test/some-file.txt"}
+             (:site.fabricate.file/output-file
+              (populate-page-meta {:site.fabricate.file/input-file (io/file "content/test/some-file.txt.fab")
+                                   :site.fabricate.file/output-file "public/test/some-file.txt"}
                                   default-site-settings))))
 
     (let [meta-post
           (fsm/complete
-           (dissoc operations
+           (dissoc default-operations
                    rendered-state
                    html-state
                    markdown-state)
-           {:input-file (io/file "content/test/some-file.txt.fab")
-            :unparsed-content "✳=(with-meta [:div \"text\"] {:page/title \"text\"})🔚"})]
+           {:site.fabricate.file/input-file (io/file "content/test/some-file.txt.fab")
+            :site.fabricate.file/filename "content/test/some-file.txt.fab"
+            :site.fabricate.page/unparsed-content "✳=(with-meta [:div \"text\"] {:page/title \"text\"})🔚"}
+           initial-state)]
       (t/is
-       (and (:metadata meta-post)
-            (contains? (:metadata meta-post) :title))))
+       (and (:site.fabricate.page/metadata meta-post)
+            (or (contains? (:site.fabricate.page/metadata meta-post) :title)))))
 
     (let [sample-error
-          (->> {:input-file (io/file "content/test/some-file.txt.fab")
-                :unparsed-content "✳=(unbound-fn nil)🔚"}
-               (fsm/complete (dissoc operations
-                                     rendered-state
-                                     html-state
-                                     markdown-state))
-               :evaluated-content
+          (->> {:site.fabricate.file/input-file (io/file "content/test/some-file.txt.fab")
+                :site.fabricate.file/filename "content/test/some-file.txt.fab"
+                :site.fabricate.page/unparsed-content "✳=(unbound-fn nil)🔚"}
+               (#(fsm/complete (dissoc default-operations
+                                       rendered-state
+                                       html-state
+                                       markdown-state)
+                               %
+                               initial-state))
+               :site.fabricate.page/evaluated-content
                first)]
       (t/is
        (and (= :div (first sample-error))
@@ -141,39 +157,152 @@
        "Errors should be correctly surfaced in output"))
 
     (t/is (contains?
-           (fsm/complete (dissoc operations
+           (fsm/complete (dissoc default-operations
                                  markdown-state
                                  html-state
                                  rendered-state)
-                         "./README.md.fab")
-           :evaluated-content))
+                         "./README.md.fab"
+                         initial-state)
+           :site.fabricate.page/evaluated-content))
 
     (t/is
      (m/validate rendered-state
-                 (fsm/complete (dissoc operations
+                 (fsm/complete (dissoc default-operations
                                        html-state
                                        rendered-state)
-                               "./README.md.fab"))))
+                               "./README.md.fab"
+                               initial-state)))))
 
+(t/deftest existing-pages
   (t/testing "existing pages"
-    (let [operations
-          (assoc operations
+    (let [default-operations
+          (assoc default-operations
                  rendered-state
-                 (fn [{:keys [rendered-content]
-                       :as page-data}]
+                 (fn [{:keys [site.fabricate.page/rendered-content]
+                       :as page-data}
+                      settings]
                    (do
                      (t/is (any? rendered-content))
                      page-data)))]
       (doseq [page-path (get-template-files "./pages" ".fab")]
         (println "testing" page-path)
-        (fsm/complete operations page-path)))))
+        (fsm/complete default-operations page-path initial-state)))))
 
 (comment
-  (let [operations
-        (dissoc operations
-                rendered-state
-                html-state)]
+  (:status (curl/get "https://respatialized.github.io/"))
 
-    (evaluated->hiccup
-     (fsm/complete operations
-                   "./pages/fabricate.html.fab"))))
+  (let [srv (server/start {:port 9800})]
+    (server/stop srv)))
+
+(defn delete-directory-recursive
+  "Recursively delete a directory."
+  [^java.io.File file]
+  ;; when `file` is a directory, list its entries and call this
+  ;; function with each entry. can't `recur` here as it's not a tail
+  ;; position, sadly. could cause a stack overflow for many entries?
+  ;; thanks to @nikolavojicic for the idea to use `run!` instead of
+  ;; `doseq` :)
+  (when (.isDirectory file)
+    (run! delete-directory-recursive (.listFiles file)))
+  ;; delete the file or directory. if it it's a file, it's easily
+  ;; deletable. if it's a directory, we already have deleted all its
+  ;; contents with the code above (remember?)
+  (io/delete-file file))
+
+(def test-fabricate-str
+  "✳(ns site.fabricate.prototype.write-test.post)🔚
+✳(def metadata {:title \"an example post\"})🔚
+Some plaintext
+✳=[:h1 (:title metadata)]🔚
+Some more text")
+
+(def extra-content-str "\n\n Three plus four is: ✳=[:strong (+ 3 4)]🔚")
+
+(def test-config
+  (-> initial-state
+      (assoc-in [:site.fabricate/settings
+                 :site.fabricate.file/input-dir]
+                "./test-resources/fab/inputs/")
+      (assoc-in [:site.fabricate/settings
+                 :site.fabricate.file/output-dir]
+                "./test-resources/fab/outputs/")
+      (assoc-in [:site.fabricate/settings
+                 :site.fabricate.server/config]
+                {:dir "./test-resources/fab/outputs/"
+                 :port 9223})))
+
+(t/deftest application-state
+  (println "creating test dir")
+  (io/make-parents "./test-resources/fab/outputs/.nothing")
+  (io/make-parents "./test-resources/fab/inputs/.nothing")
+
+  (t/testing "rerender fn"
+    (let [f (do (spit "./test-resources/fab/inputs/test-file.html.fab"
+                      test-fabricate-str)
+                "./test-resources/fab/inputs/test-file.html.fab")
+          res (rerender test-config
+                        {:file (io/file f) :count 1 :action :create})
+          rendered-str (get-in res [:site.fabricate/pages
+                                    "test-resources/fab/inputs/test-file.html.fab"
+                                    :site.fabricate.page/rendered-content])]
+      (t/is
+       (re-find #"example" rendered-str))
+
+      (t/is (= rendered-str (slurp "./test-resources/fab/outputs/test-file.html")))
+
+      (io/delete-file (io/file "./test-resources/fab/inputs/test-file.html.fab"))
+      (io/delete-file (io/file "./test-resources/fab/outputs/test-file.html"))))
+
+  ;; the rerender fn works when tested in isolation, but not
+  ;; when used via send!
+
+  (t/testing "ability to manage server state using send and draft!"
+    (let [url "http://localhost:9223"]
+
+      (println "0. overriding default state")
+      (send state (constantly test-config) )
+
+      (println "1. starting application")
+      (send-off state draft!)
+      (await state)
+      (t/is (#{200 304} (:status (curl/get url)))
+            "Server should start via agent")
+
+      (println "2. initial write")
+      (spit "./test-resources/fab/inputs/test-file.html.fab"
+            test-fabricate-str)
+      (await state)
+      (await (:site.fabricate.app/watcher @state))
+      (t/is (not (agent-error state))
+            "File writing should not cause errors in state agent")
+      (t/is (not (agent-error (:site.fabricate.app/watcher @state)))
+            "File writing should not cause errors in watcher agent")
+
+      (Thread/sleep 250)
+      (let [response (curl/get url)]
+        (t/is (re-find #"test\-file\.html" (:body response))
+              "File should display in list of files after rendering"))
+      (t/is (#{200 304} (:status (curl/get (str url "/test-file.html"))))
+            "File should be visible on server")
+      (Thread/sleep 250)
+      (println "3. file update")
+      (spit "./test-resources/fab/inputs/test-file.html.fab"
+            extra-content-str
+            :append true)
+      (await state)
+      (Thread/sleep 250)
+      (t/is (re-find #"four" (:body (curl/get (str url "/test-file.html"))))
+            "File should have contents updated by filewatcher")
+
+      (Thread/sleep 250)
+      (println "4. shutdown")
+      (send-off state stop!)
+
+      (await state)
+
+      (t/is (nil? (:status (curl/get url {:throw false})))
+            "Server should shutdown via agent")))
+
+  (println "deleting test dir")
+  (delete-directory-recursive (io/file "test-resources/fab")))
+
