@@ -403,7 +403,10 @@
                       %
                       (:template-suffix default-site-settings)) dirs))]
     (doseq [fp all-files]
-      (fsm/complete default-operations fp))))
+      (fsm/complete
+       (get-in @state [:site.fabricate/settings
+                       :site.fabricate.file/operations])
+       fp))))
 
 (defn stop!
   "Shuts down fabricate's stateful components."
