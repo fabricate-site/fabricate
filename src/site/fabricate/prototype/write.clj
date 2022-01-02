@@ -51,29 +51,12 @@
      [:site.fabricate.file/input-dir :string]
      [:site.fabricate.file/output-dir :string]
      [:site.fabricate.file/template-suffix :string]
-     [:site.fabricate.server/config :map]]]
+     [:site.fabricate.server/config :map]
+     [:site.fabricate.file/operations fsm/state-action-map]]]
    [:site.fabricate/pages [:map-of :string page-metadata-schema]]
    [:site.fabricate.app/watcher {:optional true}
     [:fn #(instance? clojure.lang.Agent %)]]
    [:site.fabricate.app/server {:optional true} :any]])
-
-(def default-site-settings
-  {:site.fabricate.file/template-suffix ".fab"
-   :site.fabricate.file/input-dir "./pages"
-   :site.fabricate.file/output-dir "./docs"
-   :site.fabricate.server/config
-   {:cors-allow-headers nil
-    :dir (str (System/getProperty "user.dir") "/docs")
-    :port 8002
-    :no-cache true}})
-
-;; make this var less ambiguous
-(def initial-state {:site.fabricate/settings default-site-settings
-                    :site.fabricate/pages {}})
-
-(def state
-  "This agent holds the current state of all the pages created by fabricate, the application settings, and the state of the application itself"
-  (agent initial-state))
 
 (def template-suffix-regex
   (let [suffix (:site.fabricate.file/template-suffix default-site-settings)]
@@ -286,7 +269,7 @@
 ;; to accept both a page map and a settings map - or just the entire state
 ;;
 ;; and also include these operations in the state map
-(def operations
+(def default-operations
   {input-state (fn [f _] {:site.fabricate.file/input-file (io/as-file f)
                           :site.fabricate.file/filename f})
    file-state (fn [{:keys [site.fabricate.file/input-file] :as page-data} _]
@@ -321,15 +304,25 @@
        (spit output-file rendered-content)
        page-data))})
 
-(defn update-page-map
-  {:malli/schema [:=> [:cat :map :string] :map]}
-  [old-map page-name]
-  (try (update old-map page-name
-               (fn [_] (fsm/complete operations page-name)))
-       (catch Exception e
-         (println (.getMessage e))
-         (println "Parse error detected, skipping")
-         old-map)))
+(def default-site-settings
+  {:site.fabricate.file/template-suffix ".fab"
+   :site.fabricate.file/input-dir "./pages"
+   :site.fabricate.file/output-dir "./docs"
+   :site.fabricate.file/operations default-operations
+   :site.fabricate.server/config
+   {:cors-allow-headers nil
+    :dir (str (System/getProperty "user.dir") "/docs")
+    :port 8002
+    :no-cache true}})
+
+;; make this var less ambiguous
+(def initial-state {:site.fabricate/settings default-site-settings
+                    :site.fabricate/pages {}})
+
+(def state
+  "This agent holds the current state of all the pages created by fabricate, the application settings, and the state of the application itself"
+  (agent initial-state))
+
 
 (defn rerender
   {:malli/schema
@@ -339,8 +332,9 @@
   [{:keys [site.fabricate/settings site.fabricate/pages]
     :as application-state-map}
    {:keys [file count action]}]
-  (let [{:keys  [site.fabricate.file/template-suffix
-                 site.fabricate.file/output-dir]}
+  (let [{:keys [site.fabricate.file/template-suffix
+                site.fabricate.file/output-dir
+                site.fabricate.file/operations]}
         settings]
     #_(println "rerendering from state:")
     #_(prn application-state-map)
@@ -362,7 +356,7 @@
 
 (comment
   (fsm/complete
-   operations
+   default-operations
    (first
     (get-template-files
      (:site.fabricate.file/input-dir default-site-settings)
@@ -380,17 +374,19 @@
   {:malli/schema [:=> [:cat state-schema] state-schema]}
   [{:keys [site.fabricate/settings site.fabricate/pages]
     :as application-state-map}]
-  (let [written-pages
+  (let [{:keys [site.fabricate.file/input-dir
+                site.fabricate.file/template-suffix
+                site.fabricate.file/operations]} settings
+        written-pages
         (into {}
-              (for [fp (get-template-files
-                        (:site.fabricate.file/input-dir settings)
-                        (:site.fabricate.file/template-suffix settings)) ]
+              (for [fp (get-template-files input-dir template-suffix) ]
                 [fp (fsm/complete operations fp application-state-map)]))
         fw (do
              (println "establishing file watch")
-             (let [fw (watch-dir (fn [f]
-                                   (send state rerender f))
-                                 (io/file (:site.fabricate.file/input-dir settings)))]
+             (let [fw (watch-dir
+                       (fn [f]
+                         (do (send-off state rerender f)))
+                       (io/file input-dir))]
                #_(set-error-mode! fw :continue)
                fw))
         srv (do
@@ -415,7 +411,7 @@
                       %
                       (:template-suffix default-site-settings)) dirs))]
     (doseq [fp all-files]
-      (fsm/complete operations fp))))
+      (fsm/complete default-operations fp))))
 
 (defn stop!
   "Shuts down fabricate's stateful components."
@@ -436,13 +432,23 @@
 (.addShutdownHook (java.lang.Runtime/getRuntime)
                   (Thread. (fn []
                              (do (println "shutting down")
-                                 (send stop! state)
+                                 (send-off stop! state)
+                                 (await state)
                                  (shutdown-agents)))))
 
 (comment
   (publish {:dirs ["./pages"]})
 
-  (send state draft!)
+
+  (-> state
+      (send (constantly initial-state))
+      (send-off draft!)
+      await)
+
+  (-> state
+      (send-off stop!)
+      await)
+
 
   (keys @state)
 
@@ -450,7 +456,6 @@
 
   (restart-agent state initial-state)
 
-  (send state stop!)
 
   @state
 
@@ -459,18 +464,18 @@
 (comment
   ;; to update pages manually, do this:
 
-  (fsm/complete operations "./README.md.fab")
+  (fsm/complete default-operations "./README.md.fab")
 
-  (fsm/complete operations "./pages/finite-schema-machines.html.fab")
+  (fsm/complete default-operations "./pages/finite-schema-machines.html.fab")
 
-  (fsm/complete operations "./pages/extended-forms.html.fab")
+  (fsm/complete default-operations "./pages/extended-forms.html.fab")
 
   (site.fabricate.prototype.read.grammar/template
    (slurp "./pages/extended-forms.html.fab"))
 
-  (fsm/complete operations "./pages/fabricate.html.fab")
+  (fsm/complete default-operations "./pages/fabricate.html.fab")
 
-  (def finite-schema-machines (fsm/complete operations "./pages/finite-schema-machines.html.fab"))
+  (def finite-schema-machines (fsm/complete default-operations "./pages/finite-schema-machines.html.fab"))
 
   (malli.error/humanize (m/explain parsed-state finite-schema-machines))
 

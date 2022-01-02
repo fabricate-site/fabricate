@@ -56,7 +56,7 @@
 
     (t/is (=  "./README.md.fab"
               (-> (fsm/complete
-                   (select-keys operations [input-state])
+                   (select-keys default-operations [input-state])
                    "./README.md.fab"
                    initial-state)
                   (get :site.fabricate.file/input-file)
@@ -65,7 +65,7 @@
     (let [evaluated
           (:site.fabricate.page/evaluated-content
            (fsm/complete
-            (dissoc operations
+            (dissoc default-operations
                     markdown-state
                     rendered-state)
             initial-state
@@ -80,7 +80,7 @@
     (t/is (= (slurp "./README.md.fab")
              (get
               (fsm/complete
-               (select-keys operations [input-state file-state])
+               (select-keys default-operations [input-state file-state])
                "./README.md.fab"
                initial-state)
               :site.fabricate.page/unparsed-content)))
@@ -96,13 +96,13 @@
           (mu/dissoc :site.fabricate.page/hiccup-content)
           (mu/dissoc :site.fabricate.page/rendered-content))
       (fsm/complete
-       (select-keys operations [input-state file-state])
+       (select-keys default-operations [input-state file-state])
        "./README.md.fab"
        initial-state)))
 
     (let [output
           (fsm/complete
-           (select-keys operations [input-state file-state read-state])
+           (select-keys default-operations [input-state file-state read-state])
            "./README.md.fab"
            initial-state)
           out-keys  (->> output keys (into #{}))
@@ -124,7 +124,7 @@
 
     (let [meta-post
           (fsm/complete
-           (dissoc operations
+           (dissoc default-operations
                    rendered-state
                    html-state
                    markdown-state)
@@ -140,7 +140,7 @@
           (->> {:site.fabricate.file/input-file (io/file "content/test/some-file.txt.fab")
                 :site.fabricate.file/filename "content/test/some-file.txt.fab"
                 :site.fabricate.page/unparsed-content "✳=(unbound-fn nil)🔚"}
-               (#(fsm/complete (dissoc operations
+               (#(fsm/complete (dissoc default-operations
                                        rendered-state
                                        html-state
                                        markdown-state)
@@ -155,7 +155,7 @@
        "Errors should be correctly surfaced in output"))
 
     (t/is (contains?
-           (fsm/complete (dissoc operations
+           (fsm/complete (dissoc default-operations
                                  markdown-state
                                  html-state
                                  rendered-state)
@@ -165,7 +165,7 @@
 
     (t/is
      (m/validate rendered-state
-                 (fsm/complete (dissoc operations
+                 (fsm/complete (dissoc default-operations
                                        html-state
                                        rendered-state)
                                "./README.md.fab"
@@ -173,8 +173,8 @@
 
 (t/deftest existing-pages
   (t/testing "existing pages"
-    (let [operations
-          (assoc operations
+    (let [default-operations
+          (assoc default-operations
                  rendered-state
                  (fn [{:keys [site.fabricate.page/rendered-content]
                        :as page-data}
@@ -184,7 +184,7 @@
                      page-data)))]
       (doseq [page-path (get-template-files "./pages" ".fab")]
         (println "testing" page-path)
-        (fsm/complete operations page-path initial-state)))))
+        (fsm/complete default-operations page-path initial-state)))))
 
 (comment
   (:status (curl/get "https://respatialized.github.io/"))
@@ -294,7 +294,7 @@ Some more text")
 
       (Thread/sleep 250)
       (println "4. shutdown")
-      (send state stop!)
+      (send-off state stop!)
 
       (await state)
 
