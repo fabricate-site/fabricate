@@ -2,6 +2,7 @@
   (:require [site.fabricate.prototype.write :refer :all]
             [site.fabricate.prototype.read :as read]
             [site.fabricate.prototype.fsm :as fsm]
+            [site.fabricate.prototype.test-utils :refer [with-instrumentation]]
             [site.fabricate.sketch :as sketch]
             [clojure.java.io :as io]
             [clojure.set :as set]
@@ -12,6 +13,7 @@
             [clojure.test :as t]
             [babashka.curl :as curl]))
 
+(t/use-fixtures :once with-instrumentation)
 
 (t/deftest file-utils
   (t/testing "output path fn"

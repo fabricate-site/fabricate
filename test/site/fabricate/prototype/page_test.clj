@@ -2,6 +2,7 @@
   (:require [site.fabricate.prototype.page :refer :all]
             [site.fabricate.prototype.html :as html]
             [site.fabricate.prototype.html-test.generators :as html-gen]
+            [site.fabricate.prototype.test-utils :refer [with-instrumentation]]
             [hiccup2.core :as hiccup]
             [clojure.test.check.properties :as prop]
             [clojure.test.check.generators :as gen]
@@ -10,12 +11,6 @@
             [malli.core :as m]
             [malli.instrument :as mi]
             [clojure.test :as t]))
-
-(defn with-instrumentation [f]
-  (mi/collect!)
-  (mi/instrument!)
-  (f)
-  (mi/unstrument!))
 
 (t/use-fixtures :once with-instrumentation)
 

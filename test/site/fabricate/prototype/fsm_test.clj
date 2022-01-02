@@ -1,14 +1,9 @@
 (ns site.fabricate.prototype.fsm-test
   (:require [site.fabricate.prototype.fsm :refer :all]
+            [site.fabricate.prototype.test-utils :refer [with-instrumentation]]
             [malli.core :as m]
             [malli.instrument :as mi]
             [clojure.test :as t]))
-
-(defn with-instrumentation [f]
-  (mi/collect!)
-  (mi/instrument!)
-  (f)
-  (mi/unstrument!))
 
 (t/use-fixtures :once with-instrumentation)
 

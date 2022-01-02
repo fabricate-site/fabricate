@@ -16,6 +16,7 @@
    [hiccup.page :as hp]
    [malli.core :as m]
    [malli.util :as mu]
+   [malli.instrument :as mi]
    [malli.generator :as mg]
    [site.fabricate.sketch :as sketch]
    [site.fabricate.prototype.read :as read]
@@ -29,7 +30,7 @@
 (def page-metadata-schema
   [:map
    [:site.fabricate.file/input-file [:orn [:path :string]
-                 [:file [:fn sketch/file?]]]]
+                                     [:file [:fn sketch/file?]]]]
    [:site.fabricate.file/template-suffix {:optional true} :string]
    [:site.fabricate.page/parsed-content {:optional true} [:fn vector?]]
    [:site.fabricate.page/title {:optional true} :string]
@@ -57,10 +58,6 @@
    [:site.fabricate.app/watcher {:optional true}
     [:fn #(instance? clojure.lang.Agent %)]]
    [:site.fabricate.app/server {:optional true} :any]])
-
-(def template-suffix-regex
-  (let [suffix (:site.fabricate.file/template-suffix default-site-settings)]
-    (re-pattern (str "#*[.]" (subs suffix 1 (count suffix)) "$"))))
 
 (defn template-str->hiccup
   "Attempts to parse the given string"
@@ -173,7 +170,8 @@
           :fsm/description "Fabricate input parsed and metadata associated with page map"}
     [:site.fabricate.file/input-file [:fn sketch/file?]]
     [:site.fabricate.file/template-suffix
-     [:enum (:site.fabricate.file/template-suffix default-site-settings)]]
+     [:orn [:default [:= ".fab"]]
+      [:custom :string]]]
     [:site.fabricate.file/filename :string]
     [:site.fabricate.file/output-extension :string]
     [:site.fabricate.page/unparsed-content :string]
@@ -237,15 +235,6 @@
           :open true
           :fsm/state :fsm/exit}         ; indicating the exit state
     [:site.fabricate.page/rendered-content :string]]))
-
-(defn parse-page
-  {:malli/schema [:=> [:cat read-state] parsed-state]}
-  [{:keys [site.fabricate.page/unparsed-content
-           site.fabricate.file/filename] :as page-data}]
-  (let [parsed (read/parse unparsed-content {:filename filename})]
-    (-> page-data
-        (assoc :site.fabricate.page/parsed-content parsed)
-        (populate-page-meta default-site-settings))))
 
 (defn eval-parsed-page
   {:malli/schema [:=> [:cat parsed-state] evaluated-state]}
@@ -415,6 +404,7 @@
 
 (defn stop!
   "Shuts down fabricate's stateful components."
+  {:malli/schema [:=> [:cat state-schema] state-schema]}
   [application-state-map]
   (-> application-state-map
       (update :site.fabricate.app/watcher
@@ -427,12 +417,12 @@
                  (println "stopping file server")
                  (when % (do (server/stop %) nil))
                  #_(try (do (server/stop %) nil)
-                      (catch Exception e nil))))))
+                        (catch Exception e nil))))))
 
 (.addShutdownHook (java.lang.Runtime/getRuntime)
                   (Thread. (fn []
                              (do (println "shutting down")
-                                 (send-off stop! state)
+                                 (send-off state stop!)
                                  (await state)
                                  (shutdown-agents)))))
 
