@@ -255,60 +255,52 @@ Some more text")
   ;; when used via send!
 
   (t/testing "ability to manage server state using send and draft!"
-    (let [url "http://localhost:9223"
-          test-state (agent test-config)]
+    (let [url "http://localhost:9223"]
 
-      (with-redefs [state test-state]
-        #_ (add-watch test-state :watcher
-                      (fn [key agent old-state new-state]
-                        (prn "-- Agent Changed --")
-                        (prn "key" key)
-                        (prn "agent" agent)
-                        (prn "old-state" old-state)
-                        (prn "new-state" new-state)
-                        (prn "diff" (clojure.data/diff old-state new-state))
-                        (prn "error" (agent-error agent))))
+      (println "0. overriding default state")
+      (send state (constantly test-config) )
 
-        (println "1. starting application")
-        (send test-state draft!)
-        (await test-state)
-        (t/is (#{200 304} (:status (curl/get url)))
-              "Server should start via agent")
+      (println "1. starting application")
+      (send-off state draft!)
+      (await state)
+      (t/is (#{200 304} (:status (curl/get url)))
+            "Server should start via agent")
 
-        (println "2. initial write")
-        (spit "./test-resources/fab/inputs/test-file.html.fab"
-              test-fabricate-str)
-        (await test-state)
-        (await (:site.fabricate.app/watcher @test-state))
-        (t/is (not (agent-error test-state))
-              "File writing should not cause errors in state agent")
-        (t/is (not (agent-error (:site.fabricate.app/watcher @test-state)))
-              "File writing should not cause errors in watcher agent")
+      (println "2. initial write")
+      (spit "./test-resources/fab/inputs/test-file.html.fab"
+            test-fabricate-str)
+      (await state)
+      (await (:site.fabricate.app/watcher @state))
+      (t/is (not (agent-error state))
+            "File writing should not cause errors in state agent")
+      (t/is (not (agent-error (:site.fabricate.app/watcher @state)))
+            "File writing should not cause errors in watcher agent")
 
-        (Thread/sleep 250)
-        (let [response (curl/get url)]
-          (t/is (re-find #"test\-file\.html" (:body response))
-                "File should display in list of files after rendering"))
-        (t/is (#{200 304} (:status (curl/get (str url "/test-file.html"))))
-              "File should be visible on server")
-        (Thread/sleep 250)
-        (println "3. file update")
-        (spit "./test-resources/fab/inputs/test-file.html.fab"
-              extra-content-str
-              :append true)
-        (await test-state)
-        (Thread/sleep 250)
-        (t/is (re-find #"four" (:body (curl/get (str url "/test-file.html"))))
-              "File should have contents updated by filewatcher")
+      (Thread/sleep 250)
+      (let [response (curl/get url)]
+        (t/is (re-find #"test\-file\.html" (:body response))
+              "File should display in list of files after rendering"))
+      (t/is (#{200 304} (:status (curl/get (str url "/test-file.html"))))
+            "File should be visible on server")
+      (Thread/sleep 250)
+      (println "3. file update")
+      (spit "./test-resources/fab/inputs/test-file.html.fab"
+            extra-content-str
+            :append true)
+      (await state)
+      (Thread/sleep 250)
+      (t/is (re-find #"four" (:body (curl/get (str url "/test-file.html"))))
+            "File should have contents updated by filewatcher")
 
-        (Thread/sleep 250)
-        (println "4. shutdown")
-        (send test-state stop!)
+      (Thread/sleep 250)
+      (println "4. shutdown")
+      (send state stop!)
 
-        (await test-state)
+      (await state)
 
-        (t/is (nil? (:status (curl/get url {:throw false})))
-              "Server should shutdown via agent"))))
+      (t/is (nil? (:status (curl/get url {:throw false})))
+            "Server should shutdown via agent")))
 
   (println "deleting test dir")
   (delete-directory-recursive (io/file "test-resources/fab")))
+

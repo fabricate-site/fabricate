@@ -389,9 +389,6 @@
         fw (do
              (println "establishing file watch")
              (let [fw (watch-dir (fn [f]
-                                   ;; this is the problem expr in the tests;
-                                   ;; the state isn't rebound to the test
-                                   ;; state
                                    (send state rerender f))
                                  (io/file (:site.fabricate.file/input-dir settings)))]
                #_(set-error-mode! fw :continue)
