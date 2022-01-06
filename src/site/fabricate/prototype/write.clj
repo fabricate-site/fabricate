@@ -397,15 +397,17 @@
     :nil]}
   [{:keys [files dirs]
     :as opts}]
-  (let [all-files
+  (let [current-state (deref state)
+        all-files
         (apply concat files
                (map #(get-template-files
                       %
                       (:template-suffix default-site-settings)) dirs))]
     (doseq [fp all-files]
       (fsm/complete
-       (get-in @state [:site.fabricate/settings
-                       :site.fabricate.file/operations])
+       (get-in current-state
+               [:site.fabricate/settings
+                :site.fabricate.file/operations])
        fp))))
 
 (defn stop!
