@@ -185,7 +185,8 @@
                default-form [:p]
                current-paragraph? false}
           :as opts}]
-   (cond ;; (html/phrasing? form) form
+   (cond
+     (#{:svg} (first form)) form ; don't detect in SVG elements
      (non-hiccup-seq? form)
      ;; recurse?
      (parse-paragraphs (apply conj default-form form) opts)

@@ -116,6 +116,11 @@
               [:p [:del [:em [:u "text\n\nmore text"]]]]))
           "Paragraphs should be detected at arbitrary levels of nesting")
 
+    (t/is (= [:svg {:width 100 :height 100} [:circle {:cx 50 :cy 50 :r 3}]]
+             (parse-paragraphs
+              [:svg {:width 100 :height 100} [:circle {:cx 50 :cy 50 :r 3}]]))
+          "Paragraph detection should skip SVG elements")
+
     (t/is
      (= (list [:p "some text" true 24] [:p "second paragraph"])
         (parse-paragraphs
