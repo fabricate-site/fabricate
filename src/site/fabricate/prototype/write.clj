@@ -487,3 +487,32 @@
 
   (:evaluated-content fsm-post-data)
   (hp/html5 (list [:head [:title "something"] [:body "something else"]])))
+
+
+
+(comment
+
+  ;; experiment with adding an output file watcher
+  (-> state
+      (send (constantly initial-state))
+      (send-off draft!)
+      (send-off
+       (fn [{:keys [site.fabricate/settings]
+             :as application-state-map}]
+         (println "watching output dir for changes")
+         (let [output-dir (:site.fabricate.file/output-dir settings)
+               out-dir-trailing (if (not (.endsWith output-dir "/"))
+                                  (str output-dir "/") output-dir)]
+           (assoc application-state-map
+                  :site.fabricate.file.output/watcher
+                  (watch-dir
+                   (fn [{:keys [file count action]}]
+                     (if (#{:create :modify} action)
+                       (do
+                         (println "syncing")
+                         (let [r (clojure.java.shell/sh "sync-fabricate.sh")]
+                           (println (or (:out r) (:err r)))))))
+                   (io/file output-dir)))))) )
+
+
+  )
