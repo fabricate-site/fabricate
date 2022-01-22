@@ -461,7 +461,11 @@
 (comment
   ;; to update pages manually, do this:
 
-  (fsm/complete default-operations "./README.md.fab")
+  (fsm/complete
+   default-operations
+   "./README.md.fab"
+   state)
+
 
   (fsm/complete default-operations "./pages/finite-schema-machines.html.fab")
 

@@ -23,7 +23,7 @@ jobs:
           cli: 1.10.1.693
       - name: Publish
         run: |
-          clojure -X site.fabricate.prototype.write/publish :dirs '["./pages"]'
+          clojure -X site.fabricate.prototype.write/publish! :dirs '["./pages"]'
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
