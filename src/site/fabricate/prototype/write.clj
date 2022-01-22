@@ -402,13 +402,17 @@
         (apply concat files
                (map #(get-template-files
                       %
-                      (:template-suffix default-site-settings)) dirs))]
+                      (get-in current-state
+                              [:site.fabricate/settings
+                               :site.fabricate.file/template-suffix]))
+                    dirs))]
     (doseq [fp all-files]
       (fsm/complete
        (get-in current-state
                [:site.fabricate/settings
                 :site.fabricate.file/operations])
-       fp))))
+       fp
+       current-state))))
 
 (defn stop!
   "Shuts down fabricate's stateful components."
@@ -464,12 +468,13 @@
   (fsm/complete
    default-operations
    "./README.md.fab"
-   state)
+   initial-state )
 
 
   (fsm/complete default-operations "./pages/finite-schema-machines.html.fab")
 
-  (fsm/complete default-operations "./pages/extended-forms.html.fab")
+  (fsm/complete default-operations "./pages/extended-forms.html.fab"
+                state)
 
   (site.fabricate.prototype.read.grammar/template
    (slurp "./pages/extended-forms.html.fab"))
