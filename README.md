@@ -1,4 +1,6 @@
 
+
+
                  
 # ` fabricate.site `
 
@@ -21,7 +23,7 @@ That sounds pretty complicated, but it's actually not. If you want to add a titl
 ```
 Some basic text
 
-[:div [:h6 "Error"] [:dl [:dt "Error type"] [:dd [:code "class clojure.lang.Compiler$CompilerException"]] [:dt "Error message"] [:dd [:code "No such var: site.fabricate.prototype.read/delimiters"]] [:dt "Error phase"] [:dd [:code ":compile-syntax-check"]]] [:details [:summary "Source expression"] [:pre [:code " (str (first site.fabricate.prototype.read/delimiters) \"=[:h2 \\\"A title\\\"]\"\n        (second site.fabricate.prototype.read/delimiters)) "]]]]
+✳=[:h2 "A title"]🔚
 
 Some more text
 ```

@@ -19,9 +19,8 @@
                 :font-family "'Inria Sans', sans-serif"
                 :border-left-color "#dc4032"
                 :border-left-style "solid"
-                :border-left-width "2em"
-                }
-      [:section {:padding-left "1.4em"}]
+                :border-left-width "2em"}
+      [:section {:padding-left "2.2em"}]
       [:h1 :h2 :h3 :h4 {:font-family "Inter"}]
       [:h1 {:font-size "2.5rem"
             :line-height "1.35em"}]
