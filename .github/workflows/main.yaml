@@ -1,13 +1,9 @@
-name: Publish
-# This workflow is triggered on pushes to main.
-on:
-  push:
-    branches:
-      - main
+name: Main
+on: [push]
 jobs:
-  publish:
-    name: Publish
-    runs-on: ubuntu-18.04
+  main:
+    name: Main
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -21,10 +17,15 @@ jobs:
         uses: DeLaGuardo/setup-clojure@3.5
         with:
           cli: 1.10.1.693
+      - name: Run Tests
+        run: |
+          clojure -X:test:runner
       - name: Publish
+        if: github.ref == 'refs/heads/main'
         run: |
           clojure -X site.fabricate.prototype.write/publish! :dirs '["./pages"]'
       - name: Deploy
+        if: github.ref == 'refs/heads/main'
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
