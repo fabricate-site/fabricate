@@ -13,7 +13,11 @@
             [clojure.test :as t]
             [babashka.curl :as curl]))
 
-(t/use-fixtures :once with-instrumentation)
+(t/use-fixtures :once
+  (fn [f]
+    (with-instrumentation f)
+    (send state stop!)
+    (shutdown-agents)))
 
 (t/deftest file-utils
   (t/testing "output path fn"
