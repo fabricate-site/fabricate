@@ -817,9 +817,11 @@
   [tag]
   (if (nil? tag) tag
       (let [tag (if (qualified-keyword? tag) tag
-                    (ns-kw 'site.fabricate.prototype.html tag))]
-        (last
-         (flatten (last (get-in (m/properties html) [:registry tag])))))))
+                    (ns-kw 'site.fabricate.prototype.html tag))
+            schema (get-in (m/properties html) [:registry tag])]
+        (when schema
+          (last
+           (flatten (last (m/form schema))))))))
 
 (def tag-contents
   (->> (concat phrasing-tags flow-tags heading-tags sectioning-tags
