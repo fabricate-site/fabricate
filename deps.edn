@@ -29,7 +29,8 @@
                       babashka/babashka.curl {:mvn/version "0.1.1"}}}
   :runner
   {:extra-deps {io.github.cognitect-labs/test-runner
-                {:git/tag "v0.5.0" :git/sha "b3fd0d2"}}
+                {:git/url "https://github.com/cognitect-labs/test-runner"
+                 :sha "cc75980b43011773162b485f46f939dc5fba91e4" }}
    :main-opts ["-m" "cognitect.test-runner"]
    :exec-fn cognitect.test-runner.api/test
    :exec-args {:excludes [:performance]
