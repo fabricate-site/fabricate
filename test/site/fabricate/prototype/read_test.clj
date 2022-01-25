@@ -145,6 +145,23 @@
                    first
                    (eval-parsed-expr false))))
 
+(t/is
+ (= {:src "(+ 4 5)" :display true
+     :expr (+ 4 5) :result 9 :err nil}
+  (-> "✳+=(+ 4 5)🔚"
+      parse
+      first
+      (eval-parsed-expr false))))
+
+      (t/is
+       (= '([:pre [:code "(+ 4 5)\n"]] 9)
+          (-> "✳+=(+ 4 5)🔚"
+              parse
+              first
+              (eval-parsed-expr false)
+              form->hiccup))
+       "Results of forms should display properly alongside source expressions")
+
       (t/is (m/validate
              error-form-schema
              [:div [:h6 "Error"]
