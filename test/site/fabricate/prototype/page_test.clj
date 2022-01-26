@@ -224,6 +224,29 @@
         "and\n\nlinebreak"])))
 
     (t/is
+     (=
+      [:div
+       [:p "orphan text" [:em "with emphasis added"] "and"]
+       [:p "linebreak"]
+       (list [:p "and list contents"] [:p "also with linebreak"])]
+      (parse-paragraphs
+       [:div
+        "orphan text"
+        [:em "with emphasis added"]
+        "and\n\nlinebreak"
+        (list "and list contents, \n\nalso with linebreak")]))
+     "List elements should be processed in place and in order")
+
+    (let [expr-form [:pre [:code {"class" "language-clojure"}] "(+ 3 4)"]
+          expr-result 7
+          pre-parsed [:div "a section" (list expr-form expr-result)]
+          parsed (parse-paragraphs pre-parsed)
+          tree (tree-seq sequential? identity parsed)]
+      (t/is (< (.indexOf tree expr-form) (.indexOf tree expr-result))
+            "After paragraph detection, expression results should come after the form"))
+
+
+    (t/is
      (=  [:p "some text" [:br] "with newlines"]
          (parse-paragraphs [:p "some text\n\nwith newlines"])))
 
