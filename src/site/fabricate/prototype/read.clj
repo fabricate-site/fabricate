@@ -57,14 +57,14 @@
 
 (defn parsed-form->expr-map
   {:malli/schema [:=> [:cat [:schema [:cat :string :string :string]]]
-                  :map]}
+                  parsed-expr-schema]}
   [parsed-form]
   (let [[t form-or-ctrl? form?]  parsed-form
         parse-metadata (meta parsed-form)
         read-results
         (try (r/read-string (or form? form-or-ctrl?))
              (catch Exception e
-               {:err
+               {:error
                 (let [em (Throwable->map e)]
                   (merge
                    (select-keys (first (:via em)) [:type])
@@ -74,11 +74,12 @@
         m (with-meta
             (merge {:src (if (vector? form-or-ctrl?) form? form-or-ctrl?)
                     :display false}
-                   (if (:err read-results)
+                   (if (or (:error read-results) (::parse-error read-results))
                      (assoc read-results :expr nil)))
             parse-metadata)]
     (cond
-      (:err m) m
+      (::parse-error m) m
+      (:error m) m
       (not (vector? form-or-ctrl?))
       (assoc m :exec read-results)
       :else
@@ -128,12 +129,19 @@
        [:ref ::form]
        [:ref ::extended-form]]]]]))
 
+(comment
+  (-> (template "✳=((+ 2 3)🔚")
+      (second)
+      parsed-form->expr-map)
+
+  )
+
 (defn read-template
   {:malli/schema [:=> [:cat :string] parsed-schema]}
   [template-txt]
   (let [attempt (template template-txt)]
     (if (insta/failure? attempt)
-      {::parse-failure attempt}
+      {::parse-error attempt}
       ;; preserve provenance information, you'll
       ;; never know when it might be useful
       ;;
@@ -174,22 +182,22 @@
   "If the form has no errors, return its results.
   Otherwise, create a hiccup form describing the error."
   {:malli/schema [:=> [:cat parsed-expr-schema] [:or error-form-schema :any]]}
-  [{:keys [src exec expr err result display]
+  [{:keys [src exec expr error result display]
     :as parsed-expr}]
   (cond
-    err [:div [:h6 "Error"]
+    error [:div [:h6 "Error"]
          [:dl
           [:dt "Error type"]
-          [:dd [:code (str (:type err))]]
+          [:dd [:code (str (:type error))]]
           [:dt "Error message"]
-          [:dd [:code (str (:cause err))]]
+          [:dd [:code (str (:cause error))]]
           [:dt "Error phase"]
-          [:dd [:code (str (:phase err))]]
+          [:dd [:code (str (:phase error))]]
           [:dt "Location"]
           [:dd (lines->msg (meta parsed-expr))]]
          [:details [:summary "Source expression"]
           [:pre [:code src]]]]
-    display (list [:pre [:code (render-src (or exec expr) true)]] result)
+    display (list [:pre [:code (render-src (or exec expr))]] result)
     :else result))
 
 ;; post-validator should have the following signature
@@ -199,50 +207,47 @@
 (defn eval-parsed-expr
   {:malli/schema [:=> [:cat parsed-expr-schema :boolean [:fn fn?]]
                   [:or :map :any]]}
-  ([{:keys [src expr exec err result display]
+  ([{:keys [src expr exec error result display
+            fabricate.read/parse-error]
      :as expr-map} simplify? post-validator]
-   (let [res
-         (with-meta
-           (if err expr-map
-               (try
-                 (assoc
-                  expr-map
-                  :result
-                  (let [res (eval (or exec expr))]
-                    (if (var? res)
-                      (alter-meta!
-                       res
-                       (fn [var-meta form-meta]
-                         (-> var-meta
-                             (merge form-meta)
-                             (#(assoc % :column (% :instaparse.gll/start-column)
-                                      :line (% :instaparse.gll/start-line)))))
-                       (meta expr-map)))
-                    (if exec nil res))
-                  :err nil)
-                 (catch Exception e
-                   (assoc expr-map
-                          :result nil
-                          :err (merge {:type (.getClass e)
-                                       :message (.getMessage e)}
-                                      (select-keys (Throwable->map e)
-                                                   [:cause :phase]))))))
-           (meta expr-map))
-         validated (post-validator res)]
+   (let [evaluated-expr-map
+         (try (assoc expr-map
+                     :result (eval (or exec expr))
+                     :error (or nil error))
+              (catch Exception e
+                (assoc expr-map
+                       :result nil
+                       :error (merge {:type (.getClass e)
+                                      :message (.getMessage e)}
+                                     (select-keys (Throwable->map e)
+                                                  [:cause :phase])))))
+         res (with-meta evaluated-expr-map (meta expr-map))
+         validated (post-validator (:result res))]
+     (when (var? (:result res))
+       (alter-meta!
+        (:result res)
+        (fn [var-meta form-meta]
+          (-> var-meta
+              (merge form-meta)
+              (#(assoc % :column (% :instaparse.gll/start-column)
+                       :line (% :instaparse.gll/start-line)))))
+        (meta expr-map)))
      (cond
-       (and (or err (:err res)) simplify?) (form->hiccup res)
-       (or err (:err res)) (assoc res :result (form->hiccup res))
-       (and display simplify?)
+       (and (or error (:error res)) simplify?) (form->hiccup res)
+       (or error (:error res)) (assoc res :result (form->hiccup res))
+       (and simplify? display expr) (form->hiccup res)
+       (and exec display simplify?)
        [:pre [:code {:class "language-clojure"} src]]
-       display
+       (and exec display)
        (assoc (merge expr-map res)
               :result [:pre [:code {:class "language-clojure"} src]])
-       (and simplify? (:result res))    ; nil is overloaded here
+       (and expr simplify? (:result res)) ; nil is overloaded here
        (:result res)
-       (and (nil? (:result res)) (nil? (:err res)))
+       (and exec simplify?) nil
+       (and (nil? (:result res)) (nil? (:error res)))
        nil
        :else (merge expr-map res))))
-  ([expr simplify?] (eval-parsed-expr expr simplify? (fn [e] {:result e})))
+  ([expr simplify?] (eval-parsed-expr expr simplify? (constantly true)))
   ([expr] (eval-parsed-expr expr false)))
 
 (defn yank-ns

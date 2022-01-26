@@ -49,19 +49,19 @@
      (m/validate parsed-expr-schema
                  {:src "(+ 3 4)"
                   :expr '(+ 3 4)
-                  :err nil
+                  :error nil
                   :result 7}))
     (t/is
      (m/validate parsed-expr-schema
                  {:src "(+ 3 4)"
                   :exec '(+ 3 4)
-                  :err nil
+                  :error nil
                   :result nil}))
     (t/is
      (m/validate parsed-expr-schema
                  {:src "((+ 3 4)"
                   :expr nil
-                  :err {:type clojure.lang.ExceptionInfo
+                  :error {:type clojure.lang.ExceptionInfo
                         :cause "Unexpected EOF while reading item 1 of list."
                         :data {:type :reader-exception :ex-kind :eof}}
                   :result nil}))
@@ -75,7 +75,7 @@
                        :display false}]
              (parse "text ✳=(+ 2 3)🔚")))
 
-    (t/is (not (nil? (:err (first (parse "✳((+ 2 3)🔚")))))
+    (t/is (not (nil? (:error (first (parse "✳((+ 2 3)🔚")))))
           "Expression parsing errors should be surfaced")
 
     (t/is (= [{:exec '(+ 2 3)
@@ -128,22 +128,38 @@
   (t/testing "evaluation of parsed expressions"
     (t/testing ": single exprs"
       (t/is (= 5 (eval-parsed-expr (first (parse "✳=(+ 2 3)🔚")) true)))
-      (t/is (= {:expr '(+ 2 3), :src "(+ 2 3)", :err nil, :result 5
+      (t/is (= {:expr '(+ 2 3), :src "(+ 2 3)", :error nil, :result 5
                 :display false}
                (eval-parsed-expr (first (parse "✳=(+ 2 3)🔚")) false)))
       (t/is (= nil
                (eval-parsed-expr {:exec '(def myvar 3) :src "(def myvar 3)"}
-                                 true)))
+                                  true)))
 
       (t/is (= {:exec '(def something 23)
                 :src "(def something 23)"
                 :result [:pre [:code {:class "language-clojure"} "(def something 23)"]]
-                :err nil
+                :error nil
                 :display true}
                (-> "✳+(def something 23)🔚"
                    parse
                    first
                    (eval-parsed-expr false))))
+
+      (t/is
+       (= {:src "(+ 4 5)" :display true
+           :expr '(+ 4 5) :result 9 :error nil}
+          (-> "✳+=(+ 4 5)🔚"
+              parse
+              first
+              (eval-parsed-expr false))))
+
+      (t/is
+       (= '([:pre [:code "(+ 4 5)\n"]] 9)
+          (-> "✳+=(+ 4 5)🔚"
+              parse
+              first
+              (eval-parsed-expr true)))
+       "Results of forms should display properly alongside source expressions")
 
       (t/is (m/validate
              error-form-schema
@@ -163,9 +179,11 @@
             [:dd
              '("Line " [:strong 1] ", " "Columns " [:strong 1 "-" 12])]]
            [:details [:summary "Source expression"] [:pre [:code "((+ 2 3)"]]]]
-          (eval-parsed-expr (first (parse "✳((+ 2 3)🔚")) true))
+          (eval-parsed-expr (first (parse "✳((+ 2 3)🔚")) true) )
+
        "Expression parsing errors should be surfaced in the output")
-      (t/is (not (nil? (:err (eval-parsed-expr (first (parse "✳=((+ 2 3)🔚")) false))))))
+
+      (t/is (not (nil? (:error (eval-parsed-expr (first (parse "✳=((+ 2 3)🔚")) false) )))))
 
     (t/testing ": multiple exprs"
       (t/is (= [:foo " bar " :baz]
@@ -205,9 +223,9 @@
                         (parse {:filename "README.md.fab"})
                         eval-all)
             ex-meta (-> 'site.fabricate.docs.readme/metadata
-                         resolve
-                         meta
-                         (select-keys [:file :ns :column]))]
+                        resolve
+                        meta
+                        (select-keys [:file :ns :column]))]
         (t/is (=  {:file "README.md.fab" :ns (find-ns 'site.fabricate.docs.readme)
                    :column 1}
                   ex-meta)
@@ -230,7 +248,7 @@
     (t/testing ": error messages"
       (t/is
        (= [:div 5]
-          (eval-all [:div {:expr '(+ 2 3), :src "✳=(+ 2 3)🔚", :err nil, :result nil}]))))))
+          (eval-all [:div {:expr '(+ 2 3), :src "✳=(+ 2 3)🔚", :error nil, :result nil}]))))))
 
 (t/deftest source-code-transforms
   (t/testing "source printing"
