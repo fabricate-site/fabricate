@@ -107,7 +107,7 @@
            (parse-paragraphs [:div "some\n\ntext" [:em "with emphasis"]]
                              {:paragraph-pattern #"\n\n"})))
 
-    (t/is (= [:p "some text" true 24]
+    (t/is (= '([:p "some text" true 24])
              (parse-paragraphs
               (list "some text" true 24))))
 
@@ -173,9 +173,19 @@
               [:p [:div "with div"] "and following"])))
 
     (t/is
-     (= [:p "text" [:br] "newline" [:del "more text"]]
+     (= '([:p "text" [:br] "newline" [:del "more text"]])
         (parse-paragraphs
          (list "text\n\n" "newline" [:del "more text"]))))
+
+    (t/is
+     (= [:div [:p "text" [:br] "newline" [:del "more text"]]]
+        (parse-paragraphs
+         [:div "text\n\n" "newline" [:del "more text"]])))
+
+    (t/is
+     (= '([:p "text"] [:p "newline" [:del "more text"]])
+        (parse-paragraphs
+         (list "text\n\nnewline" [:del "more text"]))))
 
     (t/is
      (=
@@ -228,7 +238,7 @@
       [:div
        [:p "orphan text" [:em "with emphasis added"] "and"]
        [:p "linebreak"]
-       (list [:p "and list contents"] [:p "also with linebreak"])]
+       (list [:p "and list contents, "] [:p "also with linebreak"])]
       (parse-paragraphs
        [:div
         "orphan text"
@@ -249,6 +259,10 @@
     (t/is
      (=  [:p "some text" [:br] "with newlines"]
          (parse-paragraphs [:p "some text\n\nwith newlines"])))
+
+    (t/is
+     (=  '([:p "some text" [:br] "with newlines"])
+         (parse-paragraphs (list [:p "some text\n\nwith newlines"]))))
 
     (t/is
      (=  [:section [:p "some text"] [:p "with newlines"]]
