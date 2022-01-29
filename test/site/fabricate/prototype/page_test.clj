@@ -81,6 +81,12 @@
 (t/deftest content-transforms
   (t/testing "Paragraph detection"
 
+    (t/testing ": utilities"
+      (t/is (#'site.fabricate.prototype.page/final-match? #"\n\n" "abc\n\n"))
+
+      (t/is (not (#'site.fabricate.prototype.page/final-match? #"\n\n" "abc\n\ndef")))
+      (t/is (not (#'site.fabricate.prototype.page/final-match? #"\n\n" "abc\n\ndef\n\n"))))
+
     (t/is (= [:div [:p "some"] [:p "text"]]
              (parse-paragraphs [:div "some\n\ntext"])))
 
@@ -107,7 +113,7 @@
            (parse-paragraphs [:div "some\n\ntext" [:em "with emphasis"]]
                              {:paragraph-pattern #"\n\n"})))
 
-    (t/is (= [:p "some text" true 24]
+    (t/is (= '([:p "some text" true 24])
              (parse-paragraphs
               (list "some text" true 24))))
 
@@ -161,6 +167,22 @@
      "Orphan phrasing elements should be inserted into paragraphs")
 
     (t/is
+     (let [error-form
+           [:div
+            [:h6 "Error"]
+            [:dl
+             [:dt "Error type"]
+             [:dd [:code "clojure.lang.ExceptionInfo"]]
+             [:dt "Error message"]
+             [:dd [:code "Unexpected EOF while reading item 1 of list."]]
+             [:dt "Error phase"]
+             [:dd [:code ""]]
+             [:dt "Location"]
+             [:dd '("Line " [:strong 1] ", " "Columns " [:strong 1 "-" 12])]]
+            [:details [:summary "Source expression"] [:pre [:code "((+ 2 3)"]]]]]
+       (= error-form (parse-paragraphs error-form))))
+
+    (t/is
      (= [:p "text" [:br] "newline" [:del "more text"]]
         (parse-paragraphs
          [:p "text\n\n" "newline" [:del "more text"]]))
@@ -173,13 +195,23 @@
               [:p [:div "with div"] "and following"])))
 
     (t/is
-     (= [:p "text" [:br] "newline" [:del "more text"]]
+     (= '([:p "text" [:br] "newline" [:del "more text"]])
         (parse-paragraphs
          (list "text\n\n" "newline" [:del "more text"]))))
 
     (t/is
+     (= [:div [:p "text" [:br] "newline" [:del "more text"]]]
+        (parse-paragraphs
+         [:div "text\n\n" "newline" [:del "more text"]])))
+
+    (t/is
+     (= '([:p "text"] [:p "newline" [:del "more text"]])
+        (parse-paragraphs
+         (list "text\n\nnewline" [:del "more text"]))))
+
+    (t/is
      (=
-      [[:p "text" "newline" [:del "more text"]]]
+      [[:p "text" [:br] "newline" [:del "more text"]]]
       (parse-paragraphs
        ["text\n\n" "newline" [:del "more text"]])))
 
@@ -224,8 +256,35 @@
         "and\n\nlinebreak"])))
 
     (t/is
+     (=
+      [:div
+       [:p "orphan text" [:em "with emphasis added"] "and"]
+       [:p "linebreak"]
+       (list [:p "and list contents, "] [:p "also with linebreak"])]
+      (parse-paragraphs
+       [:div
+        "orphan text"
+        [:em "with emphasis added"]
+        "and\n\nlinebreak"
+        (list "and list contents, \n\nalso with linebreak")]))
+     "List elements should be processed in place and in order")
+
+    (let [expr-form [:pre [:code {"class" "language-clojure"}] "(+ 3 4)"]
+          expr-result 7
+          pre-parsed [:div "a section" (list expr-form expr-result)]
+          parsed (parse-paragraphs pre-parsed)
+          tree (tree-seq sequential? identity parsed)]
+      (t/is (< (.indexOf tree expr-form) (.indexOf tree expr-result))
+            "After paragraph detection, expression results should come after the form"))
+
+
+    (t/is
      (=  [:p "some text" [:br] "with newlines"]
          (parse-paragraphs [:p "some text\n\nwith newlines"])))
+
+    (t/is
+     (=  '([:p "some text" [:br] "with newlines"])
+         (parse-paragraphs (list [:p "some text\n\nwith newlines"]))))
 
     (t/is
      (=  [:section [:p "some text"] [:p "with newlines"]]
