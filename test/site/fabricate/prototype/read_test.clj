@@ -62,8 +62,8 @@
                  {:src "((+ 3 4)"
                   :expr nil
                   :error {:type clojure.lang.ExceptionInfo
-                        :cause "Unexpected EOF while reading item 1 of list."
-                        :data {:type :reader-exception :ex-kind :eof}}
+                          :cause "Unexpected EOF while reading item 1 of list."
+                          :data {:type :reader-exception :ex-kind :eof}}
                   :result nil}))
 
     (t/is (m/validate parsed-expr-schema
@@ -133,7 +133,7 @@
                (eval-parsed-expr (first (parse "✳=(+ 2 3)🔚")) false)))
       (t/is (= nil
                (eval-parsed-expr {:exec '(def myvar 3) :src "(def myvar 3)"}
-                                  true)))
+                                 true)))
 
       (t/is (= {:exec '(def something 23)
                 :src "(def something 23)"
@@ -179,11 +179,11 @@
             [:dd
              '("Line " [:strong 1] ", " "Columns " [:strong 1 "-" 12])]]
            [:details [:summary "Source expression"] [:pre [:code "((+ 2 3)"]]]]
-          (eval-parsed-expr (first (parse "✳((+ 2 3)🔚")) true) )
+          (eval-parsed-expr (first (parse "✳((+ 2 3)🔚")) true))
 
        "Expression parsing errors should be surfaced in the output")
 
-      (t/is (not (nil? (:error (eval-parsed-expr (first (parse "✳=((+ 2 3)🔚")) false) )))))
+      (t/is (not (nil? (:error (eval-parsed-expr (first (parse "✳=((+ 2 3)🔚")) false))))))
 
     (t/testing ": multiple exprs"
       (t/is (= [:foo " bar " :baz]

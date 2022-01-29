@@ -132,9 +132,7 @@
 (comment
   (-> (template "✳=((+ 2 3)🔚")
       (second)
-      parsed-form->expr-map)
-
-  )
+      parsed-form->expr-map))
 
 (defn read-template
   {:malli/schema [:=> [:cat :string] parsed-schema]}
@@ -186,17 +184,17 @@
     :as parsed-expr}]
   (cond
     error [:div [:h6 "Error"]
-         [:dl
-          [:dt "Error type"]
-          [:dd [:code (str (:type error))]]
-          [:dt "Error message"]
-          [:dd [:code (str (:cause error))]]
-          [:dt "Error phase"]
-          [:dd [:code (str (:phase error))]]
-          [:dt "Location"]
-          [:dd (lines->msg (meta parsed-expr))]]
-         [:details [:summary "Source expression"]
-          [:pre [:code src]]]]
+           [:dl
+            [:dt "Error type"]
+            [:dd [:code (str (:type error))]]
+            [:dt "Error message"]
+            [:dd [:code (str (:cause error))]]
+            [:dt "Error phase"]
+            [:dd [:code (str (:phase error))]]
+            [:dt "Location"]
+            [:dd (lines->msg (meta parsed-expr))]]
+           [:details [:summary "Source expression"]
+            [:pre [:code src]]]]
     display (list [:pre [:code (render-src (or exec expr))]] result)
     :else result))
 
@@ -205,8 +203,9 @@
 ;; if it doesn't, return a map describing the error
 
 (defn eval-parsed-expr
-  {:malli/schema [:=> [:cat parsed-expr-schema :boolean [:fn fn?]]
-                  [:or :map :any]]}
+  {:malli/schema
+   [:=> [:cat parsed-expr-schema :boolean [:fn fn?]]
+    [:or :map :any]]}
   ([{:keys [src expr exec error result display
             fabricate.read/parse-error]
      :as expr-map} simplify? post-validator]

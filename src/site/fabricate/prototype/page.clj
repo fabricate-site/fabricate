@@ -175,6 +175,41 @@
        (or (not (vector? form))
            (not (keyword? (first form))))))
 
+(defn- reconstruct [s sequence-type]
+  (cond (= clojure.lang.PersistentList sequence-type)
+           (apply list s)
+           (= clojure.lang.PersistentVector sequence-type)
+           (into [] s) :else (into [] s)))
+
+
+(defn- final-match? [re s]
+  (and (= 1 (count (re-seq re s)))
+       (let [m (re-matcher re s)]
+         (.find m)
+         (= (.end m) (count s)))))
+
+(comment
+
+  (re-seq #"\n\n" "abc\n\ndef")
+
+  (final-match? #"\n\n" "abc\n\n")
+
+  (final-match? #"\n\n" "abc")
+
+  (iterator-seq (.iterator (.results (re-matcher #"\n\n" "abc\n\ndef\n\nghi"))))
+
+  (loop [ct 0 m (re-matcher #"\n\n" "abc\n\ndef\n\nghi")]
+    (let [f? (.find m)]
+      (if (not f?) ct
+          (recur (inc ct) m))))
+
+  (loop [ct 0 m (re-matcher #"\n\n" "abc\n\ndef\n\nghi")]
+    (let [f? (.find m)]
+      (if (not f?) ct
+          (recur (inc ct) m))))
+
+  )
+
 (defn parse-paragraphs
   "Detects the paragraphs within the form"
   {:malli/schema [:=> [:cat [:vector :any] :map] [:vector :any]]}
@@ -185,81 +220,91 @@
                default-form [:p]
                current-paragraph? false}
           :as opts}]
-   (cond
-     (#{:svg} (first form)) form ; don't detect in SVG elements
-     (non-hiccup-seq? form)
-     ;; recurse?
-     (parse-paragraphs (apply conj default-form form) opts)
-     :else
-     (reduce
-      (fn [acc next]
-        ;; peek the contents of acc to determine whether to
-        ;; conj on to an extant paragraph
-        (let [previous (if (vector? acc) (peek acc) (last acc))
-              r-acc (if (not (empty? acc)) (pop acc) acc)
-              previous-paragraph?
-              (and (vector? previous) (= :p (first previous)))
-              current-paragraph? (or current-paragraph? (= :p (first acc)))
-              permitted-contents
-              (if (html/phrasing? acc) ::html/phrasing-content
-                  (html/tag-contents
-                   (let [f (first acc)]
-                     (if (keyword? f) f :div))))]
-          (cond
-            ;; flow + heading content needs to break out of a paragraph
-            (and current-paragraph? (sequential? next)
-                 (or (html/flow? next) (html/heading? next))
-                 (not (html/phrasing? next)))
-            (list acc (parse-paragraphs next opts))
-            ;; if previous element is a paragraph,
-            ;; conj phrasing elements on to it
-            (and (sequential? next) previous-paragraph?
-                 (html/phrasing? next))
-            (conj r-acc (conj previous (parse-paragraphs next opts)))
-            ;; in-paragraph linebreaks are special, they get replaced with <br> elements
-            ;; we can't split text into paragraphs inside
-            ;; elements that can't contain paragraphs
-            (and (string? next) (re-find paragraph-pattern next)
-                 (not (= ::html/flow-content permitted-contents)))
-            (apply conj acc
-                   (let [r (interpose [:br] (clojure.string/split next paragraph-pattern))]
-                     (if (= 1 (count r)) (conj (into [] r) [:br]) r)))
-            ;; if there's a previous paragraph, do a head/tail split of the string
-            (and (string? next) (re-find paragraph-pattern next)
-                 previous-paragraph?)
-            (let [[h & tail] (clojure.string/split next paragraph-pattern)]
-              (apply conj
-                     r-acc
-                     (conj previous h)
-                     (->> tail
-                          (filter #(not (empty? %)))
-                          (map #(conj default-form %)))))
-            ;; otherwise split it into separate paragraphs
-            (and (string? next) (re-find paragraph-pattern next))
-            (apply conj acc
-                   (->> (clojure.string/split next paragraph-pattern)
-                        (filter #(not (empty? %)))
-                        (map #(conj default-form %))))
-            ;; skip empty or whitespace strings
-            (and (string? next)
-                 (or (empty? next)
-                     (re-matches #"\s+" next))) acc
-            ;; add to previous paragraph
-            (and previous-paragraph? (html/phrasing? next))
-            (conj r-acc (conj previous next))
-            ;; start paragraph for orphan strings/elements
-            (and (not current-paragraph?)
-                 (not previous-paragraph?)
-                 (= ::html/flow-content permitted-contents)
-                 (html/phrasing? next))
-            (conj acc (conj default-form next))
-            (sequential? next)
-            (conj acc (parse-paragraphs
-                       next
-                       (assoc opts :current-paragraph? current-paragraph?)))
-            :else (conj acc next))))
-      []
-      form)))
+   (let [sequence-type (type form)
+         res
+         (cond
+           (#{:svg :dl} (first form)) form  ; don't detect in SVG elements
+           ;; (non-hiccup-seq? form)
+           ;; recurse?
+           ;; (parse-paragraphs (apply conj default-form form) opts)
+           :else
+           (reduce
+            (fn [acc next]
+              ;; peek the contents of acc to determine whether to
+              ;; conj on to an extant paragraph
+              (let [previous (peek acc)
+                    r-acc (if (not (empty? acc)) (pop acc) acc)
+                    previous-paragraph?
+                    (and (vector? previous) (= :p (first previous)))
+                    current-paragraph? (or current-paragraph? (= :p (first acc)))
+                    permitted-contents
+                    (if (html/phrasing? acc) ::html/phrasing-content
+                        (html/tag-contents
+                         (let [f (first acc)]
+                           (if (keyword? f) f :div))))]
+                (cond
+                  ;; flow + heading content needs to break out of a paragraph
+                  (and current-paragraph? (sequential? next)
+                       (or (html/flow? next) (html/heading? next))
+                       (not (html/phrasing? next)))
+                  (counted-double-list
+                   (reconstruct acc sequence-type)
+                   (parse-paragraphs next opts))
+                  ;; if previous element is a paragraph,
+                  ;; conj phrasing elements on to it
+                  (and (sequential? next) previous-paragraph?
+                       (html/phrasing? next))
+                  (conj r-acc (conj previous (parse-paragraphs next opts)))
+                  ;; in-paragraph linebreaks are special, they get replaced with <br> elements
+                  ;; we can't split text into paragraphs inside
+                  ;; elements that can't contain paragraphs
+                  (and (string? next) (re-find paragraph-pattern next)
+                       (not (= ::html/flow-content permitted-contents)))
+                  (apply conj acc
+                         (let [r (interpose [:br] (clojure.string/split next paragraph-pattern))]
+                           (if (= 1 (count r)) (conj (into [] r) [:br]) r)))
+                  ;; corner case: trailing paragraph-pattern
+                  (and (string? next) (re-find paragraph-pattern next)
+                       (not current-paragraph?)
+                       (final-match? paragraph-pattern next))
+                  (conj acc [:p (first (string/split next paragraph-pattern)) [:br]])
+                  ;; if there's a previous paragraph, do a head/tail split of the string
+                  (and (string? next) (re-find paragraph-pattern next)
+                       previous-paragraph?)
+                  (let [[h & tail] (clojure.string/split next paragraph-pattern)]
+                    (apply conj
+                           r-acc
+                           (conj previous h)
+                           (->> tail
+                                (filter #(not (empty? %)))
+                                (map #(conj default-form %)))))
+                  ;; otherwise split it into separate paragraphs
+                  (and (string? next) (re-find paragraph-pattern next))
+                  (apply conj acc
+                         (->> (clojure.string/split next paragraph-pattern)
+                              (filter #(not (empty? %)))
+                              (map #(conj default-form %))))
+                  ;; skip empty or whitespace strings
+                  (and (string? next)
+                       (or (empty? next)
+                           (re-matches #"\s+" next))) acc
+                  ;; add to previous paragraph
+                  (and previous-paragraph? (html/phrasing? next))
+                  (conj r-acc (conj previous next))
+                  ;; start paragraph for orphan strings/elements
+                  (and (not current-paragraph?)
+                       (not previous-paragraph?)
+                       (= ::html/flow-content permitted-contents)
+                       (html/phrasing? next))
+                  (conj acc (conj default-form next))
+                  (sequential? next)
+                  (conj acc (parse-paragraphs
+                             next
+                             (assoc opts :current-paragraph? current-paragraph?)))
+                  :else (conj acc next))))
+            (counted-double-list)
+            form))]
+     (reconstruct res sequence-type)))
   ([form] (parse-paragraphs form {})))
 
 (comment

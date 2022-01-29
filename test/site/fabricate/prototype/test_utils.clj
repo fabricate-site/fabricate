@@ -6,6 +6,6 @@
 
 (defn with-instrumentation [f]
   (mi/collect!)
-  (mi/instrument!)
+  #_(mi/instrument!)
   (f)
-  (mi/unstrument!))
+  #_(mi/unstrument!))
