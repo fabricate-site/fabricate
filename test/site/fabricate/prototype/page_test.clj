@@ -167,6 +167,22 @@
      "Orphan phrasing elements should be inserted into paragraphs")
 
     (t/is
+     (let [error-form
+           [:div
+            [:h6 "Error"]
+            [:dl
+             [:dt "Error type"]
+             [:dd [:code "clojure.lang.ExceptionInfo"]]
+             [:dt "Error message"]
+             [:dd [:code "Unexpected EOF while reading item 1 of list."]]
+             [:dt "Error phase"]
+             [:dd [:code ""]]
+             [:dt "Location"]
+             [:dd '("Line " [:strong 1] ", " "Columns " [:strong 1 "-" 12])]]
+            [:details [:summary "Source expression"] [:pre [:code "((+ 2 3)"]]]]]
+       (= error-form (parse-paragraphs error-form))))
+
+    (t/is
      (= [:p "text" [:br] "newline" [:del "more text"]]
         (parse-paragraphs
          [:p "text\n\n" "newline" [:del "more text"]]))

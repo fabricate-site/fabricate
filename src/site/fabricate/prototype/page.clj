@@ -223,7 +223,7 @@
    (let [sequence-type (type form)
          res
          (cond
-           (#{:svg} (first form)) form  ; don't detect in SVG elements
+           (#{:svg :dl} (first form)) form  ; don't detect in SVG elements
            ;; (non-hiccup-seq? form)
            ;; recurse?
            ;; (parse-paragraphs (apply conj default-form form) opts)
@@ -265,6 +265,7 @@
                            (if (= 1 (count r)) (conj (into [] r) [:br]) r)))
                   ;; corner case: trailing paragraph-pattern
                   (and (string? next) (re-find paragraph-pattern next)
+                       (not current-paragraph?)
                        (final-match? paragraph-pattern next))
                   (conj acc [:p (first (string/split next paragraph-pattern)) [:br]])
                   ;; if there's a previous paragraph, do a head/tail split of the string
