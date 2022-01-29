@@ -81,6 +81,12 @@
 (t/deftest content-transforms
   (t/testing "Paragraph detection"
 
+    (t/testing ": utilities"
+      (t/is (#'site.fabricate.prototype.page/final-match? #"\n\n" "abc\n\n"))
+
+      (t/is (not (#'site.fabricate.prototype.page/final-match? #"\n\n" "abc\n\ndef")))
+      (t/is (not (#'site.fabricate.prototype.page/final-match? #"\n\n" "abc\n\ndef\n\n"))))
+
     (t/is (= [:div [:p "some"] [:p "text"]]
              (parse-paragraphs [:div "some\n\ntext"])))
 
@@ -189,7 +195,7 @@
 
     (t/is
      (=
-      [[:p "text" "newline" [:del "more text"]]]
+      [[:p "text" [:br] "newline" [:del "more text"]]]
       (parse-paragraphs
        ["text\n\n" "newline" [:del "more text"]])))
 

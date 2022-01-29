@@ -181,6 +181,35 @@
            (= clojure.lang.PersistentVector sequence-type)
            (into [] s) :else (into [] s)))
 
+
+(defn- final-match? [re s]
+  (and (= 1 (count (re-seq re s)))
+       (let [m (re-matcher re s)]
+         (.find m)
+         (= (.end m) (count s)))))
+
+(comment
+
+  (re-seq #"\n\n" "abc\n\ndef")
+
+  (final-match? #"\n\n" "abc\n\n")
+
+  (final-match? #"\n\n" "abc")
+
+  (iterator-seq (.iterator (.results (re-matcher #"\n\n" "abc\n\ndef\n\nghi"))))
+
+  (loop [ct 0 m (re-matcher #"\n\n" "abc\n\ndef\n\nghi")]
+    (let [f? (.find m)]
+      (if (not f?) ct
+          (recur (inc ct) m))))
+
+  (loop [ct 0 m (re-matcher #"\n\n" "abc\n\ndef\n\nghi")]
+    (let [f? (.find m)]
+      (if (not f?) ct
+          (recur (inc ct) m))))
+
+  )
+
 (defn parse-paragraphs
   "Detects the paragraphs within the form"
   {:malli/schema [:=> [:cat [:vector :any] :map] [:vector :any]]}
@@ -234,6 +263,10 @@
                   (apply conj acc
                          (let [r (interpose [:br] (clojure.string/split next paragraph-pattern))]
                            (if (= 1 (count r)) (conj (into [] r) [:br]) r)))
+                  ;; corner case: trailing paragraph-pattern
+                  (and (string? next) (re-find paragraph-pattern next)
+                       (final-match? paragraph-pattern next))
+                  (conj acc [:p (first (string/split next paragraph-pattern)) [:br]])
                   ;; if there's a previous paragraph, do a head/tail split of the string
                   (and (string? next) (re-find paragraph-pattern next)
                        previous-paragraph?)
