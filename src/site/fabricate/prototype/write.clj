@@ -282,11 +282,11 @@
                     (assoc page-data :site.fabricate.page/rendered-content
                            (reduce str evaluated-content)))
    html-state (fn [page-data state]
-                (assoc page-data
-                       :site.fabricate.page/rendered-content
-                       (-> page-data
-                           (evaluated->hiccup state)
-                           (#(hp/html5 {:lang :en-us} %)))))
+                (let [final-hiccup (evaluated->hiccup page-data state)]
+                  (assoc page-data
+                         :site.fabricate.page/evaluated-content final-hiccup
+                         :site.fabricate.page/rendered-content
+                         (hp/html5 {:lang :en-us} final-hiccup))))
    rendered-state
    (fn [{:keys [site.fabricate.page/rendered-content
                 site.fabricate.file/output-file] :as page-data}
