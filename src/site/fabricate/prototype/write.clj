@@ -431,11 +431,11 @@
                  #_(try (do (server/stop %) nil)
                         (catch Exception e nil))))))
 
-#_(.addShutdownHook (java.lang.Runtime/getRuntime)
+(.addShutdownHook (java.lang.Runtime/getRuntime)
                   (Thread. (fn []
                              (do (println "shutting down")
                                  #_(send state stop!)
-                                 #_(shutdown-agents)))))
+                                 (shutdown-agents)))))
 
 (comment
   (publish {:dirs ["./pages"]})
