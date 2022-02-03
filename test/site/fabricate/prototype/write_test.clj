@@ -16,7 +16,9 @@
 (t/use-fixtures :once
   (fn [f]
     (with-instrumentation f)
-    (send state stop!)))
+    (send state stop!)
+    (shutdown-agents)
+    ))
 
 (t/deftest file-utils
   (t/testing "output path fn"
