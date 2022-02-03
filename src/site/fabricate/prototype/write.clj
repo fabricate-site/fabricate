@@ -192,7 +192,7 @@
      [:map
       {:closed true
        :fsm/description "Fabricate contents evaluated after parsing"}
-      [:site.fabricate.page/evaluated-content [:fn vector?]]
+      [:site.fabricate.page/evaluated-content [:fn #(or (list? %) (vector? %))]]
       [:site.fabricate.page/metadata {:optional true} [:map {:closed false}]]]))))
 
 (def html-state
@@ -431,11 +431,11 @@
                  #_(try (do (server/stop %) nil)
                         (catch Exception e nil))))))
 
-(.addShutdownHook (java.lang.Runtime/getRuntime)
+#_(.addShutdownHook (java.lang.Runtime/getRuntime)
                   (Thread. (fn []
                              (do (println "shutting down")
-                                 (send-off state stop!)
-                                 (shutdown-agents)))))
+                                 #_(send state stop!)
+                                 #_(shutdown-agents)))))
 
 (comment
   (publish {:dirs ["./pages"]})
