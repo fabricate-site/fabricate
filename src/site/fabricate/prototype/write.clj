@@ -192,7 +192,7 @@
      [:map
       {:closed true
        :fsm/description "Fabricate contents evaluated after parsing"}
-      [:site.fabricate.page/evaluated-content [:fn vector?]]
+      [:site.fabricate.page/evaluated-content [:fn #(or (list? %) (vector? %))]]
       [:site.fabricate.page/metadata {:optional true} [:map {:closed false}]]]))))
 
 (def html-state
@@ -282,11 +282,11 @@
                     (assoc page-data :site.fabricate.page/rendered-content
                            (reduce str evaluated-content)))
    html-state (fn [page-data state]
-                (assoc page-data
-                       :site.fabricate.page/rendered-content
-                       (-> page-data
-                           (evaluated->hiccup state)
-                           (#(hp/html5 {:lang :en-us} %)))))
+                (let [final-hiccup (evaluated->hiccup page-data state)]
+                  (assoc page-data
+                         :site.fabricate.page/evaluated-content final-hiccup
+                         :site.fabricate.page/rendered-content
+                         (hp/html5 {:lang :en-us} final-hiccup))))
    rendered-state
    (fn [{:keys [site.fabricate.page/rendered-content
                 site.fabricate.file/output-file] :as page-data}
@@ -434,7 +434,7 @@
 (.addShutdownHook (java.lang.Runtime/getRuntime)
                   (Thread. (fn []
                              (do (println "shutting down")
-                                 (send-off state stop!)
+                                 #_(send state stop!)
                                  (shutdown-agents)))))
 
 (comment

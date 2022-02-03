@@ -17,7 +17,8 @@
   (fn [f]
     (with-instrumentation f)
     (send state stop!)
-    (shutdown-agents)))
+    (shutdown-agents)
+    ))
 
 (t/deftest file-utils
   (t/testing "output path fn"
@@ -309,4 +310,3 @@ Some more text")
 
   (println "deleting test dir")
   (delete-directory-recursive (io/file "test-resources/fab")))
-
