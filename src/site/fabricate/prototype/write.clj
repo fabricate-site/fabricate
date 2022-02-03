@@ -214,7 +214,8 @@
 (defn evaluated->hiccup
   "Takes the evaluated contents and turns them into a well-formed
    hiccup data structure."
-  {:malli/schema [:=> [:cat evaluated-state state-schema] :map]}
+  {:malli/schema [:=> [:cat evaluated-state state-schema]
+                  html/html]}
   [{:keys [site.fabricate.page/namespace
            site.fabricate.page/metadata
            site.fabricate.page/evaluated-content]
@@ -225,11 +226,11 @@
         body-content (into [:article {:lang "en"}]
                            (page/parse-paragraphs
                             evaluated-content))]
-    (list
+    [:html
      (doc-header metadata)
-     [:article body-content]
-     [:footer
-      [:div [:a {:href "/"} "Home"]]])))
+     [:body [:article body-content]
+      [:footer
+       [:div [:a {:href "/"} "Home"]]]]]))
 
 (def rendered-state
   (mu/merge
@@ -286,7 +287,9 @@
                   (assoc page-data
                          :site.fabricate.page/evaluated-content final-hiccup
                          :site.fabricate.page/rendered-content
-                         (hp/html5 {:lang :en-us} final-hiccup))))
+                         (str (hiccup/html
+                               {:escape-strings? false}
+                               final-hiccup)))))
    rendered-state
    (fn [{:keys [site.fabricate.page/rendered-content
                 site.fabricate.file/output-file] :as page-data}
