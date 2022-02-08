@@ -1,4 +1,5 @@
 (ns site.fabricate.prototype.read.grammar
+  "Instaparse grammar for Fabricate's page templates."
   (:require [instaparse.core :as insta]))
 
 (comment (require '[lambdaisland.regal :as regal])
