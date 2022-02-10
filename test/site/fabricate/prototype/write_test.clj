@@ -11,17 +11,23 @@
             [malli.util :as mu]
             [http.server :as server]
             [clojure.test :as t]
-            [babashka.curl :as curl]))
+            [babashka.curl :as curl])
+  (:import  [java.util.concurrent Executors]))
 
 (declare test-state)
 
 (t/use-fixtures :once
   (fn [f]
-    (def test-state (agent initial-state))
-    (with-instrumentation f)
-    (println "stopping")
-    (send test-state stop!)
-    (shutdown-agents)))
+    (let [prior-exec clojure.lang.Agent/soloExecutor
+          test-exec (Executors/newWorkStealingPool 20)]
+      (set-agent-send-executor! test-exec)
+      (set-agent-send-off-executor! test-exec)
+      (def test-state (agent initial-state))
+      (with-instrumentation f)
+      (println "stopping")
+      (send test-state stop!)
+      (set-agent-send-executor! prior-exec)
+      (set-agent-send-off-executor! prior-exec))))
 
 (t/deftest file-utils
   (t/testing "output path fn"
