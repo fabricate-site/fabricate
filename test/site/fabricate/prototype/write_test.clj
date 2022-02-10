@@ -1,5 +1,5 @@
 (ns site.fabricate.prototype.write-test
-  (:require [site.fabricate.prototype.write :refer :all]
+  (:require [site.fabricate.prototype.write :as write :refer :all]
             [site.fabricate.prototype.read :as read]
             [site.fabricate.prototype.fsm :as fsm]
             [site.fabricate.prototype.test-utils :refer [with-instrumentation]]
@@ -13,12 +13,15 @@
             [clojure.test :as t]
             [babashka.curl :as curl]))
 
+(declare test-state)
+
 (t/use-fixtures :once
   (fn [f]
+    (def test-state (agent initial-state))
     (with-instrumentation f)
-    (send state stop!)
-    (shutdown-agents)
-    ))
+    (println "stopping")
+    (send test-state stop!)
+    (shutdown-agents)))
 
 (t/deftest file-utils
   (t/testing "output path fn"
@@ -261,52 +264,60 @@ Some more text")
   ;; the rerender fn works when tested in isolation, but not
   ;; when used via send!
 
-  (t/testing "ability to manage server state using send and draft!"
-    (let [url "http://localhost:9223"]
+  (with-redefs [state test-state]
+    (t/testing "ability to manage server state using send and draft!"
+      (let [url "http://localhost:9223"]
 
-      (println "0. overriding default state")
-      (send state (constantly test-config) )
+        (println "0. overriding default state")
+        (send test-state (constantly test-config))
+        (await test-state)
 
-      (println "1. starting application")
-      (send-off state draft!)
-      (await state)
-      (t/is (#{200 304} (:status (curl/get url)))
-            "Server should start via agent")
+        (t/is (= "./test-resources/fab/inputs/"
+                 (get-in @test-state
+                         [:site.fabricate/settings
+                          :site.fabricate.file/input-dir]))
+              "Default configuration should be overridden")
 
-      (println "2. initial write")
-      (spit "./test-resources/fab/inputs/test-file.html.fab"
-            test-fabricate-str)
-      (await state)
-      (await (:site.fabricate.app/watcher @state))
-      (t/is (not (agent-error state))
-            "File writing should not cause errors in state agent")
-      (t/is (not (agent-error (:site.fabricate.app/watcher @state)))
-            "File writing should not cause errors in watcher agent")
+        (println "1. starting application")
+        (send-off test-state draft!)
+        (await test-state)
+        (t/is (#{200 304} (:status (curl/get url)))
+              "Server should start via agent")
 
-      (Thread/sleep 250)
-      (let [response (curl/get url)]
-        (t/is (re-find #"test\-file\.html" (:body response))
-              "File should display in list of files after rendering"))
-      (t/is (#{200 304} (:status (curl/get (str url "/test-file.html"))))
-            "File should be visible on server")
-      (Thread/sleep 250)
-      (println "3. file update")
-      (spit "./test-resources/fab/inputs/test-file.html.fab"
-            extra-content-str
-            :append true)
-      (await state)
-      (Thread/sleep 250)
-      (t/is (re-find #"four" (:body (curl/get (str url "/test-file.html"))))
-            "File should have contents updated by filewatcher")
+        (println "2. initial write")
+        (spit "./test-resources/fab/inputs/test-file.html.fab"
+              test-fabricate-str)
+        (await test-state)
+        #_(await (:site.fabricate.app/watcher @test-state))
+        (t/is (not (agent-error state))
+              "File writing should not cause errors in state agent")
+        (t/is (not (agent-error (:site.fabricate.app/watcher @test-state)))
+              "File writing should not cause errors in watcher agent")
 
-      (Thread/sleep 250)
-      (println "4. shutdown")
-      (send-off state stop!)
+        (Thread/sleep 250)
+        (let [response (curl/get url)]
+          (t/is (re-find #"test\-file\.html" (:body response))
+                "File should display in list of files after rendering"))
+        (t/is (#{200 304} (:status (curl/get (str url "/test-file.html"))))
+              "File should be visible on server")
+        (Thread/sleep 250)
+        (println "3. file update")
+        (spit "./test-resources/fab/inputs/test-file.html.fab"
+              extra-content-str
+              :append true)
+        (await test-state)
+        (Thread/sleep 250)
+        (t/is (re-find #"four" (:body (curl/get (str url "/test-file.html"))))
+              "File should have contents updated by filewatcher")
 
-      (await state)
+        (Thread/sleep 250)
+        (println "4. shutdown")
+        (send-off test-state stop!)
 
-      (t/is (nil? (:status (curl/get url {:throw false})))
-            "Server should shutdown via agent")))
+        (await test-state)
+
+        (t/is (nil? (:status (curl/get url {:throw false})))
+              "Server should shutdown via agent"))))
 
   (println "deleting test dir")
   (delete-directory-recursive (io/file "test-resources/fab")))

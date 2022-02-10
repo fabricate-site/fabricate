@@ -90,13 +90,13 @@
 
 (defn extended-form->form
   {:malli/schema [:=> [:cat [:schema [:* :string]]] [:* :any]]}
-  [[tag open front-matter [_ forms] close :as ext-form]]
+  [[tag open front-matter [_ & forms] close :as ext-form]]
   (let [delims (str open close)
         parsed-front-matter
         (if (= "" front-matter) '()
             (map (fn [e] {:src (str e) :expr e})
                  (r/read-string (str open front-matter close))))]
-    (with-meta (cond (= delims "[]") (apply conj [] (concat parsed-front-matter [forms]))
+    (with-meta (cond (= delims "[]") (apply conj [] (concat parsed-front-matter forms))
                      (= delims "()") (concat () parsed-front-matter forms))
       (meta ext-form))))
 
@@ -194,8 +194,9 @@
             [:dt "Location"]
             [:dd (lines->msg (meta parsed-expr))]]
            [:details [:summary "Source expression"]
-            [:pre [:code src]]]]
-    display (list [:pre [:code (render-src (or exec expr))]] result)
+            [:pre [:code {:class "language-clojure"} src]]]]
+    display (list [:pre [:code {:class "language-clojure"}
+                         (render-src (or exec expr))]] result)
     :else result))
 
 ;; post-validator should have the following signature
@@ -332,8 +333,8 @@
      :as opts} file-path]
    (let [source-code (slurp file-path)]
      (if details (conj [:details [:summary details]]
-                       [:pre [:code source-code]])
-         [:pre [:code source-code]])))
+                       [:pre [:code {:class "language-clojure"} source-code]])
+         [:pre [:code {:class "language-clojure"} source-code]])))
   ([file-path] (include-source {} file-path)))
 
 (defn include-def

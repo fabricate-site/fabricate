@@ -5,6 +5,7 @@
              [malli.instrument :as mi]
              [hiccup.core :as hiccup]
              [clojure.java.io :as io]
+             [site.fabricate.prototype.read.grammar :refer [template]]
              [site.fabricate.prototype.read :refer :all]))
 
 (defn setup [f]
@@ -93,6 +94,22 @@
              ":div {:class \"col\"}"
              [:form-contents [:txt "some text"]] "]"])))
 
+    (t/is (m/validate parsed-schema
+                      (template "✳//[:div
+✳+=(let [s \"output\"]
+    [:code (format \"a form evaluated and displayed with its %s\" s)]) 🔚
+]//🔚")))
+
+    (t/is (= [{:src ":div", :expr :div} [:txt "\n"] [:expr [:ctrl "+="] "(let [s \"output\"]\n    [:code (format \"a form evaluated and displayed with its %s\" s)]) "] [:txt "\n"]]
+             (-> "✳//[:div
+
+✳+=(let [s \"output\"]
+    [:code (format \"a form evaluated and displayed with its %s\" s)]) 🔚
+]//🔚"
+                 template
+                 second
+                 extended-form->form)))
+
     (t/is (-> "✳=(+ 2 3)🔚"
               read-template
               second
@@ -154,7 +171,7 @@
               (eval-parsed-expr false))))
 
       (t/is
-       (= '([:pre [:code "(+ 4 5)\n"]] 9)
+       (= '([:pre [:code {:class "language-clojure"} "(+ 4 5)\n"]] 9)
           (-> "✳+=(+ 4 5)🔚"
               parse
               first
@@ -178,7 +195,8 @@
             [:dt "Location"]
             [:dd
              '("Line " [:strong 1] ", " "Columns " [:strong 1 "-" 12])]]
-           [:details [:summary "Source expression"] [:pre [:code "((+ 2 3)"]]]]
+           [:details [:summary "Source expression"]
+            [:pre [:code {:class "language-clojure"} "((+ 2 3)"]]]]
           (eval-parsed-expr (first (parse "✳((+ 2 3)🔚")) true))
 
        "Expression parsing errors should be surfaced in the output")
