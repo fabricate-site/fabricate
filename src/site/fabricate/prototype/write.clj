@@ -331,8 +331,6 @@
                 site.fabricate.file/output-dir
                 site.fabricate.file/operations]}
         settings]
-    #_(println "rerendering from state:")
-    #_(prn application-state-map)
     (if (and (#{:create :modify} action)
              (.endsWith (.toString file) template-suffix))
       (let [local-file
@@ -378,9 +376,10 @@
                 [fp (fsm/complete operations fp application-state-map)]))
         fw (do
              (println "establishing file watch")
-             (let [fw (watch-dir
+             (let [state-agent *agent*
+                   fw (watch-dir
                        (fn [f]
-                         (do (send-off state rerender f)))
+                         (do (send-off state-agent rerender f)))
                        (io/file input-dir))]
                #_(set-error-mode! fw :continue)
                fw))
