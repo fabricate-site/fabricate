@@ -12,9 +12,9 @@
   (def parse-eval (comp eval-all parse))
   (require '[site.fabricate.prototype.page :refer [em link]])
   (mi/collect!)
-  #_(mi/instrument!)
+  (mi/instrument!)
   (f)
-  #_(mi/unstrument!))
+  (mi/unstrument!))
 
 (t/use-fixtures :once setup)
 
