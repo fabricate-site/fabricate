@@ -42,7 +42,7 @@
       (t/is (= {:site.fabricate.page/namespace (symbol 'test-ns)
                 :site.fabricate.page/parsed-content
                 [{:exec '(ns test-ns)
-                  :src "(ns test-ns)"}]
+                  :expr-src "(ns test-ns)"}]
                 :site.fabricate.file/filename "content/test-file"
                 :site.fabricate.file/output-extension "txt"
                 :site.fabricate.file/template-suffix ".fab"
@@ -50,7 +50,7 @@
                 :site.fabricate.file/input-file ex-file}
                (populate-page-meta
                 {:site.fabricate.page/parsed-content [{:exec '(ns test-ns)
-                                                       :src "(ns test-ns)"}]
+                                                       :expr-src "(ns test-ns)"}]
                  :site.fabricate.file/input-file ex-file}
                 {:site.fabricate.file/output-dir "./pages"
                  :site.fabricate.file/input-dir "./content"}))))

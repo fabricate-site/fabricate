@@ -223,7 +223,8 @@
    (let [sequence-type (type form)
          res
          (cond
-           (#{:svg :dl} (first form)) form  ; don't detect in SVG elements
+           ; don't detect in specific elements
+           (#{:svg :dl :figure} (first form)) form
            ;; (non-hiccup-seq? form)
            ;; recurse?
            ;; (parse-paragraphs (apply conj default-form form) opts)

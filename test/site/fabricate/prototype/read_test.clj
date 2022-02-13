@@ -48,19 +48,19 @@
   (t/testing "parsed element schema"
     (t/is
      (m/validate parsed-expr-schema
-                 {:src "(+ 3 4)"
+                 {:expr-src "(+ 3 4)"
                   :expr '(+ 3 4)
                   :error nil
                   :result 7}))
     (t/is
      (m/validate parsed-expr-schema
-                 {:src "(+ 3 4)"
+                 {:expr-src "(+ 3 4)"
                   :exec '(+ 3 4)
                   :error nil
                   :result nil}))
     (t/is
      (m/validate parsed-expr-schema
-                 {:src "((+ 3 4)"
+                 {:expr-src "((+ 3 4)"
                   :expr nil
                   :error {:type clojure.lang.ExceptionInfo
                           :cause "Unexpected EOF while reading item 1 of list."
@@ -72,7 +72,7 @@
 
   (t/testing "expression parsing"
     (t/is (= ["text " {:expr '(+ 2 3)
-                       :src "(+ 2 3)"
+                       :expr-src "(+ 2 3)"
                        :display false}]
              (parse "text ✳=(+ 2 3)🔚")))
 
@@ -80,13 +80,13 @@
           "Expression parsing errors should be surfaced")
 
     (t/is (= [{:exec '(+ 2 3)
-               :src "(+ 2 3)"
+               :expr-src "(+ 2 3)"
                :display false}]
              (parse "✳(+ 2 3)🔚")))
 
     (t/is (=
-           [{:src ":div", :expr :div}
-            {:src "{:class \"col\"}", :expr {:class "col"}}
+           [{:expr-src ":div", :expr :div}
+            {:expr-src "{:class \"col\"}", :expr {:class "col"}}
             [:txt "some text"]]
            (extended-form->form
             [:extended-form
@@ -100,7 +100,7 @@
     [:code (format \"a form evaluated and displayed with its %s\" s)]) 🔚
 ]//🔚")))
 
-    (t/is (= [{:src ":div", :expr :div} [:txt "\n"] [:expr [:ctrl "+="] "(let [s \"output\"]\n    [:code (format \"a form evaluated and displayed with its %s\" s)]) "] [:txt "\n"]]
+    (t/is (= [{:expr-src ":div", :expr :div} [:txt "\n"] [:expr [:ctrl "+="] "(let [s \"output\"]\n    [:code (format \"a form evaluated and displayed with its %s\" s)]) "] [:txt "\n"]]
              (-> "✳//[:div
 
 ✳+=(let [s \"output\"]
@@ -145,15 +145,15 @@
   (t/testing "evaluation of parsed expressions"
     (t/testing ": single exprs"
       (t/is (= 5 (eval-parsed-expr (first (parse "✳=(+ 2 3)🔚")) true)))
-      (t/is (= {:expr '(+ 2 3), :src "(+ 2 3)", :error nil, :result 5
+      (t/is (= {:expr '(+ 2 3), :expr-src "(+ 2 3)", :error nil, :result 5
                 :display false}
                (eval-parsed-expr (first (parse "✳=(+ 2 3)🔚")) false)))
       (t/is (= nil
-               (eval-parsed-expr {:exec '(def myvar 3) :src "(def myvar 3)"}
+               (eval-parsed-expr {:exec '(def myvar 3) :expr-src "(def myvar 3)"}
                                  true)))
 
       (t/is (= {:exec '(def something 23)
-                :src "(def something 23)"
+                :expr-src "(def something 23)"
                 :result [:pre [:code {:class "language-clojure"} "(def something 23)"]]
                 :error nil
                 :display true}
@@ -163,7 +163,7 @@
                    (eval-parsed-expr false))))
 
       (t/is
-       (= {:src "(+ 4 5)" :display true
+       (= {:expr-src "(+ 4 5)" :display true
            :expr '(+ 4 5) :result 9 :error nil}
           (-> "✳+=(+ 4 5)🔚"
               parse
@@ -236,6 +236,15 @@
                (let [parsed (parse "✳(ns test-form-ns)🔚 baz ✳(def var 3)🔚 foo ✳=var🔚")]
                  (eval-all parsed)))
             "In-form defs should be evaluated successfully.")
+
+      (t/is (= [[:figure [:img {:src "https://upload.wikimedia.org/wikipedia/commons/9/90/Pterodroma_mollis_light_morph_-_SE_Tasmania_2019.jpg"} ]
+                 [:figcaption "soft-plumaged petrel"]]]
+               (->  "✳=[:figure [:img {:src \"https://upload.wikimedia.org/wikipedia/commons/9/90/Pterodroma_mollis_light_morph_-_SE_Tasmania_2019.jpg\"} ]
+                [:figcaption \"soft-plumaged petrel\"]]🔚"
+                    parse
+                    eval-all))
+            "evaluation should not remove content from forms")
+
       (let [ex-file (-> "README.md.fab"
                         slurp
                         (parse {:filename "README.md.fab"})
@@ -266,7 +275,7 @@
     (t/testing ": error messages"
       (t/is
        (= [:div 5]
-          (eval-all [:div {:expr '(+ 2 3), :src "✳=(+ 2 3)🔚", :error nil, :result nil}]))))))
+          (eval-all [:div {:expr '(+ 2 3), :expr-src "✳=(+ 2 3)🔚", :error nil, :result nil}]))))))
 
 (t/deftest source-code-transforms
   (t/testing "source printing"
