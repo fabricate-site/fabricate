@@ -288,7 +288,19 @@
 
     (t/is
      (=  [:section [:p "some text"] [:p "with newlines"]]
-         (parse-paragraphs [:section "some text\n\nwith newlines"])))))
+         (parse-paragraphs [:section "some text\n\nwith newlines"])))
+
+    (t/is
+     (=  [:img {:src "https://upload.wikimedia.org/wikipedia/commons/9/90/Pterodroma_mollis_light_morph_-_SE_Tasmania_2019.jpg"} [:p "with newlines"]]
+         (parse-paragraphs
+          [:img {:src "https://upload.wikimedia.org/wikipedia/commons/9/90/Pterodroma_mollis_light_morph_-_SE_Tasmania_2019.jpg"} [:p "with newlines"]])))
+
+    (t/is
+     (=  [:figure [:img {:src "https://upload.wikimedia.org/wikipedia/commons/9/90/Pterodroma_mollis_light_morph_-_SE_Tasmania_2019.jpg"}]
+          [:figcaption "soft-plumaged petrel"]]
+         (parse-paragraphs
+          [:figure [:img {:src "https://upload.wikimedia.org/wikipedia/commons/9/90/Pterodroma_mollis_light_morph_-_SE_Tasmania_2019.jpg"}]
+           [:figcaption "soft-plumaged petrel"]])))))
 
 (defspec paragraph-detection-output
   (prop/for-all

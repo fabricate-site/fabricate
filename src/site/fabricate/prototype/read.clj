@@ -39,7 +39,7 @@
 (def parsed-expr-schema
   (m/schema
    [:map
-    [:src {:doc "The source expression as a string"} :string]
+    [:expr-src {:doc "The source expression as a string"} :string]
     [:expr {:doc "An expression intended to have its results embedded in the resulting text."
             :optional true} :any]
     [:exec {:optional true
@@ -72,7 +72,7 @@
                     em
                     [:cause :data])))}))
         m (with-meta
-            (merge {:src (if (vector? form-or-ctrl?) form? form-or-ctrl?)
+            (merge {:expr-src (if (vector? form-or-ctrl?) form? form-or-ctrl?)
                     :display false}
                    (if (or (:error read-results) (::parse-error read-results))
                      (assoc read-results :expr nil)))
@@ -94,7 +94,7 @@
   (let [delims (str open close)
         parsed-front-matter
         (if (= "" front-matter) '()
-            (map (fn [e] {:src (str e) :expr e})
+            (map (fn [e] {:expr-src (str e) :expr e})
                  (r/read-string (str open front-matter close))))]
     (with-meta (cond (= delims "[]") (apply conj [] (concat parsed-front-matter forms))
                      (= delims "()") (concat () parsed-front-matter forms))
@@ -180,7 +180,7 @@
   "If the form has no errors, return its results.
   Otherwise, create a hiccup form describing the error."
   {:malli/schema [:=> [:cat parsed-expr-schema] [:or error-form-schema :any]]}
-  [{:keys [src exec expr error result display]
+  [{:keys [expr-src exec expr error result display]
     :as parsed-expr}]
   (cond
     error [:div [:h6 "Error"]
@@ -194,7 +194,7 @@
             [:dt "Location"]
             [:dd (lines->msg (meta parsed-expr))]]
            [:details [:summary "Source expression"]
-            [:pre [:code {:class "language-clojure"} src]]]]
+            [:pre [:code {:class "language-clojure"} expr-src]]]]
     display (list [:pre [:code {:class "language-clojure"}
                          (render-src (or exec expr))]] result)
     :else result))
@@ -207,7 +207,7 @@
   {:malli/schema
    [:=> [:cat parsed-expr-schema :boolean [:fn fn?]]
     [:or :map :any]]}
-  ([{:keys [src expr exec error result display
+  ([{:keys [expr-src expr exec error result display
             fabricate.read/parse-error]
      :as expr-map} simplify? post-validator]
    (let [evaluated-expr-map
@@ -237,10 +237,10 @@
        (or error (:error res)) (assoc res :result (form->hiccup res))
        (and simplify? display expr) (form->hiccup res)
        (and exec display simplify?)
-       [:pre [:code {:class "language-clojure"} src]]
+       [:pre [:code {:class "language-clojure"} expr-src]]
        (and exec display)
        (assoc (merge expr-map res)
-              :result [:pre [:code {:class "language-clojure"} src]])
+              :result [:pre [:code {:class "language-clojure"} expr-src]])
        (and expr simplify? (:result res)) ; nil is overloaded here
        (:result res)
        (and exec simplify?) nil
@@ -312,7 +312,6 @@
      [:=> [:cat #_[:schema parsed-schema] [:vector :any] :boolean] [:vector :any]]
      [:=> [:cat #_[:schema parsed-schema] [:vector :any] :boolean :symbol]
       [:vector :any]]])}
-
   ([parsed-form simplify? nmspc]
    (let [form-nmspc (yank-ns parsed-form)
          nmspc (if form-nmspc (create-ns form-nmspc) *ns*)]
