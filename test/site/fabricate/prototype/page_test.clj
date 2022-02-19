@@ -255,6 +255,30 @@
         [:em "with emphasis added"]
         "and\n\nlinebreak"])))
 
+    (t/is (= (list
+              [:h3 "header"]
+              [:p "some preliminary text"]
+              [:p " followed by a double linebreak, " [:code "with inline code"]
+               " and more text following, in the same paragraph"]
+              [:h3 "and another header"])
+             (parse-paragraphs
+              (list [:h3 "header"]
+                    "some preliminary text\n\n followed by a double linebreak, "
+                    (in-code "with inline code")
+                    " and more text following, in the same paragraph"
+                    [:h3 "and another header"])) ))
+
+    (t/is (=
+           '([:h2 "a header"]
+             [:p "Some starting text, with some code thrown in. "]
+             [:p "This the code: " [:code "some code"] "There's more text afterwards." [:br]])
+           (parse-paragraphs
+            (list
+             [:h2 "a header"]
+             "\n\nSome starting text, with some code thrown in. \n\nThis the code: "
+             [:code "some code"]
+             "There's more text afterwards.\n\n"))))
+
     (t/is
      (=
       [:div
