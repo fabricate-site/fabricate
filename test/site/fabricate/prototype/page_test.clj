@@ -271,7 +271,7 @@
     (t/is (=
            '([:h2 "a header"]
              [:p "Some starting text, with some code thrown in. "]
-             [:p "This the code: " [:code "some code"] "There's more text afterwards." [:br]])
+             [:p "This the code: " [:code "some code"] "There's more text afterwards."])
            (parse-paragraphs
             (list
              [:h2 "a header"]
