@@ -266,6 +266,7 @@
                            (if (= 1 (count r)) (conj (into [] r) [:br]) r)))
                   ;; corner case: trailing paragraph-pattern
                   (and (string? next) (re-find paragraph-pattern next)
+                       (not previous-paragraph?)
                        (not current-paragraph?)
                        (final-match? paragraph-pattern next))
                   (conj acc [:p (first (string/split next paragraph-pattern)) [:br]])

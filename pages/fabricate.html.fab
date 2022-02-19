@@ -21,10 +21,11 @@
                    :line-height "1.25"
                    :max-width "60ch"
                    :box-sizing "border-box"
-                   :background-color "#7DA4B4"}]
+                   :background-color "#EEE"}]
             [:h1 :h2 :h3 :h4 :h5 :h6 {:font-family "Epilogue"
                                       :text-transform "uppercase"}
              [:code {:text-transform "none"}]]
+            #_[:hr {:background-color ""}]
             [:html :body :div :header :article :nav :main :footer
              {:max-width "none"}]
             [:h1 {:font-size (str (Math/pow 1.618033 3) "em")
@@ -36,7 +37,7 @@
                   :margin-top (str (Math/pow 1.618033 -2) "em")
                   :margin-bottom "0em"}]
             [:h3 :h4 :h5 :h6 {:margin-bottom "0em"}]
-            [:hr {:border "0.25em solid black"}]
+            [:hr {:border "0.25em solid #B4501D"}]
             [:dt {:margin-top "0em"}]
             [:dd {:margin-top "0em"}]
             [:code {:font-family "Overpass Mono"}]
@@ -49,10 +50,8 @@
 ✳(def metadata {:title "Fabricate"
                :page-style page-css} )🔚
 
-✳=[:h1 (:title metadata)]🔚
-
-✳=[:h4 "form by art and labor"]🔚
-
+✳= [:div [:h1 (:title metadata)] [:hr]
+    [:h4 "form by art and labor"]]🔚
 
 Introducing fabricate, a Clojure library for making static websites, using Clojure.
 
@@ -60,12 +59,20 @@ Fabricate takes a different approach than markdown and notebook-based tools, whi
 
 Rather than deriving the layout from a generic approach that treats "code blocks" and "text" as distinct entities, Fabricate lets you embed the results of any expression right in the text, eschewing markup formats in favor of inline Hiccup elements.
 
-Because Fabricate is a compositional and creative medium, it expects its users to take an active role in thinking about how their code and its results ought to be displayed.
 
-This may not suit your use case; you may prefer to just generate some HTML from the library you need to document and get back to triaging GitHub issues.
+✳=[:div [:h2 "Examples"] [:hr]]🔚
 
-✳=[:hr]🔚
-✳=[:h2 "Namespaces"]🔚
+✳//[:div
+
+✳+=(let [s "output"]
+    [:code (format "a form evaluated and displayed with its %s" s)]) 🔚
+
+]//🔚
+
+Block starts here: it should contain the quote "The web is a conduit for primarily textual information supplemented by media such as images and videos, often referred to collectively as content.", a basic example of fabricate's syntax (input above, output below)
+
+
+✳= [:div [:h2 "Namespaces"] [:hr]]🔚
 
 The namespace descriptions, automatically generated from the namespace definitions, introduce the functionality that fabricate assembles to create pages.
 
@@ -85,19 +92,8 @@ The namespace descriptions, automatically generated from the namespace definitio
                 ['site.fabricate.prototype.schema
                  'site.fabricate.prototype.html
                  'site.fabricate.prototype.read
+                 'site.fabricate.prototype.read.grammar
                  'site.fabricate.prototype.page
                  'site.fabricate.prototype.fsm
                  'site.fabricate.prototype.write]))]
 🔚
-
-✳=[:hr]🔚
-✳=[:h2 "Examples"]🔚
-
-
-✳+(def ex-form "a form evaluated but displayed without its output")🔚
-
-✳+=(let [s "output"]
-    (format "a form evaluated and displayed with its %s" s)) 🔚
-
-
-Block starts here: it should contain the quote "The web is a conduit for primarily textual information supplemented by media such as images and videos, often referred to collectively as content.", a basic example of fabricate's syntax (input above, output below)
