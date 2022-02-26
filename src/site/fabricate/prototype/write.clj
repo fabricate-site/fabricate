@@ -370,27 +370,30 @@
   (let [{:keys [site.fabricate.file/input-dir
                 site.fabricate.file/template-suffix
                 site.fabricate.file/operations]} settings
+        srv (future (do
+                      (println "launching server")
+                      (server/start (:site.fabricate.server/config settings))))
         written-pages
-        (into {}
-              (for [fp (get-template-files input-dir template-suffix) ]
-                [fp (fsm/complete operations fp application-state-map)]))
-        fw (do
-             (println "establishing file watch")
-             (let [state-agent *agent*
-                   fw (watch-dir
-                       (fn [f]
-                         (do (send-off state-agent rerender f)))
-                       (io/file input-dir))]
-               #_(set-error-mode! fw :continue)
-               fw))
-        srv (do
-              (println "launching server")
-              (server/start (:site.fabricate.server/config settings)))]
+        (future
+          (->> (get-template-files input-dir template-suffix)
+               (pmap (fn [fp] [fp (fsm/complete operations fp application-state-map)]))
+               (into {})))
+        fw
+        (future
+          (do
+            (println "establishing file watch")
+            (let [state-agent *agent*
+                  fw (watch-dir
+                      (fn [f]
+                        (do (send-off state-agent rerender f)))
+                      (io/file input-dir))]
+              #_(set-error-mode! fw :continue)
+              fw)))]
     (assoc
      application-state-map
-     :site.fabricate/pages written-pages
-     :site.fabricate.app/watcher fw
-     :site.fabricate.app/server srv)))
+     :site.fabricate/pages @written-pages
+     :site.fabricate.app/watcher @fw
+     :site.fabricate.app/server @srv)))
 
 (defn publish!
   {:malli/schema
