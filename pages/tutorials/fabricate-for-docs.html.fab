@@ -1,0 +1,36 @@
+✳(ns site.fabricate.docs.tutorials.documentation
+  (:require
+            [garden.selectors :refer [root]]
+            [garden.stylesheet :as stylesheet]
+            [site.fabricate.prototype.page])) 🔚
+
+✳(def metadata {:title "Tutorial: Creating Documentation for Clojure Projects with Fabricate"})🔚
+
+✳= [:div [:h1 (:title metadata)] [:hr]]🔚
+
+What you'll learn in this tutorial:
+
+- How to use Fabricate alongside your own code to document your project.
+
+
+What you'll need to get started:
+
+- A Clojure project
+
+- An installation of the Clojure CLI and tools.deps (any version after 1.10.302)
+
+- If your project already uses ✳=[:code "deps.edn"]🔚 and ✳=[:code "tools.deps"]🔚 you won't need to make any configuration changes apart from adding an alias. If you use lein or boot, you'll need to do a bit more setup.
+
+✳= [:div [:h4 "Steps"] ]🔚
+
+✳= [:ol [:li [:b "Add an alias for Fabricate"]
+           [:br] "You can add Fabricate as a tool to your project without adding it as a dependency."]
+[:li [:b "Create folders for input documents and output HTML"] [:br] "Fabricate needs dedicated folders for its content."]
+[:li [:b "Create your first page template: an introduction to your library"] [:br] "Plain text isn't a bad place to start describing your library."]
+  [:li [:b "Generate a HTML page from the first template"] [:br] "Use Fabricate to see your writing in action."]
+  [:li [:b "Create your second page template: an overview of the API for a namespace"] [:br] "This is how you'll use more of Clojure and Fabricate together to automatically derive documentation from Clojure source code and metadata."]
+  [:li [:b "Create an index for your documentation"] [:br] "Tie multiple pages together by linking between them."]
+
+
+]🔚
+
