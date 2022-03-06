@@ -1,36 +1,154 @@
 ✳(ns site.fabricate.docs.tutorials.documentation
   (:require
-            [garden.selectors :refer [root]]
+[garden.core  :as garden]
+[garden.selectors :as select]
             [garden.stylesheet :as stylesheet]
             [site.fabricate.prototype.page])) 🔚
 
-✳(def metadata {:title "Tutorial: Creating Documentation for Clojure Projects with Fabricate"})🔚
+✳(def page-style
+  (garden/css (stylesheet/at-import "https://fonts.googleapis.com/css2?family=Spline+Sans:wght@300..700&display=swap")
+              [:article {:font-family "'Spline Sans', sans-serif"
+                         :font-size "22px"
+                         :color "#222"
+                         :line-height "1.45em"
+                         :max-width "70ch"}]
+              [:html {:background-color "#DAD1C2"}]
+              [:pre {:background-color "#EEE"}
+               [:ins {:text-decoration "none" :background-color "#ADC3A2"}]
+               [(select/ins select/before) {:position "relative"
+                                            :background-color "#EEE"
+                                            :font-weight "700"
+                                            :content "\"+\""}]
+               [(select/ins select/after) {:content "\"\"" :display "block"}]]
+               [:a {:margin-bottom "0em"
+                   :text-decoration "none"
+                   :color "#337E80"}]
+[:.repl [(select/code select/before) {:position "relative"
+:content "\"user> \""}]
+
+[(select/code select/after ) {:content "\"\"" :display "block"}]]
+[:.shell [(select/code select/before) {:position "relative" :content "\"$ \""}]]
+        ))🔚
+
+✳(def metadata {:title "Tutorial: Creating Documentation for Clojure Projects with Fabricate" :page-style page-style})🔚
 
 ✳= [:div [:h1 (:title metadata)] [:hr]]🔚
 
-What you'll learn in this tutorial:
+✳=[:h2 "Introduction"]🔚
+✳=[:h3 "What you'll learn in this tutorial:"]🔚
+
 
 - How to use Fabricate alongside your own code to document your project.
 
+✳=[:h3 "What you'll need to get started:"]🔚
 
-What you'll need to get started:
 
 - A Clojure project
 
-- An installation of the Clojure CLI and tools.deps (any version after 1.10.302)
+- An installation of the Clojure CLI and tools.deps (any version after 1.10.1.697)
 
-- If your project already uses ✳=[:code "deps.edn"]🔚 and ✳=[:code "tools.deps"]🔚 you won't need to make any configuration changes apart from adding an alias. If you use lein or boot, you'll need to do a bit more setup.
-
-✳= [:div [:h4 "Steps"] ]🔚
-
-✳= [:ol [:li [:b "Add an alias for Fabricate"]
-           [:br] "You can add Fabricate as a tool to your project without adding it as a dependency."]
-[:li [:b "Create folders for input documents and output HTML"] [:br] "Fabricate needs dedicated folders for its content."]
-[:li [:b "Create your first page template: an introduction to your library"] [:br] "Plain text isn't a bad place to start describing your library."]
-  [:li [:b "Generate a HTML page from the first template"] [:br] "Use Fabricate to see your writing in action."]
-  [:li [:b "Create your second page template: an overview of the API for a namespace"] [:br] "This is how you'll use more of Clojure and Fabricate together to automatically derive documentation from Clojure source code and metadata."]
-  [:li [:b "Create an index for your documentation"] [:br] "Tie multiple pages together by linking between them."]
+If your project already uses ✳=[:code "deps.edn"]🔚 and ✳=[:code "tools.deps"]🔚 you won't need to make any configuration changes apart from adding an alias. If you use lein or boot, you'll need to do a bit more setup. Lein and boot support are covered in separate guides.
 
 
+✳=[:h3 "What you'll have when you're done:"]🔚
+
+Some published documentation, hosted with your project, that you can automatically update when your project changes.
+
+✳=  [:h3 "How this tutorial works"] 🔚
+
+We'll be doing all the setup we need to do from the Clojure REPL. As long as you can customize how you start your REPL, you can follow the tutorial regardless of which editor or operating system you use.
+
+✳(def steps
+[{:step/name "Add an alias for Fabricate"
+:step/summary "You can add Fabricate as a tool to your project without adding it as a dependency." :step/slug "step-alias"}
+{:step/name "Create folders for input documents and output HTML"
+:step/summary "Fabricate needs dedicated folders for its content."
+:step/slug "step-folders"}
+{:step/name "Create your first page template: an introduction to your library" :step/summary "Plain text isn't a bad place to start describing your library." :step/slug "step-intro-page"}
+{:step/name "Generate a HTML page from the first template"
+:step/slug "step-generate-html" :step/summary "Use Fabricate to see your writing in action."}
+{:step/name "Create your second page template: an overview of the API for a namespace" :step/slug "step-api-page" :step/summary "This is how you'll use more of Clojure and Fabricate together to automatically derive documentation from Clojure source code and metadata."}
+{:step/name "Create an index for your documentation" :step/summary "Tie multiple pages together by linking between them." :step/slug "step-index"}
+{:step/name "Push your documentation to GitHub pages" :step/summary "Publish your docs alongside your project." :step/slug "step-publish"}
+]
+) 🔚
+✳= [:h2 "Steps"] 🔚
+
+✳= (into [:ol {:class "steps"}]
+       (for [{:keys [step/name step/slug step/summary]} steps] [:li {:class "step"} [:b [:a {:href (str "#" slug) } name]] summary]) ) 🔚
+
+
+✳= (let [n 0 step (nth steps n)]
+     [:h3 {:id (:step/slug step)} (str "Step " (inc n) ": " (:step/name step))]) 🔚
+
+In your Clojure project's folder, you will have a file called ✳=[:code "deps.edn"]🔚. This file contains data used to define information about your project, like the libraries it depends upon, functions that can be used from the Clojure command-line-interface, and where the project's source code and resources can be found.
+
+This file is just an EDN map, defining in plain text an associative array much like Clojure's own hash maps. If you've used JSON before, you can think of EDN like Clojure's version of JSON. The important part is this file maps from certain keys to values - you can add Fabricate to the project by updating the ✳=[:code ":aliases"]🔚 key with a new key. You might already have aliases defined for your project, in which case you'll add another one for Fabricate. If you don't, then you can just add an ✳=[:code ":aliases"]🔚 key with the same information.
+
+
+✳//[:div {:style (garden/style {:display "flex" :font-size "0.85em"})}
+
+✳= [:div {:style (garden/style {:flex "50%"})}
+[:h5 "If you already have aliases defined"]
+[:pre [:code {:class "language-clojure"}
+       ":aliases {
+:test {:extra-paths [\"test\"]
+   :extra-deps org.clojure/test.check {:mvn/version \"1.1.0\"}}" [:br]
+       [:ins
+       ":fabricate {:extra-deps site.fabricate/fabricate"]
+[:ins
+"    {:git/url \"https://github.com/fabricate-site/fabricate/\""]
+[:ins "     :sha \"7fb30c0ead0c03ef0cc4c0133a2329752e0db37b\"}}"]
+        "}"
+       ]]]🔚
+
+
+✳= [:div {:style (garden/style {:flex "50%"})}
+[:h5 "If your project doesn't have aliases defined yet"]
+[:pre [:code {:class "language-clojure"}
+"…" [:br]
+      [:ins ":aliases {"]
+       [:ins
+       ":fabricate {:extra-deps site.fabricate/fabricate"]
+[:ins
+"    {:git/url \"https://github.com/fabricate-site/fabricate/\""]
+[:ins "     :sha \"7fb30c0ead0c03ef0cc4c0133a2329752e0db37b\"}}"]
+[:ins "}"] "…"
+       ]]]🔚
+
+]//🔚
+
+Once you have this alias, you can test it by launching your Clojure REPL with it:
+
+✳=[:pre {:class "shell"} [:code  "clojure -A:fabricate -X:clojure.main/main"]]🔚
+
+You'll use this REPL for the rest of the tutorial.
+
+✳= (let [n 1 step (nth steps n)]
+     [:h3 {:id (:step/slug step)} (str "Step " (inc n) ": " (:step/name step))]) 🔚
+
+Run the following commands in your REPL:
+
+
+✳=[:pre {:class "repl"}
+[:code {:class "language-clojure"} "(require '[clojure.java.io :as io])"]
+[:code {:class "language-clojure"} "(io/make-parents \"./pages/intro.html.fab\")"]
+[:code {:class "language-clojure"} "(io/make-parents \"./docs/\")"]
 ]🔚
 
+Make sure the files and folders got created:
+
+✳=[:pre {:class "repl"}
+[:code {:class "language-clojure"} "(.exists (io/file \"./pages/intro.html.fab\"))"]
+[:code {:class "language-clojure"} "(let [f (io/file \"./docs/\")]
+(and (.exists f) (.isDirectory f)))"]
+]🔚
+
+The results for both of those commands should be ✳=[:code "true"]🔚.
+
+✳= (let [n 2 step (nth steps n)]
+     [:h3 {:id (:step/slug step)} (str "Step " (inc n) ": " (:step/name step))]) 🔚
+
+You might already have some text in a ✳=[:code "README"]🔚 file somewhere; that's a great starting point. If you don't, take a few minutes to think about the purpose of your code and how to communicate the purpose of that code to someone unfamiliar with it. Try to empathize with someone who might know a bit about Clojure, but knows nothing at all about your library and might be confused by it.
+
+Now you're ready to write. Open the file you created in your editor.
