@@ -410,7 +410,7 @@
            [:head
             [:title (str (:site-title page-meta) " | " title)]
             [:link {:rel "stylesheet" :href "https://raw.githubusercontent.com/jensimmons/cssremedy/master/css/remedy.css"}]
-            [:link {:rel "stylesheet" :href "css/extras.css"}]]
+            [:link {:rel "stylesheet" :href "/css/extras.css"}]]
            (concat (opengraph-enhance
                     ogp-properties
                     (map ->meta page-meta))
