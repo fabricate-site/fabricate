@@ -1,5 +1,7 @@
 ✳(ns site.fabricate.docs.tutorials.documentation
-  (:require
+(:require
+[clojure.string :as str]
+[site.fabricate.prototype.read.grammar :as grammar]
 [garden.core  :as garden]
 [garden.selectors :as select]
             [garden.stylesheet :as stylesheet]
@@ -10,8 +12,12 @@
               [:article {:font-family "'Spline Sans', sans-serif"
                          :font-size "22px"
                          :color "#222"
+                         :margin-left "2em"
                          :line-height "1.45em"
                          :max-width "70ch"}]
+[:aside {:margin-left "3.5em" :font-size "0.8em" :font-weight "400"}]
+[(select/aside select/before) {:content "\"🤔\"" :left "0" :position "absolute" :padding "0.9rem" :margin-left "5em"}]
+              [:h1 :h2 :h3 :h4 :h5 :h6 {:font-weight "700"}]
               [:html {:background-color "#DAD1C2"}]
               [:pre {:background-color "#EEE"}
                [:ins {:text-decoration "none" :background-color "#ADC3A2"}]
@@ -20,15 +26,15 @@
                                             :font-weight "700"
                                             :content "\"+\""}]
                [(select/ins select/after) {:content "\"\"" :display "block"}]]
-               [:a {:margin-bottom "0em"
+              [:a {:margin-bottom "0em"
                    :text-decoration "none"
                    :color "#337E80"}]
-[:.repl [(select/code select/before) {:position "relative"
-:content "\"user> \""}]
+              [:.repl [(select/code select/before) {:position "relative"
+                                                    :content "\"user> \""}]
 
-[(select/code select/after ) {:content "\"\"" :display "block"}]]
-[:.shell [(select/code select/before) {:position "relative" :content "\"$ \""}]]
-        ))🔚
+               [(select/code select/after ) {:content "\"\"" :display "block"}]]
+              [:.shell [(select/code select/before) {:position "relative" :content "\"$ \""}]]
+              ))🔚
 
 ✳(def metadata {:title "Tutorial: Creating Documentation for Clojure Projects with Fabricate" :page-style page-style})🔚
 
@@ -67,9 +73,9 @@ We'll be doing all the setup we need to do from the Clojure REPL. As long as you
 {:step/name "Create your first page template: an introduction to your library" :step/summary "Plain text isn't a bad place to start describing your library." :step/slug "step-intro-page"}
 {:step/name "Generate a HTML page from the first template"
 :step/slug "step-generate-html" :step/summary "Use Fabricate to see your writing in action."}
-{:step/name "Create your second page template: an overview of the API for a namespace" :step/slug "step-api-page" :step/summary "This is how you'll use more of Clojure and Fabricate together to automatically derive documentation from Clojure source code and metadata."}
-{:step/name "Create an index for your documentation" :step/summary "Tie multiple pages together by linking between them." :step/slug "step-index"}
-{:step/name "Push your documentation to GitHub pages" :step/summary "Publish your docs alongside your project." :step/slug "step-publish"}
+#_{:step/name "Create your second page template: an overview of the API for a namespace" :step/slug "step-api-page" :step/summary "This is how you'll use more of Clojure and Fabricate together to automatically derive documentation from Clojure source code and metadata."}
+#_{:step/name "Create an index for your documentation" :step/summary "Tie multiple pages together by linking between them." :step/slug "step-index"}
+#_{:step/name "Push your documentation to GitHub pages" :step/summary "Publish your docs alongside your project." :step/slug "step-publish"}
 ]
 ) 🔚
 ✳= [:h2 "Steps"] 🔚
@@ -86,9 +92,9 @@ In your Clojure project's folder, you will have a file called ✳=[:code "deps.e
 This file is just an EDN map, defining in plain text an associative array much like Clojure's own hash maps. If you've used JSON before, you can think of EDN like Clojure's version of JSON. The important part is this file maps from certain keys to values - you can add Fabricate to the project by updating the ✳=[:code ":aliases"]🔚 key with a new key. You might already have aliases defined for your project, in which case you'll add another one for Fabricate. If you don't, then you can just add an ✳=[:code ":aliases"]🔚 key with the same information.
 
 
-✳//[:div {:style (garden/style {:display "flex" :font-size "0.85em"})}
+✳//[:div {:style (garden/style {:display "flex" :gap "10px" :font-size "0.85em"})}
 
-✳= [:div {:style (garden/style {:flex "50%"})}
+✳= [:div {:style (garden/style {:flex "40%"})}
 [:h5 "If you already have aliases defined"]
 [:pre [:code {:class "language-clojure"}
        ":aliases {
@@ -103,7 +109,7 @@ This file is just an EDN map, defining in plain text an associative array much l
        ]]]🔚
 
 
-✳= [:div {:style (garden/style {:flex "50%"})}
+✳= [:div {:style (garden/style {:flex "40%"})}
 [:h5 "If your project doesn't have aliases defined yet"]
 [:pre [:code {:class "language-clojure"}
 "…" [:br]
@@ -151,4 +157,62 @@ The results for both of those commands should be ✳=[:code "true"]🔚.
 
 You might already have some text in a ✳=[:code "README"]🔚 file somewhere; that's a great starting point. If you don't, take a few minutes to think about the purpose of your code and how to communicate the purpose of that code to someone unfamiliar with it. Try to empathize with someone who might know a bit about Clojure, but knows nothing at all about your library and might be confused by it.
 
-Now you're ready to write. Open the file you created in your editor.
+Now you're ready to write. Open the file you created in your editor. Here's a basic structure you can get started with:
+
+✳(def example-lines
+  (mapv #(format % (first grammar/delimiters) (last grammar/delimiters))
+        ["%1$s(ns my-library.docs.intro)%2$s"
+         "%1$s(def metadata {:title \"Intro to my library\"})%2$s"
+         "%1$s=[:h1 (:title metadata)] %2$s"
+"This document gives an overview of the library."]))🔚
+
+✳=[:pre [:code (str/join "\n\n" example-lines)]]🔚
+
+The first three lines are Fabricate blocks, which contain Clojure code. They start with the ✳=(first grammar/delimiters)🔚 emoji and end with the ✳=(last grammar/delimiters)🔚 emoji. Usually they contain only one expression each. The last line is plain text. This is a short snippet, but it contains a few important ideas about Fabricate, so it's worth going through it line-by-line and seeing why each of these lines matters to the final page.
+
+✳=[:h5 "Line 1: Each page is a namespace"]🔚
+✳=[:pre [:code (nth example-lines 0)]]🔚
+
+In Fabricate, pages are organized and kept separate from one another by using the same method used to organize ordinary Clojure code: ✳=[:a {:href "https://clojure.org/reference/namespaces"} "namespaces"]🔚. You can require libraries, define variables, and do anything you'd do in an ordinary Clojure file in a Fabricate file. Just like an ordinary Clojure file, it's sensible to begin a Fabricate file with a namespace declaration.
+
+✳=[:aside "In Fabricate, each block is evaluated by itself, in order - the same way that forms are " [:a {:href "https://clojure.org/reference/evaluation"} "evaluated"] " in Clojure."]🔚
+
+For more context on how Fabricate uses the file you're writing in to produce a page, you can see the reference docs "anatomy of a Fabricate page template" and "the Fabricate reading process".
+
+✳=[:h5 "Line 2: One variable is special: " [:code "metadata"]]🔚
+✳=[:pre [:code (nth example-lines 1)]]🔚
+
+The ✳=[:code "metadata"]🔚 variable tells Fabricate about the page itself: what its title is, whether it should define any custom CSS, or load any JavaScript. The most visible use of this variable is to set the HTML document ✳=[:code "&lttitle&gt"]🔚 tag using the ✳=[:code ":title"]🔚 keyword, so the web browser can give the page a title.
+
+This variable is one of the few that you have to pay special attention to in order to use Fabricate correctly. If you ignore or mess with this variable, things might break!
+
+✳=[:aside "If you want to add your own keys to this map that don't overlap with the keys Fabricate already uses - that's always OK. You can and should enhance this with your own metadata if you feel it would be useful."]🔚
+
+✳=[:h5 "Line 3: Use = to produce output"]🔚
+✳=[:pre [:code (nth example-lines 2)]]🔚
+
+This is where Fabricate first produces the contents of the HTML page; by including ✳=[:code "="]🔚 after the ✳=(first grammar/delimiters)🔚 emoji, the input file is telling Fabricate to include the result in the page - in this case, a header with the title defined in the ✳=[:code "metadata"]🔚 variable.
+
+The first two Fabricate expressions in the example code don't produce anything in the output. These are functions that are usually run for their side-effects: declaring the namespace of a page for the first line, and defining a variable by binding the ✳=[:code "metadata"]🔚 symbol to the hash-map: ✳=[:code "{:title \"Intro to my library\"}"]🔚.
+
+This expression is how Fabricate lets you use all of HTML inline, with the full power of Clojure to create and mold it.
+
+✳=[:h5 "Line 4: Your own writing"]🔚
+✳=[:pre [:code (nth example-lines 3)]]🔚
+
+Beyond this, it's up to you! Fabricate gives you some tools to help you along, but doesn't impose much of a structure on you. You can define the page you're writing, and the functions you use to help you write, however you see fit.
+
+You should change this line to reflect what your library can do for its users, and what might make it unique.
+
+✳= (let [n 3 step (nth steps n)]
+     [:h3 {:id (:step/slug step)} (str "Step " (inc n) ": " (:step/name step))]) 🔚
+
+Run Fabricate's ✳=[:code "publish!"]🔚 function from the  ✳=[:code "site.fabricate.prototype.write"]🔚 namespace.
+
+You can do this from your REPL, as before:
+
+✳=[:pre {:class "repl"} [:code "(require '[site.fabricate.prototype.write :as write])"]
+[:code "(write/publish! {:files [\"./pages/intro.html.fab\"]})"]
+]🔚
+
+You should see some output in your REPL about the page getting read, parsed, and evaluated. Don't worry too much about that for the time being. Check to see if your page is there by opening the file in your web browser!
