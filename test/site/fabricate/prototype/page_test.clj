@@ -19,7 +19,10 @@
     (t/is (= "<em>help</em>" (str (hiccup/html (em "help"))))
           "emphasis should be added")
     (t/is (= "<em>help</em>" (str (hiccup/html (em "help"))))
-          "emphasis should be added")))
+          "emphasis should be added")
+
+    (t/is (= "✳=[:h2 \"An example document\"]🔚"
+             (simple-expr [:h2 "An example document"] {:ctrl-char "="})))))
 
 (t/deftest metadata-transforms
   (t/testing "Metadata transformation"

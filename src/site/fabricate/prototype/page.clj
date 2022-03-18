@@ -441,6 +441,7 @@
 
 (defn simple-expr
   "Takes a Clojure form and yields a string with the Fabricate template expression for that form."
+  {:malli/schema [:=> [:cat :any :map] :string]}
   [form {:keys [ctrl-char format-fn]
          :or {format-fn str
               ctrl-char ""}}]
