@@ -1,42 +1,15 @@
 ✳(ns site.fabricate.docs.tutorials.documentation
 (:require
-[clojure.string :as str]
-[site.fabricate.prototype.read.grammar :as grammar]
-[garden.core  :as garden]
-[garden.selectors :as select]
-            [garden.stylesheet :as stylesheet]
-            [site.fabricate.prototype.page])) 🔚
+ [clojure.string :as str]
+ [site.fabricate.prototype.read.grammar :as grammar]
+ [site.fabricate.styles :as styles]
+ [garden.core :as garden]
+ [garden.selectors :as select]
+ [garden.stylesheet :as stylesheet]
+ [site.fabricate.prototype.page])) 🔚
 
-✳(def page-style
-  (garden/css (stylesheet/at-import "https://fonts.googleapis.com/css2?family=Spline+Sans:wght@300..700&display=swap")
-              [:article {:font-family "'Spline Sans', sans-serif"
-                         :font-size "22px"
-                         :color "#222"
-                         :margin-left "2em"
-                         :line-height "1.45em"
-                         :max-width "70ch"}]
-[:aside {:margin-left "3.5em" :font-size "0.8em" :font-weight "400"}]
-[(select/aside select/before) {:content "\"🤔\"" :left "0" :position "absolute" :padding "0.9rem" :margin-left "5em"}]
-              [:h1 :h2 :h3 :h4 :h5 :h6 {:font-weight "700"}]
-              [:html {:background-color "#DAD1C2"}]
-              [:pre {:background-color "#EEE"}
-               [:ins {:text-decoration "none" :background-color "#ADC3A2"}]
-               [(select/ins select/before) {:position "relative"
-                                            :background-color "#EEE"
-                                            :font-weight "700"
-                                            :content "\"+\""}]
-               [(select/ins select/after) {:content "\"\"" :display "block"}]]
-              [:a {:margin-bottom "0em"
-                   :text-decoration "none"
-                   :color "#337E80"}]
-              [:.repl [(select/code select/before) {:position "relative"
-                                                    :content "\"user> \""}]
 
-               [(select/code select/after ) {:content "\"\"" :display "block"}]]
-              [:.shell [(select/code select/before) {:position "relative" :content "\"$ \""}]]
-              ))🔚
-
-✳(def metadata {:title "Tutorial: Creating Documentation for Clojure Projects with Fabricate" :page-style page-style})🔚
+✳(def metadata {:title "Tutorial: Creating Documentation for Clojure Projects with Fabricate" :page-style (garden/css styles/docs) })🔚
 
 ✳= [:div [:h1 (:title metadata)] [:hr]]🔚
 
@@ -92,7 +65,7 @@ In your Clojure project's folder, you will have a file called ✳=[:code "deps.e
 This file is just an EDN map, defining in plain text an associative array much like Clojure's own hash maps. If you've used JSON before, you can think of EDN like Clojure's version of JSON. The important part is this file maps from certain keys to values - you can add Fabricate to the project by updating the ✳=[:code ":aliases"]🔚 key with a new key. You might already have aliases defined for your project, in which case you'll add another one for Fabricate. If you don't, then you can just add an ✳=[:code ":aliases"]🔚 key with the same information.
 
 
-✳//[:div {:style (garden/style {:display "flex" :gap "10px" :font-size "0.85em"})}
+✳//[:div {:style (garden/style {:display "flex" :gap "10px" :font-size "0.75em"})}
 
 ✳= [:div {:style (garden/style {:flex "40%"})}
 [:h5 "If you already have aliases defined"]
