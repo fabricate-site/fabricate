@@ -10,50 +10,47 @@
             [site.fabricate.prototype.page])) 🔚
 
 ✳ (def page-css
-   (garden/css
-    (garden.stylesheet/at-import "https://fonts.googleapis.com/css2?family=Epilogue:ital@0..1,wght@100..900" )
-    (garden.stylesheet/at-import "https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap")
-    (garden.stylesheet/at-import  "https://fonts.googleapis.com/css2?family=Overpass+Mono&display=swap")
-    (apply conj
-           (list
-            [root {:font-family "'Atkinson Hyperlegible', sans-serif"
-                   :font-size "1rem"
-                   :line-height "1.25"
-                   :max-width "60ch"
-                   :box-sizing "border-box"
-                   :background-color "#EEE"}]
-            [:h1 :h2 :h3 :h4 :h5 :h6 {:font-family "Epilogue"
-                                      :text-transform "uppercase"}
-             [:code {:text-transform "none"}]]
-            #_[:hr {:background-color ""}]
-            [:html :body :div :header :article :nav :main :footer
-             {:max-width "none"}]
-            [:h1 {:font-size (str (Math/pow 1.618033 3) "em")
-                  :margin-bottom "0em"
-                  :margin-top "0em"
-                  :line-height "1.25"
-                  :font-weight "850"}]
-            [:h2 {:font-size (str (Math/pow 1.618033 2) "em")
-                  :margin-top (str (Math/pow 1.618033 -2) "em")
-                  :margin-bottom "0em"}]
-            [:h3 :h4 :h5 :h6 {:margin-bottom "0em"}]
-            [:hr {:border "0.25em solid #B4501D"}]
-            [:dt {:margin-top "0em"}]
-            [:dd {:margin-top "0em"}]
-            [:code {:font-family "Overpass Mono"}]
-            [:pre {:white-space "pre-wrap"
-                   :font-family "Overpass Mono"
-                   :font-size "0.95rem"}])
-           )
-    )) 🔚
+    (garden/css
+     (garden.stylesheet/at-import "https://fonts.googleapis.com/css2?family=Epilogue:ital@0..1,wght@100..900" )
+     (garden.stylesheet/at-import "https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap")
+     (garden.stylesheet/at-import  "https://fonts.googleapis.com/css2?family=Overpass+Mono&display=swap")
+     [:html {:font-family "'Atkinson Hyperlegible', sans-serif"
+            :font-size "1rem"
+            :line-height "1.25"
+            :max-width "60ch"
+            :box-sizing "border-box"
+            :background-color "#EEE"}]
+     [:h1 :h2 :h3 :h4 :h5 :h6 {:font-family "Epilogue"
+                               :text-transform "uppercase"}
+      [:code {:text-transform "none"}]]
+     [:html :body :div :header :article :nav :main :footer
+      {:max-width "none"}]
+     [:h1 {:font-size (str (Math/pow 1.618033 3) "em")
+           :margin-bottom "0em"
+           :margin-top "0em"
+           :line-height "1.25"
+           :font-weight "850"}]
+     [:h2 {:font-size (str (Math/pow 1.618033 2) "em")
+           :margin-top (str (Math/pow 1.618033 -2) "em")
+           :margin-bottom "0em"}]
+     [:h3 :h4 :h5 :h6 {:margin-bottom "0em"}]
+     [:hr {:border "0.25em solid #B4501D"}]
+     [:dt {:margin-top "0em"}]
+     [:dd {:margin-top "0em"}]
+     [:code {:font-family "Overpass Mono"}]
+     [:pre {:white-space "pre-wrap"
+            :font-family "Overpass Mono"
+            :font-size "0.95rem"}]
+
+     ) ) 🔚
 
 ✳(def metadata {:title "Fabricate"
-               :page-style page-css} )🔚
+                :page-style page-css} )🔚
 
 ✳= [:div [:h1 (:title metadata)] [:hr]
     [:h4 "form by art and labor"]]🔚
 
-Introducing fabricate, a Clojure library for making static websites, using Clojure.
+Introducing ✳=[:a {:href "github.com/fabricate-site/fabricate"} "Fabricate"]🔚, a Clojure library for making static websites, using Clojure.
 
 Fabricate takes a different approach than markdown and notebook-based tools, which frequently assume a one-size fits all approach to displaying code: if there's code in a markdown block, it's included in the output. I made Fabricate so that I could program more of my layout, and so that I could choose when and where to display both Clojure expressions and their results.
 
@@ -65,16 +62,33 @@ Rather than deriving the layout from a generic approach that treats "code blocks
 ✳//[:div
 
 ✳+=(let [s "output"]
-    [:code (format "a form evaluated and displayed with its %s" s)]) 🔚
+    [:h4 (format "a form evaluated and displayed with its %s" s)]) 🔚
 
 ]//🔚
 
-Block starts here: it should contain the quote "The web is a conduit for primarily textual information supplemented by media such as images and videos, often referred to collectively as content.", a basic example of fabricate's syntax (input above, output below)
+✳= [:div [:h2 "Documentation"] [:hr]]🔚
+✳= [:div [:h3 "Tutorials"] ]🔚
+These guides will get you up and running with Fabricate, so you can use it as a writing and creative tool. Hopefully you find them useful.
 
+✳= [:div [:h4 "Tutorial 1: Using Fabricate to create a website"] ]🔚
+
+In the first tutorial, you will learn how
+
+✳= [:div [:h4 "Tutorial 2: Using Fabricate to add documentation to an existing Clojure project"] ]🔚
+
+✳= [:div [:h3 "How-to guides"] ]🔚
+
+✳= [:ul [:li "Visualizing data using inline SVGs"]
+[:li "Syncing your website with a web server"]
+[:li "Publishing your website on Netlify"]
+]🔚
+
+✳= [:div [:h3 "Reference"] ]🔚
+✳= [:div [:h3 "Background Information"] ]🔚
 
 ✳= [:div [:h2 "Namespaces"] [:hr]]🔚
 
-The namespace descriptions, automatically generated from the namespace definitions, introduce the functionality that fabricate assembles to create pages.
+The namespace descriptions, automatically generated from the namespace forms, introduce the functionality that fabricate assembles to create pages.
 
 ✳(defn ns->hiccup [ns form]
   (let [ns-var (find-ns ns)
