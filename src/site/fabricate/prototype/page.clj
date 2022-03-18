@@ -10,6 +10,7 @@
    [malli.core :as m]
    [clojure.string :as string]
    [site.fabricate.prototype.read :as read]
+   [site.fabricate.prototype.read.grammar :as grammar]
    [site.fabricate.prototype.schema :as schema]))
 
 (defn em
@@ -434,3 +435,14 @@
                         m))
           metadata
           (tree-seq sequential? identity page-contents)))
+
+;; stop writing dead code: every instance of clojure code embedded in a string in a fabricate document is an antipattern / code smell
+;; code is data, it should be handled as such by Fabricate
+
+(defn simple-expr
+  "Takes a Clojure form and yields a string with the Fabricate template expression for that form."
+  [form {:keys [ctrl-char format-fn]
+         :or {format-fn str
+              ctrl-char ""}}]
+  (let [[start end] grammar/delimiters]
+    (str start ctrl-char (format-fn form) end)))
