@@ -27,6 +27,14 @@ One thing that makes Fabricate different is the fact that templates can appear a
 If you don't specify any additional characters, Fabricate evaluates the expression without putting the result in the page.
 
 Useful for: namespace declarations, variable definitions, and other side effects - anything where you don't need to see the result of what you run.
+✳(def run-exprs
+   '[(ns my-demo-ns
+       (:require [site.fabricate.prototype.page :as page]))
+     (def metadata {:title "My page"})])🔚
+✳=(list [:h5 "Examples"]
+      (apply conj [:div {:style (garden/style {:font-size "0.75em"})}]
+            (for [expr run-exprs]
+              [:pre [:code (page/simple-expr expr {:ctrl-char ""})]])))🔚
 
 ✳=[:h4 (first grammar/delimiters) "= - " "Yield expressions"]🔚
 
@@ -36,8 +44,8 @@ Useful for: namespace declarations, variable definitions, and other side effects
          [:blockquote "People are alive -- they behave and respond. Creations within the computer can also live, behave, and respond... if they are allowed to."]
          [:figcaption "Bret Victor, "
           [:a {:href "https://vimeo.com/64895205"}
-           "Stop Drawing Dead Fish"]]]
-        [:img {:src "https://live.staticflickr.com/3733/11161621755_044111e737_w.jpg"}])) 🔚
+           [:em "Stop Drawing Dead Fish"]]]]
+        [:img {:src "https://live.staticflickr.com/3770/11073365765_6dd38cce29_z.jpg"}])) 🔚
 
 If you add the "=" character after the asterisk - ✳=[:span (first grammar/delimiters) "="]🔚, the expression's results get added into the page. Hiccup expressions, like ✳=[:code "[:code \"example inline code\"]"]🔚 are included in the document tree and will be transformed into HTML all at once after the document is evaluated.
 
@@ -47,7 +55,7 @@ Useful for: anything you'd use HTML for.
        [:div
         (apply list
                (for [expr yield-exprs]
-                 [:div {:style (garden/style {:display "flex" :flex-flow "row wrap" :justify-content "space-between"})}
+                 [:div {:style (garden/style {:display "flex" :flex-flow "row wrap" :justify-content "space-between" :column-gap "1em"})}
                   [:div {:style (garden/style {:flex "1 1 30ch" :font-size "0.75em"})} [:pre [:code (page/simple-expr expr {:ctrl-char "="})]]]
                   [:div {:style (garden/style {:flex "1 1 30ch"})} expr]]))])
         🔚
@@ -56,17 +64,90 @@ Useful for: anything you'd use HTML for.
 
 Use this for when you want to evaluate some code and insert the expression into the result, but not its output.
 
-Useful for: when you want to demonstrate some code that contributes to the page but its output isn't important - like when you want to show the code used to define a variable but use the the contents of that variable later on in the page.
+Useful for: when you want to demonstrate some code that contributes to the page but its output isn't important. You could show the code used to define a variable, but use the the contents of that variable later on in the page. It's also useful for instructive function definitions, where the return value of a function definition is just a var.
+
+✳(def insert-exprs
+'[(defn de-jong
+    "Returns a Peter de Jong attractor function. Use with iterate."
+    [^Double a ^Double b ^Double c ^Double d]
+    (fn [[^Double x ^Double y]]
+      [(- (Math/sin (* a y)) (Math/cos (* b x)))
+       (- (Math/sin (* c x)) (Math/cos (* d y)))]))
+  (defn clifford
+    "Returns a Clifford attractor function. Use with iterate."
+    [^Double a ^Double b ^Double c ^Double d]
+    (fn [[^Double x ^Double y]]
+      [(- (Math/sin (* a y)) (* c (Math/cos (* a x))))
+       (- (Math/sin (* b x)) (* d (Math/cos (* b y))))]))
+  (def de-jong-example
+    (de-jong 1.517 -2.001 3.45 2.07))
+  (def clifford-example (clifford 1.24 1.14 1.23 1.89))])🔚
+
+✳=(list [:h5 "Examples"]
+(apply conj [:div {:style (garden/style {:font-size "0.75em"})}]
+       (for [expr insert-exprs]
+         [:div {:style (garden/style {:display "flex" :flex-flow "row wrap" :justify-content "space-between" :column-gap "1em"})}
+
+          [:pre
+           {:style (garden/style {:flex "1 1 30ch"})}
+           [:code (page/simple-expr expr {:ctrl-char "+"})]]
+          [:pre
+           {:style (garden/style {:flex "1 1 30ch"})}
+           [:code {:class "language-clojure"} (str expr)]]
+          ])))🔚
 
 ✳=[:h4 (first grammar/delimiters) "+=" "Composing control characters"]🔚
 
 You can use both the "+" and "=" characters together to display a form along with its output.
 
+
 Useful for: showing off your art alongside the code that produced it.
+
+✳(doseq [expr insert-exprs] (eval expr))🔚
+
+✳(def insert-display-exprs
+  '[(let [w 300 h 400]
+      (into [:svg {:id "de-jong-fractal" :width w :height h}]
+            (map (fn [[^Double x ^Double y]]
+                   [:circle {:cx (* w (+ 0.5 (/ x 4.0)))
+                             :cy (* h (+ 0.5 (/ y 5.0)))
+                             :style {:opacity 0.3 :fill "#606456"}
+                             :r 1.0}])
+                 (take 15000
+                       (iterate
+                        de-jong-example
+                        [1.4 3.9])))))
+(let [w 300 h 400]
+      (into [:svg {:id "clifford-fractal" :width w :height h}]
+            (map (fn [[^Double x ^Double y]]
+                   [:circle {:cx (* w (+ 0.5 (/ x 4.0)))
+                             :cy (* h (+ 0.5 (/ y 5.0)))
+                             :style {:opacity 0.3 :fill "#606456"}
+                             :r 1.0}])
+                 (take 15000
+                       (iterate
+                        clifford-example
+                        [1.4 3.9])))))
+    ])🔚
+
+
+
+✳=(list [:h5 "Examples"]
+(apply conj [:div]
+       (for [expr insert-display-exprs]
+         [:div {:style (garden/style {:display "flex" :flex-flow "row wrap" :justify-content "space-between" :column-gap "1em"})}
+
+          [:pre
+           {:style (garden/style {:flex "1 1 30ch" :font-size "0.75em"})}
+           [:code (page/simple-expr expr {:ctrl-char "+="})]]
+          [:div
+           {:style (garden/style {:flex "1 1 30ch"})}
+           (eval expr)]
+          ])))🔚
 
 ✳=[:h3 "Extended form expressions"]🔚
 
-Sometimes it's preferable to group multiple forms together along with paragraphs of plain text into a single section. In order to do this without embedding many paragraphs in a single large Fabricate expression, Fabricate also supports extended forms, which allow you to mark the start and end points of an element and continue working within that element normally using Fabricate's mix of plain text and expressions.
+Sometimes it's preferable to group multiple forms together along with paragraphs of plain text into a single section. In order to do this without embedding many paragraphs in a single large Fabricate expression, Fabricate also supports extended forms. They allow you to mark the start and end points of an element in a document and continue working within that element normally using Fabricate's mix of plain text and expressions.
 
 ✳=[:h2 "An example document"]🔚
 
