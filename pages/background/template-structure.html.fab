@@ -47,9 +47,9 @@ Useful for: anything you'd use HTML for.
        [:div
         (apply list
                (for [expr yield-exprs]
-                 [:div {:style (garden/style {:display "flex" :flex-direction "row"})}
-                  [:div [:pre [:code (page/simple-expr expr {:ctrl-char "="})]]]
-                  [:div expr]]))])
+                 [:div {:style (garden/style {:display "flex" :flex-flow "row wrap" :justify-content "space-between"})}
+                  [:div {:style (garden/style {:flex "1 1 30ch" :font-size "0.75em"})} [:pre [:code (page/simple-expr expr {:ctrl-char "="})]]]
+                  [:div {:style (garden/style {:flex "1 1 30ch"})} expr]]))])
         🔚
 
 ✳=[:h4 (first grammar/delimiters) "+"  "Insert expressions"]🔚
@@ -66,7 +66,7 @@ Useful for: showing off your art alongside the code that produced it.
 
 ✳=[:h3 "Extended form expressions"]🔚
 
-Sometimes it's preferable to group multiple forms together along with paragraphs of plain text into a single section.
+Sometimes it's preferable to group multiple forms together along with paragraphs of plain text into a single section. In order to do this without embedding many paragraphs in a single large Fabricate expression, Fabricate also supports extended forms, which allow you to mark the start and end points of an element and continue working within that element normally using Fabricate's mix of plain text and expressions.
 
 ✳=[:h2 "An example document"]🔚
 
