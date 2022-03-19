@@ -145,6 +145,10 @@ Useful for: showing off your art alongside the code that produced it.
            (eval expr)]
           ])))🔚
 
+✳=[:h4 "Interlude: (code) documentation as data"]🔚
+
+Not only do these examples illustrate how Fabricate's control characters work, they also show how you can build up components of a page by defining them as variables in Clojure and then using them to produce page elements. I was able to use Flexbox attributes to tailor the layout to my examples without tying the whole page to a single way of displaying things. The example expressions above were defined not as ossified strings in a fenced code block, but as quoted Clojure expressions, some of which were evaluated to produce this page. If they encountered an error on evaluation, an error would have surfaced in the page as I was drafting it. Can you be assured of that when putting example code in Markdown documents?
+
 ✳=[:h3 "Extended form expressions"]🔚
 
 Sometimes it's preferable to group multiple forms together along with paragraphs of plain text into a single section. In order to do this without embedding many paragraphs in a single large Fabricate expression, Fabricate also supports extended forms. They allow you to mark the start and end points of an element in a document and continue working within that element normally using Fabricate's mix of plain text and expressions.
