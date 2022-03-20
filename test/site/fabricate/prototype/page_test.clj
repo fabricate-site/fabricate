@@ -4,6 +4,7 @@
             [site.fabricate.prototype.html-test.generators :as html-gen]
             [site.fabricate.prototype.test-utils :refer [with-instrumentation]]
             [hiccup2.core :as hiccup]
+            [rewrite-clj.node :as node]
             [clojure.test.check.properties :as prop]
             [clojure.test.check.generators :as gen]
             [clojure.test.check :as check]
@@ -22,7 +23,27 @@
           "emphasis should be added")
 
     (t/is (= "✳=[:h2 \"An example document\"]🔚"
-             (simple-expr [:h2 "An example document"] {:ctrl-char "="})))))
+             (simple-expr [:h2 "An example document"] {:ctrl-char "="}))))
+
+  (t/testing "source code display"
+    (t/is (=
+           [:span {:class "language-clojure list"}
+            "#(" [:span {:class "language-clojure symbol"}
+                  "+"] " "
+            [:span {:class "language-clojure number"} "3"] " "
+            [:span {:class "language-clojure symbol"} "%"] ")"]
+           (#'site.fabricate.prototype.page/fn-node->hiccup
+            (node/coerce '#(+ 3 %)))
+           ))
+    (t/is (=
+          [:span {:class "language-clojure list"} "#(" [:span {:class "language-clojure symbol"} "+"] " " [:span {:class "language-clojure number"} "3"] " " [:span {:class "language-clojure symbol"} "%1"] " " [:span {:class "language-clojure symbol"} "%2"] ")"]
+           (#'site.fabricate.prototype.page/fn-node->hiccup
+            (node/coerce '#(+ 3 %1 %2)))
+           ))
+    (t/is (= [:span {:class "language-clojure list"} "#(" [:span {:class "language-clojure symbol"} "apply"] " " [:span {:class "language-clojure symbol"} "+"] " " [:span {:class "language-clojure number"} "3"] " " [:span {:class "language-clojure symbol"} "%&amp;"] ")"]
+           (#'site.fabricate.prototype.page/fn-node->hiccup
+            (node/coerce '#(apply + 3 %&)))
+           ))))
 
 (t/deftest metadata-transforms
   (t/testing "Metadata transformation"

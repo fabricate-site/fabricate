@@ -447,3 +447,125 @@
               ctrl-char ""}}]
   (let [[start end] grammar/delimiters]
     (str start ctrl-char (format-fn form) end)))
+
+(defn- fn-node->hiccup [node]
+  (let [contents (:children node)
+        [_ params body] (sexpr node)
+        r (cond
+            (= 0 (count params)) {}
+            (= 1 (count params)) {(first params) '%}
+            (and (= 2 (count params)) (= '& (first params)))
+            {(second params) '%&}
+            :else
+            (into {} (map-indexed
+                      (fn [ix sym]
+                        [sym (symbol (str "%" (inc ix)))])
+                      params)))
+        edited-node
+        (z/node (z/postwalk (z/edn (node/coerce body))
+                            (fn select [zloc] (symbol? (z/sexpr zloc)))
+                            (fn visit [zloc] (z/edit zloc  #(get r % %)))))]
+    (apply span (name (tag node))
+           "#(" (conj (mapv node->hiccup (:children edited-node)) ")"))))
+
+(comment
+   (fn-node->hiccup (node/coerce `#(+ 3 %)))
+   (fn-node->hiccup (node/coerce '#(+ 3 %1 %2)))
+   (fn-node->hiccup (node/coerce '#(apply + 3 %&)))
+
+  (z/next (z/edn (node/coerce `#(+ 3 %))))
+
+  )
+
+(comment
+
+  (require '[rewrite-clj.node :as node :refer [tag sexpr]]
+           '[rewrite-clj.zip :as z])
+
+
+
+  (defmulti node->hiccup tag)
+
+  (defn span [class & contents]
+    (apply conj
+           [:span {:class (str "language-clojure " class)}]
+           contents))
+
+  ;; starting point: atoms/tokens
+
+  (defn atom-class [node]
+    (cond (:k node) "keyword"
+          (:lines node) "string"
+          (contains? node :value)
+          (let [v (:value node)]
+            (cond (number? v) "number"
+                  (string? v) "string"
+                  (nil? v) "nil"
+                  (symbol? v) "symbol"
+                  :else (name (tag node))))
+          :else (println (tag node) (keys node)
+                         (sexpr node) (type (sexpr node)))))
+
+  (atom-class (rewrite-clj.node/coerce 23))
+
+  (defmethod node->hiccup :token [node]
+    (span (atom-class node) (hu/escape-html (str node))))
+
+  (defmethod node->hiccup :whitespace [node]
+    (:whitespace node))
+
+  (str (rewrite-clj.node/coerce 'sym))
+
+
+  (node->hiccup (rewrite-clj.node/coerce 'sym))
+
+  (defmethod node->hiccup :map [node]
+    (apply span "map" "{" (conj (mapv node->hiccup (:children node)) "}")))
+
+  (defmethod node->hiccup :list [node]
+    (apply span "list" "(" (conj (mapv node->hiccup (:children node)) ")")))
+
+  (defn expr->hiccup [expr]
+    (node->hiccup (rewrite-clj.node/coerce expr)))
+
+  (defmethod node->hiccup :vector [node]
+    (apply span "vector" "[" (conj (mapv node->hiccup (:children node)) "]")))
+
+  (defmethod node->hiccup :set [node]
+    (apply span (name (tag node))
+           "#{" (conj (mapv node->hiccup (:children node)) "}")))
+
+  (defmethod node->hiccup :newline [node]
+    (repeat (count (:newlines node)) [:br]))
+
+  (defmethod node->hiccup :fn [node]
+    ;; this is a really tricky one, as it involves
+    ;; rewriting the expanded function to resemble the input
+    (fn-node->hiccup [node])
+    )
+
+
+
+  ;; comments + unevals will be a bit trickier because we're not working with source code strings
+  #_(defmethod node->hiccup :uneval [node]
+      (apply span "vector" "#_"  (mapv node->hiccup (:children node)) "}"))
+
+
+  (expr->hiccup '(def myvar 183))
+
+
+
+  (expr->hiccup '(38 29 "a" :kw sym))
+  (expr->hiccup '[38 29 "a" :kw sym])
+  (expr->hiccup #{38 29 "a" :kw})
+  (expr->hiccup '#(+ 3 %))
+
+
+  (:children (rewrite-clj.node/coerce `#(+ 3 %)))
+
+  (let [n (rewrite-clj.node/coerce '#(+ 3 %))]
+    (into {} (map (fn [k v] [k v]) (keys n) (vals n))))
+
+  (node->hiccup (rewrite-clj.node/coerce {:a 3}))
+
+  )
