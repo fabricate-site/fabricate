@@ -26,24 +26,28 @@
              (simple-expr [:h2 "An example document"] {:ctrl-char "="}))))
 
   (t/testing "source code display"
-    (t/is (=
-           [:span {:class "language-clojure list"}
-            "#(" [:span {:class "language-clojure symbol"}
-                  "+"] " "
-            [:span {:class "language-clojure number"} "3"] " "
-            [:span {:class "language-clojure symbol"} "%"] ")"]
-           (#'site.fabricate.prototype.page/fn-node->hiccup
-            (node/coerce '#(+ 3 %)))
-           ))
-    (t/is (=
-          [:span {:class "language-clojure list"} "#(" [:span {:class "language-clojure symbol"} "+"] " " [:span {:class "language-clojure number"} "3"] " " [:span {:class "language-clojure symbol"} "%1"] " " [:span {:class "language-clojure symbol"} "%2"] ")"]
-           (#'site.fabricate.prototype.page/fn-node->hiccup
-            (node/coerce '#(+ 3 %1 %2)))
-           ))
-    (t/is (= [:span {:class "language-clojure list"} "#(" [:span {:class "language-clojure symbol"} "apply"] " " [:span {:class "language-clojure symbol"} "+"] " " [:span {:class "language-clojure number"} "3"] " " [:span {:class "language-clojure symbol"} "%&amp;"] ")"]
-           (#'site.fabricate.prototype.page/fn-node->hiccup
-            (node/coerce '#(apply + 3 %&)))
-           ))))
+    (t/is (= [:span {:class "language-clojure list"}
+              "#(" [:span {:class "language-clojure symbol"}
+                    "+"] " "
+              [:span {:class "language-clojure number"} "3"] " "
+              [:span {:class "language-clojure symbol"} "%"] ")"]
+             (#'site.fabricate.prototype.page/fn-node->hiccup
+              (node/coerce '#(+ 3 %)))))
+    (t/is (= [:span {:class "language-clojure list"} "#("
+              [:span {:class "language-clojure symbol"} "+"] " "
+              [:span {:class "language-clojure number"} "3"] " "
+              [:span {:class "language-clojure symbol"} "%1"] " "
+              [:span {:class "language-clojure symbol"} "%2"] ")"]
+             (#'site.fabricate.prototype.page/fn-node->hiccup
+              (node/coerce '#(+ 3 %1 %2)))
+             (#'site.fabricate.prototype.page/expr->hiccup '#(+ 3 %1 %2))))
+    (t/is (= [:span {:class "language-clojure list"} "#("
+              [:span {:class "language-clojure symbol"} "apply"] " "
+              [:span {:class "language-clojure symbol"} "+"] " "
+              [:span {:class "language-clojure number"} "3"] " "
+              [:span {:class "language-clojure symbol"} "%&amp;"] ")"]
+             (#'site.fabricate.prototype.page/fn-node->hiccup
+              (node/coerce '#(apply + 3 %&)))))))
 
 (t/deftest metadata-transforms
   (t/testing "Metadata transformation"
@@ -73,7 +77,7 @@
                [:p "some text"]
                (let [img-url "src-url.jpg"]
                  (with-meta [:img img-url] {:page/icon img-url
-                                     "some-prop" "a property"}))]
+                                            "some-prop" "a property"}))]
               {})))))
 
 (def html-newline-gen
@@ -290,7 +294,7 @@
                     "some preliminary text\n\n followed by a double linebreak, "
                     (in-code "with inline code")
                     " and more text following, in the same paragraph"
-                    [:h3 "and another header"])) ))
+                    [:h3 "and another header"]))))
 
     (t/is (=
            '([:h2 "a header"]
@@ -324,7 +328,6 @@
           tree (tree-seq sequential? identity parsed)]
       (t/is (< (.indexOf tree expr-form) (.indexOf tree expr-result))
             "After paragraph detection, expression results should come after the form"))
-
 
     (t/is
      (=  [:p "some text" [:br] "with newlines"]
