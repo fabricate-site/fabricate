@@ -476,21 +476,8 @@
 (defmethod node->hiccup :map [node]
   (apply span "map" "{" (conj (mapv node->hiccup (:children node)) "}")))
 
-(defmethod node->hiccup :list [node]
-  (apply span "list" "(" (conj (mapv node->hiccup (:children node)) ")")))
-
-(defn- expr->hiccup [expr]
-  (node->hiccup (rewrite-clj.node/coerce expr)))
-
-(defmethod node->hiccup :vector [node]
-  (apply span "vector" "[" (conj (mapv node->hiccup (:children node)) "]")))
-
-(defmethod node->hiccup :set [node]
-  (apply span (name (tag node))
-         "#{" (conj (mapv node->hiccup (:children node)) "}")))
-
-(defmethod node->hiccup :newline [node]
-  (repeat (count (:newlines node)) [:br]))
+(defn- fn-list? [node]
+  (and (= (:tag node) :list) (= 'fn* (:value (first (:children node))))))
 
 (defn- fn-node->hiccup [node]
   (let [contents (:children node)
@@ -515,7 +502,24 @@
 (defmethod node->hiccup :fn [node]
   ;; this is a really tricky one, as it involves
   ;; rewriting the expanded function to resemble the input
-  (fn-node->hiccup [node]))
+  (fn-node->hiccup node))
+
+(defmethod node->hiccup :list [node]
+  (if (fn-list? node) (fn-node->hiccup node)
+      (apply span "list" "(" (conj (mapv node->hiccup (:children node)) ")"))))
+
+(defn- expr->hiccup [expr]
+  (node->hiccup (rewrite-clj.node/coerce expr)))
+
+(defmethod node->hiccup :vector [node]
+  (apply span "vector" "[" (conj (mapv node->hiccup (:children node)) "]")))
+
+(defmethod node->hiccup :set [node]
+  (apply span (name (tag node))
+         "#{" (conj (mapv node->hiccup (:children node)) "}")))
+
+(defmethod node->hiccup :newline [node]
+  (repeat (count (:newlines node)) [:br]))
 
 (comment
 
@@ -528,7 +532,18 @@
   (expr->hiccup #{38 29 "a" :kw})
   (expr->hiccup '#(+ 3 %))
 
-  (:children (rewrite-clj.node/coerce `#(+ 3 %)))
+  (rewrite-clj.node/coerce 'sym)
+
+  (fn-node->hiccup (rewrite-clj.node/coerce '#(+ 3 %)))
+
+  (fn-list? (rewrite-clj.node/coerce '#(+ 3 %)))
+
+
+  (:tag (rewrite-clj.node/coerce '#(+ 3 %)))
+
+
+  (= 'fn* (:value (first (:children (rewrite-clj.node/coerce `#(+ 3 %))))))
+
 
   (let [n (rewrite-clj.node/coerce '#(+ 3 %))]
     (into {} (map (fn [k v] [k v]) (keys n) (vals n))))

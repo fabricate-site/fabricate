@@ -13,9 +13,9 @@
             [malli.instrument :as mi]
             [clojure.test :as t]))
 
-(t/use-fixtures :once with-instrumentation)
+#_(t/use-fixtures :once with-instrumentation)
 
-(t/deftest content-transforms
+(t/deftest element-transforms
   (t/testing "html helper fns"
     (t/is (= "<em>help</em>" (str (hiccup/html (em "help"))))
           "emphasis should be added")
@@ -32,7 +32,8 @@
               [:span {:class "language-clojure number"} "3"] " "
               [:span {:class "language-clojure symbol"} "%"] ")"]
              (#'site.fabricate.prototype.page/fn-node->hiccup
-              (node/coerce '#(+ 3 %)))))
+              (node/coerce '#(+ 3 %)))
+             (#'site.fabricate.prototype.page/expr->hiccup '#(+ 3 %))))
     (t/is (= [:span {:class "language-clojure list"} "#("
               [:span {:class "language-clojure symbol"} "+"] " "
               [:span {:class "language-clojure number"} "3"] " "
@@ -47,7 +48,9 @@
               [:span {:class "language-clojure number"} "3"] " "
               [:span {:class "language-clojure symbol"} "%&amp;"] ")"]
              (#'site.fabricate.prototype.page/fn-node->hiccup
-              (node/coerce '#(apply + 3 %&)))))))
+              (node/coerce '#(apply + 3 %&))))))
+
+  )
 
 (t/deftest metadata-transforms
   (t/testing "Metadata transformation"
