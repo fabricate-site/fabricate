@@ -31,7 +31,7 @@ Useful for: namespace declarations, variable definitions, and other side effects
        (:require [site.fabricate.prototype.page :as page]))
      (def metadata {:title "My page"})])🔚
 ✳=(list [:h5 "Examples"]
-      (apply conj [:div {:style (garden/style {:font-size "0.75em"})}]
+      (apply conj [:div {:class "small"}]
             (for [expr run-exprs]
               [:pre [:code (page/simple-expr expr {:ctrl-char ""})]])))🔚
 
@@ -54,10 +54,10 @@ Useful for: anything you'd use HTML for.
        [:div
         (apply list
                (for [expr yield-exprs]
-                 [:div {:style (garden/style {:display "flex" :flex-flow "row wrap" :justify-content "space-between" :column-gap "1em"})}
-                  [:div {:style (garden/style {:flex "1 1 30ch" :font-size "0.75em"})} [:pre [:code (page/simple-expr expr {:ctrl-char "="})]]]
-                  [:div {:style (garden/style {:flex "1 1 30ch"})} expr]]))])
-        🔚
+                 [:div {:class "example-rows"}
+                  [:div {:class "example-row"}
+                   [:pre [:code (page/simple-expr expr {:ctrl-char "="})]]]
+                  [:div {:class "example-row"} expr]]))])🔚
 
 ✳=[:h4 (first grammar/delimiters) "+"  "Insert expressions"]🔚
 
@@ -83,15 +83,15 @@ Useful for: when you want to demonstrate some code that contributes to the page 
   (def clifford-example (clifford 1.24 1.14 1.23 1.89))])🔚
 
 ✳=(list [:h5 "Examples"]
-(apply conj [:div {:style (garden/style {:font-size "0.75em"})}]
+(apply conj [:div {:class "small"}]
        (for [expr insert-exprs]
-         [:div {:style (garden/style {:display "flex" :flex-flow "row wrap" :justify-content "space-between" :column-gap "1em"})}
+         [:div {:class "example-rows"}
 
           [:pre
-           {:style (garden/style {:flex "1 1 30ch"})}
+           {:class "example-row"}
            [:code (page/simple-expr expr {:ctrl-char "+"})]]
           [:pre
-           {:style (garden/style {:flex "1 1 30ch"})}
+           {:class "example-row"}
            [:code {:class "language-clojure"} (str expr)]]
           ])))🔚
 
@@ -134,13 +134,13 @@ Useful for: showing off your art alongside the code that produced it.
 ✳=(list [:h5 "Examples"]
 (apply conj [:div]
        (for [expr insert-display-exprs]
-         [:div {:style (garden/style {:display "flex" :flex-flow "row wrap" :justify-content "space-between" :column-gap "1em"})}
+         [:div {:class "example-rows"}
 
           [:pre
-           {:style (garden/style {:flex "1 1 30ch" :font-size "0.75em"})}
+           {:class "example-row"}
            [:code (page/simple-expr expr {:ctrl-char "+="})]]
           [:div
-           {:style (garden/style {:flex "1 1 30ch"})}
+           {:class "example-row"}
            (eval expr)]
           ])))🔚
 
@@ -174,5 +174,5 @@ Sometimes it's preferable to group multiple forms together along with paragraphs
 
 This page itself uses many of the "useful for" tips I mentioned in the first section. You might find the source code of the page instructive, so it is included below:
 
-✳=[:pre {:style (garden/style {:font-size "0.75em"})}
+✳=[:pre {:class "small"}
 [:code (slurp "pages/background/template-structure.html.fab")]]🔚

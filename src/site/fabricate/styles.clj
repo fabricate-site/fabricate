@@ -31,4 +31,10 @@
                                          :content "\"user> \""}]
 
     [(select/code select/after) {:content "\"\"" :display "block"}]]
-   [:.shell [(select/code select/before) {:position "relative" :content "\"$ \""}]]))
+   [:.shell [(select/code select/before) {:position "relative" :content "\"$ \""}]]
+   [:.small {:font-size "0.75em"}]
+   [:.example-rows {:display "flex"
+                    :flex-flow "row wrap"
+                    :justify-content "space-between"
+                    :column-gap "1em"}]
+   [:.example-row {:flex "1 1 30ch" :font-size "0.75em"}]))
