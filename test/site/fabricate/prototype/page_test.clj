@@ -48,7 +48,10 @@
               [:span {:class "language-clojure number"} "3"] " "
               [:span {:class "language-clojure symbol"} "%&amp;"] ")"]
              (#'site.fabricate.prototype.page/fn-node->hiccup
-              (node/coerce '#(apply + 3 %&))))))
+              (node/coerce '#(apply + 3 %&)))))
+    #_(t/is
+     (any? ()))
+    )
 
   )
 
@@ -251,10 +254,6 @@
         (parse-paragraphs
          [:p {:class "steel"} false]
          #"\n\n")))
-
-    (t/is (= [:div] (parse-paragraphs [:div " "]))
-          "Whitespace-only text should not be tokenized into paragraphs")
-
     (t/is
      (=
       [:div

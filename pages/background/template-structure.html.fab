@@ -2,16 +2,17 @@
 (:require
 [clojure.string :as str]
 [site.fabricate.prototype.read :as read]
+[site.fabricate.prototype.page :as page]
 [site.fabricate.prototype.read.grammar :as grammar]
 [garden.core  :as garden]
 [site.fabricate.styles :as styles]
             [site.fabricate.prototype.page :as page])) 🔚
 
 
-✳(def metadata {:title "A Guide to Fabricate Page Templates" :page-style (garden/css styles/docs)})🔚
+✳(def metadata {:title "A Guide to Fabricate's Page Templates" :page-style (garden/css styles/docs)})🔚
 
 
-✳=[:h1 (:title metadata)]🔚
+✳=[:h1 {:class "big-text"} (:title metadata)]🔚
 
 This page has an informal explanation of the parts that make up a Fabricate page, using inputs and outputs paired together for demonstration purposes.
 
@@ -36,7 +37,6 @@ Useful for: namespace declarations, variable definitions, and other side effects
               [:pre [:code (page/simple-expr expr {:ctrl-char ""})]])))🔚
 
 ✳=[:h4 (first grammar/delimiters) "= - " "Yield expressions"]🔚
-
 ✳(def yield-exprs
   (list [:code {:class "language-clojure"} "(map inc (range 40 29 -1))"]
         [:figure
@@ -51,13 +51,16 @@ If you add the "=" character after the asterisk - ✳=[:span (first grammar/deli
 Useful for: anything you'd use HTML for.
 
 ✳= (list [:h5 "Examples"]
-       [:div
-        (apply list
-               (for [expr yield-exprs]
-                 [:div {:class "example-rows"}
-                  [:div {:class "example-row"}
-                   [:pre [:code (page/simple-expr expr {:ctrl-char "="})]]]
-                  [:div {:class "example-row"} expr]]))])🔚
+         [:div
+          (apply list
+                 (for [expr yield-exprs]
+                   [:div {:class "example-rows"}
+                    [:div {:class "example-row"}
+                     [:pre (first grammar/delimiters) "="
+                      [:code (page/expr->hiccup expr)] (last grammar/delimiters)]]
+                    [:div {:class "example-row"} expr]]))]
+
+         )🔚
 
 ✳=[:h4 (first grammar/delimiters) "+"  "Insert expressions"]🔚
 

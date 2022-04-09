@@ -287,6 +287,8 @@
                               (filter #(not (empty? %)))
                               (map #(conj default-form %))))
                   ;; skip empty or whitespace strings
+                  ;; or not:
+                  #_ #_
                   (and (string? next)
                        (or (empty? next)
                            (re-matches #"\s+" next))) acc
@@ -473,6 +475,10 @@
 (defmethod node->hiccup :whitespace [node]
   (:whitespace node))
 
+(defmethod node->hiccup :multi-line [node]
+  (span "string"
+        (interpose [:br] (:lines node))))
+
 (defmethod node->hiccup :map [node]
   (apply span "map" "{" (conj (mapv node->hiccup (:children node)) "}")))
 
@@ -508,11 +514,6 @@
   (if (fn-list? node) (fn-node->hiccup node)
       (apply span "list" "(" (conj (mapv node->hiccup (:children node)) ")"))))
 
-(defn- expr->hiccup [expr]
-  (node->hiccup (rewrite-clj.node/coerce expr)))
-
-(defmethod node->hiccup :vector [node]
-  (apply span "vector" "[" (conj (mapv node->hiccup (:children node)) "]")))
 
 (defmethod node->hiccup :set [node]
   (apply span (name (tag node))
@@ -520,6 +521,15 @@
 
 (defmethod node->hiccup :newline [node]
   (repeat (count (:newlines node)) [:br]))
+
+(defmethod node->hiccup :vector [node]
+  (apply span "vector" "[" (conj (mapv node->hiccup (:children node)) "]")))
+
+(defn expr->hiccup
+  "Converts the given expression into a hiccup element tokenzed into spans by the value type."
+  {:malli/schema [:=> [:cat :any] [:vector :any]]}
+  [expr]
+  (node->hiccup (rewrite-clj.node/coerce expr)))
 
 (comment
 
@@ -531,6 +541,30 @@
   (expr->hiccup '[38 29 "a" :kw sym])
   (expr->hiccup #{38 29 "a" :kw})
   (expr->hiccup '#(+ 3 %))
+
+  (=
+   (rewrite-clj.node/coerce [:em{:class"tiny"}"text"])
+   (rewrite-clj.node/coerce [:em {:class "tiny"} "text"])
+
+   )
+  (:children
+   (rewrite-clj.node/coerce [:em{:class"tiny"}"text"]))
+
+  (:whitespace (second (:children
+                        (rewrite-clj.node/coerce [:em {:class "tiny"} "text"]))))
+
+  (expr->hiccup [:em {:class "tiny"} "text"])
+
+  (=
+   (rewrite-clj.node/coerce [:em{:class "tiny"}"text"])
+
+   (rewrite-clj.node/coerce [:em {:class "tiny"} "text"]))
+
+  (= (rewrite-clj.node/coerce :a)
+     (rewrite-clj.node/coerce :a)
+     )
+
+
 
   (rewrite-clj.node/coerce 'sym)
 
