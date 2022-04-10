@@ -19,13 +19,13 @@
               :font-size "22px"
               :color "#222"
               :margin-left "1vw"
-              :line-height "1.29em"
-              :max-width "65ch"}]
+              :line-height "1.29em"}]
    [:aside {:margin-left "1.75vw" :font-size "0.8em" :font-weight "400"}]
    [(select/aside select/before) {:content "\"🤔\"" :left "0" :position "absolute" :padding "0.5em" :margin-left "1.5vw"}]
    [:h1 :h2 :h3 :h4 :h5 :h6 {:font-weight "900"
                              :font-family "'Overpass', sans-serif"}]
    [:html {:background-color "#E2DED6"}]
+   [:p {:max-width "65ch"}]
    [:code {:font-family "'Overpass Mono', monospace"}]
    [:pre {:background-color "#EEE" :white-space "pre-wrap"
           :font-family "'Overpass Mono', monospace"}
@@ -35,9 +35,12 @@
                                  :font-weight "700"
                                  :content "\"+\""}]
     [(select/ins select/after) {:content "\"\"" :display "block"}]]
-   [:.big-text {:font-family "Katahdin, sans-serif"
-                :font-size "2.5em" :line-height "1em"
-                :text-transform "uppercase"}]
+   [:.xl-text {:font-family "Katahdin, sans-serif"
+               :font-size "2.5em" :line-height "1em"
+               :text-transform "uppercase"}]
+   [:.l-text {:font-family "Katahdin, sans-serif"
+              :font-size "1.5em" :line-height "1em"
+              :text-transform "uppercase"}]
    [:.language-clojure
     {:font-family "Overpass Mono, sans-serif"}
     [:.keyword {:color "#7f2c28"}]
