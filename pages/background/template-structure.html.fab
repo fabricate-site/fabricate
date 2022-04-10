@@ -81,14 +81,14 @@ Useful for: when you want to demonstrate some code that contributes to the page 
 ✳(def insert-exprs
 '[(defn de-jong
     "Returns a Peter de Jong attractor function. Use with iterate."
-    [^Double a ^Double b ^Double c ^Double d]
-    (fn [[^Double x ^Double y]]
+    [a b c d]
+    (fn [[x y]]
       [(- (Math/sin (* a y)) (Math/cos (* b x)))
        (- (Math/sin (* c x)) (Math/cos (* d y)))]))
   (defn clifford
     "Returns a Clifford attractor function. Use with iterate."
-    [^Double a ^Double b ^Double c ^Double d]
-    (fn [[^Double x ^Double y]]
+    [a b c d]
+    (fn [[x y]]
       [(- (Math/sin (* a y)) (* c (Math/cos (* a x))))
        (- (Math/sin (* b x)) (* d (Math/cos (* b y))))]))
   (def de-jong-example
@@ -102,10 +102,11 @@ Useful for: when you want to demonstrate some code that contributes to the page 
 
           [:pre
            {:class "example-row"}
-           [:code (page/simple-expr expr {:ctrl-char "+"})]]
+           [:code (first grammar/delimiters) "+" (page/expr->hiccup expr)
+            (last grammar/delimiters)]]
           [:pre
            {:class "example-row"}
-           [:code {:class "language-clojure"} (str expr)]]
+           [:code (page/expr->hiccup expr)]]
           ])))🔚
 
 ✳=[:h4 (first grammar/delimiters) "+=" "Composing control characters"]🔚
@@ -151,7 +152,8 @@ Useful for: showing off your art alongside the code that produced it.
 
           [:pre
            {:class "example-row"}
-           [:code (page/simple-expr expr {:ctrl-char "+="})]]
+[:code (first grammar/delimiters) "+="
+(page/expr->hiccup expr) (last grammar/delimiters)]]
           [:div
            {:class "example-row"}
            (eval expr)]

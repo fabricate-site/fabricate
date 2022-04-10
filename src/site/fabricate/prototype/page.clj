@@ -525,6 +525,14 @@
 (defmethod node->hiccup :vector [node]
   (apply span "vector" "[" (conj (mapv node->hiccup (:children node)) "]")))
 
+(defmethod node->hiccup :meta [node]
+  (apply span (name (tag node)) "^" (mapv node->hiccup (:children node))))
+
+(defmethod node->hiccup :comma [node]
+  (span (name (tag node)) ","))
+
+
+
 (defn expr->hiccup
   "Converts the given expression into a hiccup element tokenzed into spans by the value type."
   {:malli/schema [:=> [:cat :any] [:vector :any]]}
