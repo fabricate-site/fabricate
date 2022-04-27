@@ -20,15 +20,3 @@ jobs:
       - name: Run Tests
         run: |
           clojure -X:test:runner
-      - name: Publish
-        if: github.ref == 'refs/heads/main'
-        run: |
-          clojure -X site.fabricate.prototype.write/publish! :dirs '["./pages"]'
-      - name: Deploy
-        if: github.ref == 'refs/heads/main'
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .
-          #destination_dir: docs
-          publish_branch: gh-pages
