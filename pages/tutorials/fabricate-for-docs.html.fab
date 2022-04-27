@@ -8,22 +8,14 @@
  [garden.stylesheet :as stylesheet]
  [site.fabricate.prototype.page])) 🔚
 
-
 ✳(def metadata {:title "Tutorial: Creating Documentation for Clojure Projects with Fabricate" :page-style (garden/css styles/docs) })🔚
-
-✳= [:div [:h1 (:title metadata)] [:hr]]🔚
-
+✳= [:div [:h1 {:class "xl-text"} (:title metadata)] [:hr]]🔚
 ✳=[:h2 "Introduction"]🔚
 ✳=[:h3 "What you'll learn in this tutorial:"]🔚
-
-
 - How to use Fabricate alongside your own code to document your project.
 
 ✳=[:h3 "What you'll need to get started:"]🔚
-
-
 - A Clojure project
-
 - An installation of the Clojure CLI and tools.deps (any version after 1.10.1.697)
 
 If your project already uses ✳=[:code "deps.edn"]🔚 and ✳=[:code "tools.deps"]🔚 you won't need to make any configuration changes apart from adding an alias. If you use lein or boot, you'll need to do a bit more setup. Lein and boot support are covered in separate guides.

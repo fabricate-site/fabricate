@@ -8,20 +8,20 @@
 [site.fabricate.styles :as styles]
 [site.fabricate.prototype.page :as page])) 🔚
 
-✳(def metadata {:title "A Reference to Fabricate's Page Templates" :page-style (garden/css
-                                                                            (concat styles/docs
-                                                                                    (list [:article {:display "grid" :grid-template-columns "repeat(8, 1fr)"
-                                                                                                     #_ #_ :max-width "100%"
-                                                                                                     :column-gap "10px"}
-                                                                                           [:p {:grid-column "span 8"
-                                                                                                :hyphens "auto"}]
-                                                                                           [:pre {:grid-column-start 1}]
-                                                                                           [:.example-rows {:grid-column-start 1}]
-                                                                                           [:h1 :h2 :h3 :h4 :h5 :h6
-                                                                                            {:grid-column "span 8"
-                                                                                             :max-width "65ch"}]]
-                                                                                          )
-                                                                                    ))})🔚
+✳(def metadata {:title "A Reference to Fabricate's Page Templates"
+:page-style (garden/css
+(concat styles/docs
+(list [:article {:display "grid" :grid-template-columns "repeat(8, 1fr)"
+#_ #_ :max-width "100%"
+:column-gap "10px"}
+[:p {:grid-column "span 8"
+:hyphens "auto"}]
+[:pre {:grid-column-start 1}]
+[:.example-rows {:grid-column-start 1}]
+       [:h1 :h2 :h3 :h4 :h5 :h6
+        {:grid-column "span 8"
+         :max-width "65ch"}]]
+      )))})🔚
 ✳=[:h1 {:class "xl-text"} (:title metadata)]🔚
 
 This page has an informal explanation of the parts that make up a Fabricate page, using inputs and outputs paired together for demonstration purposes.
@@ -55,7 +55,6 @@ Useful for: namespace declarations, variable definitions, and other side effects
           [:a {:href "https://vimeo.com/64895205"}
            [:em "Stop Drawing Dead Fish"]]]]
         [:img {:src "https://live.staticflickr.com/3770/11073365765_6dd38cce29_z.jpg"}])) 🔚
-
 If you add the "=" character after the asterisk - ✳=[:span (first grammar/delimiters) "="]🔚, the expression's results get added into the page. Hiccup expressions, like ✳=[:code "[:code \"example inline code\"]"]🔚 are included in the document tree and will be transformed into HTML all at once after the document is evaluated.
 
 Useful for: anything you'd use HTML for.
@@ -73,7 +72,6 @@ Useful for: anything you'd use HTML for.
          )🔚
 
 ✳=[:h4 (first grammar/delimiters) "+"  "Insert expressions"]🔚
-
 Use this for when you want to evaluate some code and insert the expression into the result, but not its output.
 
 Useful for: when you want to demonstrate some code that contributes to the page but its output isn't important. You could show the code used to define a variable, but use the the contents of that variable later on in the page. It's also useful for instructive function definitions, where the return value of a function definition is just a var.
