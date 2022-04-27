@@ -1,0 +1,41 @@
+✳(ns site.fabricate.docs.eval-models)🔚
+
+
+✳(def metadata {:title "Evaluation models for fabricate"})🔚
+
+
+✳=[:h1 (:title metadata)]🔚
+
+This page discusses Fabricate's evaluation model in the context of its newly-specified formal grammar.
+
+
+✳=[:h2 "to prepl or not to prepl"]🔚
+
+One of the sticking points that I keep thinking about now that I have a formal grammar is: why bother doing all that parsing if all I'm doing is just casting the elements back into a string, throwing that string into a LineNumberingPushbackReader, and then using that as the source for prepl? For source files, it seems like I could be be using EOF characters and an input stream directly and taking advantage of the capabilities of PushbackReaders to do the reading.
+
+Reading through the source code of clojure.core.server, I ask myself the opposite question: do I even need to use prepl if it's meant to operate on streams? It seems like I'm replicating a lot of what it does myself, only on parsed forms rather than on input streams or strings. Which means that it's not clear it offers much value for my particular use case. The functions in clojure.core.server are fairly small wrappers around eval at the end of the day.
+
+
+
+
+✳=[:h3 "Prior Art in extending repls"]🔚
+
+Jakub Holy's how-to guide for prepl
+
+https://blog.jakubholy.net/how-to-use-clojure-1.10-prepl/
+
+grepl - interesting project that intercepts forms from a user-level REPL and then stores them in an Asami graph database. A major point of inspiration for future work with Fabricate
+
+https://github.com/dpsutton/grepl/blob/master/src/grepl/repl.clj
+
+bb.edn - babashka configuration that launches a JVM prepl and sends forms to it for evaluation
+
+https://gist.github.com/borkdude/5f3019d6666953f3b8f533a70eb067d2
+
+Rich Hickey's comments on what you can do when you try to build an application out of REPLs instead of with the aid of a REPL:
+
+https://nextjournal.com/mk/rich-hickey-on-repls
+
+Clojureverse thread on overriding REPL defaults and using clojure.main/repl in a non-standard way:
+
+https://ask.clojure.org/index.php/10425/what-cool-things-do-you-do-with-clojure-main-repl?show=10425#q10425
