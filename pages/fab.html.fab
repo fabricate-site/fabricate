@@ -1,0 +1,90 @@
+✳ (ns site.fabricate.docs.intro
+(:require [garden.core :as garden]
+[site.fabricate.prototype.read :as read]
+[site.fabricate.prototype.read.grammar :as grammar]
+[site.fabricate.prototype.page :refer :all]
+[garden.stylesheet :as stylesheet])) 🔚
+
+✳ (def page-css
+   (garden/css
+    (garden.stylesheet/at-import  "https://fonts.googleapis.com/css2?family=Inria+Sans:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Inter:wght@900&display=swap")
+    [:body {:background-image "linear-gradient(34deg, #9CC0DA, #ECD8D8 45%)"
+            :font-family "'Inria Sans', sans-serif"
+            :font-size "22px"}]
+    [:header {:font-family "Inter"}
+     [:h1 {:font-size "8rem"
+           :color "#dc4032"
+           :line-height "7rem"}]]
+    [:.red {:color "#FF0000"}]
+    [:pre {:white-space "pre-wrap"
+           :font-size "0.95rem"}]
+    [:.scarlet  {:color "#a1010c"}]
+    [:.vermilion {:color "#dc4032"}]
+    [:.txt-1999 {:text-transform "uppercase"}]
+    [:code {:color "#333"}]
+    [:article {:color "#222"
+               :max-width "60rem"}]
+    [:p {:margin-bottom "2rem"}]
+    )) 🔚
+
+✳ (def metadata {:title "Introduction"
+                  :page-style page-css}) 🔚
+
+
+✳= [:header [:h1 "fab" [:br] "ri" [:br]  "cate"] ] 🔚
+
+Introducing a new kind of static website generator.
+
+✳= [:header [:h2 {:class "big"} "🦩 it starts and ends with .fab"]]🔚
+
+Your thoughts start in a file that's mostly plain text, with some code thrown in to add headers (or also, literally anything else code can make). You can go up and down the ladder from "mostly words" to "computational artwork" at your own pace.
+
+This page started its life as ✳= (in-code "index.html.fab") 🔚. Along the way, Fabricate gave it some help to make sure it looks the way a webpage should look.
+
+✳= [:header [:h2 {:class "big"} "🎓 learn HTML, not how a markdown parser works"]] 🔚
+
+Do you have time to remember whether your markdown parser lets you put a linebreak inside a table cell? Or whether your parser will let you fall back to inline HTML correctly? Yeah, me either. But sometimes you want to make something just a little more nested than what 'flat' markup formats easily allow. Why not just do it with a format that doesn't try to hide HTML, but is easier than writing a bunch of opening and closing tags by hand?
+
+✳= [:header  [:h2 {:class "big"} "🐣 CSS for amateurs"]] 🔚
+
+The CSS on this page was written by hand at the top, using an inline stylesheet. Is it "best practice" to do this for every page? Does it "scale?" Maybe not. But here's another question:
+
+✳= [:header [:h4 "Was it fun to create? 😀"]]🔚
+
+Writing this page, for me, the answer was "yes!" I'm not very knowledgable about CSS. A static website is a perfect low-stakes place to "do it wrong." I didn't have to jump back and forth between this file and "main.css" and "main.scss" and remember what variable I used to define the colors I want. I just iterated on the one file until I had the nice soothing background gradient you see here and some decent proportions.
+
+✳= [:header [:h2 {:class "txt-1999"} "📟 making websites like it's 1999 "]] 🔚
+✳=[:header  [:h4 {:class "txt-1999"} "(but maybe with webfonts? I like those)"]]🔚
+
+You really shouldn't need to learn what a CSS preprocessor is and its special syntax to get started with picking the right shade of ✳=[:s {:class "red"} "red"]🔚 ✳=[:s {:class "scarlet"} "scarlet"]🔚 ✳=[:b {:class "vermilion"} "vermilion"]🔚 you want for your headers and banners.
+
+speaking of which:
+
+✳= [:header [:h2 "A gentler environment for learning Hiccup  + Clojure"]] 🔚
+
+Okay, the reason why a lot of this works is because there are some pretty intense schemas for HTML backing it all up. But I promise you don't really need to worry about it to make a page like this, honest!
+
+Here's the markup that generated this page:
+
+✳= (read/include-source {:details "look ⬇️"} "./pages/index.html.fab") 🔚
+
+Most of it is just defining the look! The actual basics of creating a page aren't much more complicated than remembering the name of what you want to include and putting it in using fabricate's special ~emoji delimiters~✨: ✳=(first grammar/delimiters)🔚 ✳=(last grammar/delimiters)🔚
+✳= (code {:class "big"} (str (first grammar/delimiters) "(header {:level :h3} \"some heading text\")" (last grammar/delimiters))) 🔚
+
+Once you get the hang of it, you'll be writing more code than you even knew you could!
+
+✳= [:header [:h2 "🌠 S-express yourself"]] 🔚
+
+Under the hood, there's a programming language. That language is Clojure; it's why everything starts and ends with the parentheses like the one you saw creating ✳=(in-code "(header \"text\")")🔚 above.
+
+You can make anything you could make in Clojure in Fabricate. Fabricate makes it a lot easier to get what you create (whether it's words, pictures, data visualizations, or other stuff) into a real HTML page. Fabricate uses Clojure because some very powerful tools for working with HTML and with structured data like HTML have been written in Clojure.
+
+I hope Fabricate puts more of the power of tools like those in your hands, so you can make what you want to make with it.
+
+
+✳= [:header [:h3 "📚 Further reading"]] 🔚
+
+If you're interested in more about how fabricate works, you can take a look at these articles:
+
+✳= [:ul [:li [:p [:a {:href "/finite-schema-machines.html"} "Organizing Computation With Finite Schema Machines"]]
+[:p "Fabricate uses its own implementation of a finite-state machine to determine what functions to use to process different types of pages. This post explains how that implementation works."]]] 🔚
