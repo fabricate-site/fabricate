@@ -477,21 +477,26 @@
    initial-state )
 
 
-  (fsm/complete default-operations "./pages/finite-schema-machines.html.fab")
+  (fsm/complete default-operations
+                "./pages/background/finite-schema-machines.html.fab"
+                @state)
 
   (fsm/complete default-operations "./pages/extended-forms.html.fab"
                 state)
 
   (fsm/complete default-operations
-                "./pages/background/template-structure.html.fab"
+                "./pages/reference/template-structure.html.fab"
+                @state)
+
+  (fsm/complete default-operations
+                "./pages/fabricate.html.fab"
                 @state)
 
   (site.fabricate.prototype.read.grammar/template
    (slurp "./pages/extended-forms.html.fab"))
 
-  (fsm/complete default-operations "./pages/fabricate.html.fab")
 
-  (do (fsm/complete default-operations "./pages/background/template-structure.html.fab"
+  (do (fsm/complete default-operations "./pages/reference/template-structure.html.fab"
                     @state)
       nil)
 

@@ -8,7 +8,7 @@
 [site.fabricate.styles :as styles]
 [site.fabricate.prototype.page :as page])) 🔚
 
-✳(def metadata {:title "A Guide to Fabricate's Page Templates" :page-style (garden/css
+✳(def metadata {:title "A Reference to Fabricate's Page Templates" :page-style (garden/css
                                                                             (concat styles/docs
                                                                                     (list [:article {:display "grid" :grid-template-columns "repeat(8, 1fr)"
                                                                                                      #_ #_ :max-width "100%"
@@ -190,4 +190,4 @@ Sometimes it's preferable to group multiple forms together along with paragraphs
 This page itself uses many of the "useful for" tips I mentioned in the first section. You might find the source code of the page instructive, so it is included below:
 
 ✳=[:pre {:class "small"}
-[:code (slurp "pages/background/template-structure.html.fab")]]🔚
+[:code (slurp "pages/reference/template-structure.html.fab")]]🔚
