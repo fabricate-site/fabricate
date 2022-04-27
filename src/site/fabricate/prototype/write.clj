@@ -489,7 +489,7 @@
                 @state)
 
   (fsm/complete default-operations
-                "./pages/fabricate.html.fab"
+                "./pages/index.html.fab"
                 @state)
 
   (site.fabricate.prototype.read.grammar/template
