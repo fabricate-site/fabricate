@@ -28,10 +28,17 @@
           "FSM should conform to spec"))
 
   (t/testing "advance"
-    (t/is (= 3 (advance example-fsm 2)))
+    (t/is (= 3 (advance example-fsm 2) ))
+    (t/is (= 0 (advance example-fsm 0)))
+
+    (t/is (= {:fsm/value 0}
+             (advance example-fsm {:fsm/value 0})))
+    (t/is (= 3
+             (:fsm/value (advance example-fsm {:fsm/value 2}))))
+
     (t/is (= 3 (advance example-error-fsm 3))
           "FSM errors should be signaled with fallback to previous value")
-    (t/is (= 0 (advance example-fsm 0)))
+
     (t/is (= 2 (advance fsm-additional-args 1 1)))
     )
 
