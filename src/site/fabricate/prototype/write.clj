@@ -149,17 +149,22 @@
 
 ;; maybe make these state schema var names less ambiguous
 (def input-state
-  [:and {:fsm/description "Fabricate input path represented as string"}
+  [:and {:fsm/description "Fabricate input path represented as string"
+         :fsm/name "Input"
+         :examples ["pages/background/finite-schema-machines.html.fab"
+                    "README.md.fab"]}
    :string [:fn #(.endsWith % ".fab")]])
 
 (def file-state
   [:map {:closed true
+         :fsm/name "File"
          :fsm/description "Fabricate input represented as java.io.File entry in page map"}
    [:site.fabricate.file/input-file [:fn sketch/file?]]
    [:site.fabricate.file/filename :string]])
 
 (def read-state
   [:map {:closed true
+         :fsm/name "Read"
          :fsm/description "Fabricate input read in as string"}
    [:site.fabricate.file/input-file [:fn sketch/file?]]
    [:site.fabricate.file/filename :string]
@@ -168,6 +173,7 @@
 (def parsed-state
   (m/schema
    [:map {:closed true
+          :fsm/name "Parsed"
           :fsm/description "Fabricate input parsed and metadata associated with page map"}
     [:site.fabricate.file/input-file [:fn sketch/file?]]
     [:site.fabricate.file/template-suffix
@@ -191,6 +197,7 @@
     (m/schema
      [:map
       {:closed true
+       :fsm/name "Evaluated"
        :fsm/description "Fabricate contents evaluated after parsing"}
       [:site.fabricate.page/evaluated-content [:fn #(or (list? %) (vector? %))]]
       [:site.fabricate.page/metadata {:optional true} [:map {:closed false}]]]))))
@@ -200,6 +207,7 @@
    (mu/merge
     evaluated-state
     [:map {:closed true
+           :fsm/name "HTML"
            :fsm/description "Fabricate input evaluated as hiccup vector"}
      [:site.fabricate.file/output-extension [:enum  "html"]]])))
 
@@ -208,6 +216,7 @@
    (mu/merge
     evaluated-state
     [:map {:closed true
+           :fsm/name "Markdown"
            :fsm/description "Fabricate markdown input evaluated as markdown string"}
      [:site.fabricate.file/output-extension [:enum  "md" "markdown"]]])))
 
@@ -237,6 +246,8 @@
   (mu/merge
    evaluated-state
    [:map {:fsm/description "Fabricate input rendered to output string"
+          :fsm/name "Rendered"
+          :fsm/side-effect? true        ; indicating that the associated state performs a side effect
           :open true
           :fsm/state :fsm/exit}         ; indicating the exit state
     [:site.fabricate.page/rendered-content :string]]))
@@ -449,12 +460,10 @@
 
   (-> state
       (send (constantly initial-state))
-      (send-off draft!)
-      await)
+      (send-off draft!))
 
   (-> state
-      (send-off stop!)
-      await)
+      (send-off stop!))
 
 
   (keys @state)
