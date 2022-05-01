@@ -34,6 +34,12 @@
    :exec-fn cognitect.test-runner.api/test
    :exec-args {:excludes [:performance]
                :patterns ["^(?!.*performance).*$"]}}
+  :publish {:extra-deps {daveray/dorothy
+                         {:git/url "https://github.com/daveray/dorothy"
+                          :sha "207570804dfda2162a15b9ee55b5e76ec6e1ecfa"}}
+            :exec-fn site.fabricate.prototype.write/publish!
+            :exec-args {:files ["README.md.fab"]
+                        :dirs ["pages/"]}}
   :validate {:exec-fn site.fabricate.prototype.check/html
              :exec-args {:dirs ["docs/"]}}
   :serve {:main-opts ["-m" "http.server" "--dir" "docs"]}}}
