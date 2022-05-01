@@ -30,7 +30,9 @@
    the value to the next state.
 
   Additional arguments to the function can be supplied via & args; they will be
-  appended to the arguments passed to the matched function via apply."
+  appended to the arguments passed to the matched function via apply.
+
+  Errors in function execution will be printed and the input value will be returned."
   {:malli/schema [:=> [:cat state-action-map :any [:* :any]] :any]}
   [fsm-map value & args]
   (let [union-schema (schema/unify (keys fsm-map))
@@ -50,7 +52,10 @@
         (do
           (println "advancing fsm:" (get (m/properties matched-schema)
                                          :fsm/description))
-          (apply op value args))))))
+          (try (apply op value args)
+               (catch Exception e
+                 (println (Throwable->map e))
+                 value)))))))
 
 (defn complete
   "Completes the fsm by advancing through states until the same value is produced twice."
