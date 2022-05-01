@@ -1,4 +1,4 @@
-✳(ns site.fabricate.docs.background.templates
+✳(ns site.fabricate.docs.reference.templates
 (:require
 [clojure.string :as str]
 [site.fabricate.prototype.read :as read]
