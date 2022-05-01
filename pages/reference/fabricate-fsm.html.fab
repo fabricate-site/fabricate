@@ -1,0 +1,74 @@
+✳(ns site.fabricate.docs.reference.fsm
+  (:require [site.fabricate.prototype.page :as page]
+            [garden.core :as garden]
+            [site.fabricate.styles :as styles]
+            [site.fabricate.prototype.fsm :as fsm]
+            [site.fabricate.prototype.schema :as schema]
+            [site.fabricate.prototype.write :as write]
+            [malli.core :as m]
+            [malli.util :as mu]
+            [malli.dot :as md]
+            [dorothy.core :as dot]
+            [dorothy.jvm :refer [render]])) 🔚
+
+✳(def metadata {:title "A Reference to Fabricate's FSM event loop"
+               :page-style (garden/css styles/docs)})🔚
+
+✳=[:h1 {:class "xl-text"} (:title metadata)]🔚
+
+This page describes how Fabricate's main event loop is organized using a state machine and visually depicts that state machine.
+
+✳(def example-graph
+  (dot/digraph [{:bgcolor :transparent :fontname "Overpass Regular"}
+                (dot/subgraph :main [{:style :filled, :color :lightgrey, :label "Hiccup"}
+                                     (dot/node-attrs {:style :filled, :color :white})
+
+                                     [:evaluated :> :html]])
+
+                (dot/subgraph :markdown [
+                                         {:color :blue, :label "Markdown"}
+                                         (dot/node-attrs {:style :filled})
+                                         [:evaluated :> :markdown]])
+
+                [:input :file]
+                [:file :read]
+                [:read :parsed]
+                [:parsed :evaluated]
+                [:html :end]
+                [:markdown :end]
+
+                [:input {:shape :diamond}]
+                [:end   {:shape :square}]]))🔚
+
+✳=[:div (render (dot/dot example-graph) {:format :svg})]🔚
+
+✳=(let [terminal-states
+      (filter (fn [s]
+                (let [p (m/properties s)]
+                  (and (= :fsm/exit (:fsm/state p))
+                       (:fsm/side-effect? p))))
+                (keys write/default-operations))
+        ops (apply dissoc write/default-operations terminal-states)]
+  (reduce
+   (fn [acc v]
+     (let [advanced (fsm/advance v write/default-site-settings)]
+       (conj acc advanced)))
+   []
+   (map (fn [v] {:fsm/value v})
+        (:examples (m/properties write/input-state)))
+   )
+
+    )🔚
+
+✳=[:h3 {:class "l-text"} "State definitions"]🔚
+
+These are the visualizations of each state for a page, produced using ✳=[:code "malli.util/dot"]🔚.
+
+✳=
+(apply conj [:div]
+(map (fn [[k _]]
+[:div [:h5 (:fsm/name (m/properties k))]
+  [:p (:fsm/description (m/properties k))]
+  (render (md/transform k) {:format :svg})]
+              ) write/default-operations))
+🔚
