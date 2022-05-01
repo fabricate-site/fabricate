@@ -31,7 +31,8 @@
    [:fsm/matched-state {:optional true} [:fn schema/malli?]]
    [:fsm/error {:optional true} :map]])
 
-(def fsm-value-map? (m/validator fsm-value-map))
+(def ^{:malli/schema [:=> [:cat :any] :boolean]}
+  fsm-value-map? (m/validator fsm-value-map))
 
 (defn advance
   "Takes a value, matches it against the schema keys defined in the
