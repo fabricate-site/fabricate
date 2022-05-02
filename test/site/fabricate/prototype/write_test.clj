@@ -16,6 +16,9 @@
 
 (declare test-state)
 
+(def test-operations
+  (dissoc default-operations rendered-state))
+
 (t/use-fixtures :once
   (fn [f]
     (let [prior-exec clojure.lang.Agent/soloExecutor
@@ -77,6 +80,20 @@
                    initial-state)
                   (get :site.fabricate.file/input-file)
                   .getPath)))
+
+    (doseq [e (:examples (m/properties input-state))]
+      (t/is
+       (contains?  (fsm/complete
+                    test-operations e
+                    default-site-settings)
+                   :site.fabricate.page/rendered-content)
+       "Example FSMs should complete successfully")
+      (t/is (contains? (:fsm/value (fsm/complete
+                                    test-operations
+                                    {:fsm/value e}
+                                    default-site-settings))
+                       :site.fabricate.page/rendered-content)
+            "Example FSMs should complete in debug mode"))
 
     (let [evaluated
           (:site.fabricate.page/evaluated-content
