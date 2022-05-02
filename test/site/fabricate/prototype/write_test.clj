@@ -65,6 +65,20 @@
                       populate-page-meta))))
 
 (t/deftest doc-rendering
+
+  (doseq [e (:examples (m/properties input-state))]
+    (t/testing (str "example file: " e)
+      (let [final (fsm/complete test-operations e initial-state)
+            final-debug (fsm/complete test-operations {:fsm/value e} initial-state)]
+        (t/is
+         (contains?
+          final
+          :site.fabricate.page/rendered-content)
+         "Example FSMs should complete successfully")
+        (t/is (contains? (:fsm/value final-debug)
+               :site.fabricate.page/rendered-content)
+              "Example FSMs should complete in debug mode"))))
+
   (t/testing "readme"
     (t/is (string?
            (-> "./README.md.fab"
@@ -80,20 +94,6 @@
                    initial-state)
                   (get :site.fabricate.file/input-file)
                   .getPath)))
-
-    (doseq [e (:examples (m/properties input-state))]
-      (t/is
-       (contains?  (fsm/complete
-                    test-operations e
-                    default-site-settings)
-                   :site.fabricate.page/rendered-content)
-       "Example FSMs should complete successfully")
-      (t/is (contains? (:fsm/value (fsm/complete
-                                    test-operations
-                                    {:fsm/value e}
-                                    default-site-settings))
-                       :site.fabricate.page/rendered-content)
-            "Example FSMs should complete in debug mode"))
 
     (let [evaluated
           (:site.fabricate.page/evaluated-content

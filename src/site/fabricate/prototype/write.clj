@@ -153,6 +153,7 @@
   [:and {:fsm/description "Fabricate input path represented as string"
          :fsm/name "Input"
          :examples ["pages/background/finite-schema-machines.html.fab"
+                    "pages/index.html.fab"
                     "README.md.fab"]}
    :string [:fn #(.endsWith % ".fab")]])
 

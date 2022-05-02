@@ -42,26 +42,59 @@ This page describes how Fabricate's main event loop is organized using a state m
 
 ✳=[:div (render (dot/dot example-graph) {:format :svg})]🔚
 
-✳ (def iterated-fsms
-    (let [terminal-states
-          (filter (fn [s]
-                    (let [p (m/properties s)]
+✳(def terminal-fsm-states
+  (filter (fn [s]
+            (let [p (m/properties s)]
                       (and (= :fsm/exit (:fsm/state p))
                            (:fsm/side-effect? p))))
-                  (keys write/default-operations))
-          ops (apply dissoc write/default-operations terminal-states)]
-      (->> (:examples (m/properties write/input-state))
-           (map
-            (fn [v]
-              [v (reduce
-                  (fn [states next-state]
-                    (if (= (peek states) next-state)
-                      (reduced states)
-                      (conj states next-state)))
-                  []
-                  (iterate
-                   (fn [v] (fsm/advance ops v write/default-site-settings)) {:fsm/value v}))]))
-           (into {}))))🔚
+          (keys write/default-operations)))🔚
+
+✳(def fsm-ops (apply dissoc write/default-operations terminal-fsm-states))🔚
+
+✳ (def iterated-fsms
+  (->> (:examples (m/properties write/input-state))
+       (map
+        (fn [v]
+          [v (reduce
+              (fn [states next-state]
+                (if (= (:fsm/value (peek states))
+                       (:fsm/value next-state))
+                  (reduced states)
+                  (conj states next-state)))
+              []
+              (iterate
+               (fn [v] (fsm/advance fsm-ops v write/initial-state)) {:fsm/value v}))]))
+       (into {})))🔚
+
+✳(comment
+
+   (do (println "test fsm:")
+       (keys
+        (:fsm/value (fsm/complete fsm-ops
+                                  {:fsm/value "README.md.fab"}
+                                  write/default-site-settings))))
+
+   (:errors
+    (m/explain
+     write/read-state
+     (:fsm/value (fsm/complete
+                  fsm-ops
+                  (last (iterated-fsms "README.md.fab"))
+                  write/default-site-settings))
+
+     ))
+
+   (keys (write/eval-parsed-page
+          (write/parse-contents
+           (:fsm/value (fsm/complete
+                        fsm-ops
+                        (last (iterated-fsms "README.md.fab"))
+                        write/default-site-settings))
+           write/default-site-settings)
+
+          write/default-site-settings))
+
+   )🔚
 
 ✳=[:pre
  (apply conj [:code {:class "language-clojure"}]

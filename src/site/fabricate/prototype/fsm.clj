@@ -27,7 +27,7 @@
 (def fsm-value-map
   [:map
    [:fsm/value :any]
-   [:fsm/previous-state {:optional true} [:or :keyword :string]]
+   [:fsm/previous-state {:optional true} [:or :keyword :string [:fn schema/malli?]]]
    [:fsm/matched-state {:optional true} [:fn schema/malli?]]
    [:fsm/error {:optional true} :map]])
 
