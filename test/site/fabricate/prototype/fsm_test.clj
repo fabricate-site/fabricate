@@ -32,9 +32,11 @@
     (t/is (= 0 (advance example-fsm 0)))
 
     (t/is (= {:fsm/value 0}
-             (advance example-fsm {:fsm/value 0})))
+             (advance example-fsm {:fsm/value 0}))
+          "FSMs should return the same results in 'debug' mode as normal operation")
     (t/is (= 3
-             (:fsm/value (advance example-fsm {:fsm/value 2}))))
+             (:fsm/value (advance example-fsm {:fsm/value 2})))
+          "FSMs should return the same results in 'debug' mode as normal operation")
 
     (t/is (= 3 (advance example-error-fsm 3))
           "FSM errors should be signaled with fallback to previous value")

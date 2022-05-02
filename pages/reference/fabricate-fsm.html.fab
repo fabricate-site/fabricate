@@ -42,23 +42,36 @@ This page describes how Fabricate's main event loop is organized using a state m
 
 ✳=[:div (render (dot/dot example-graph) {:format :svg})]🔚
 
-✳=(let [terminal-states
-      (filter (fn [s]
-                (let [p (m/properties s)]
-                  (and (= :fsm/exit (:fsm/state p))
-                       (:fsm/side-effect? p))))
-                (keys write/default-operations))
-        ops (apply dissoc write/default-operations terminal-states)]
-  (reduce
-   (fn [acc v]
-     (let [advanced (fsm/advance v write/default-site-settings)]
-       (conj acc advanced)))
-   []
-   (map (fn [v] {:fsm/value v})
-        (:examples (m/properties write/input-state)))
-   )
+✳ (def iterated-fsms
+    (let [terminal-states
+          (filter (fn [s]
+                    (let [p (m/properties s)]
+                      (and (= :fsm/exit (:fsm/state p))
+                           (:fsm/side-effect? p))))
+                  (keys write/default-operations))
+          ops (apply dissoc write/default-operations terminal-states)]
+      (->> (:examples (m/properties write/input-state))
+           (map
+            (fn [v]
+              [v (reduce
+                  (fn [states next-state]
+                    (if (= (peek states) next-state)
+                      (reduced states)
+                      (conj states next-state)))
+                  []
+                  (iterate
+                   (fn [v] (fsm/advance ops v write/default-site-settings)) {:fsm/value v}))]))
+           (into {}))))🔚
 
-    )🔚
+✳=[:pre
+ (apply conj [:code {:class "language-clojure"}]
+        (map (fn [[k v]]
+               (apply conj [:div [:h5 k]]
+                      (map #(if (:fsm/matched-state %)
+                              [:span " "
+                               (:fsm/name
+                                (m/properties (:fsm/matched-state % )))]) v))
+               ) iterated-fsms))]🔚
 
 ✳=[:h3 {:class "l-text"} "State definitions"]🔚
 
