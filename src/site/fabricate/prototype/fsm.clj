@@ -56,7 +56,10 @@
     (if (= :malli.core/invalid parsed)
       (do
         (println "unmatched value"
-                 (me/humanize (m/explain union-schema val)))
+                 (me/humanize
+                  (m/explain
+                   union-schema
+                   (if fsm-v-map? (:fsm/value value) value))))
         value)
       (let [matched-schema (-> union-schema
                                m/children
