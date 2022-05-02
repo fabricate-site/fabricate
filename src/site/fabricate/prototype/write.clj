@@ -133,7 +133,8 @@
                                 :output-file :site.fabricate.file/output-file
                                 :title :site.fabricate.page/title})))
        (#(assoc % :site.fabricate.file/output-file
-                (or output-file
+                (or (:site.fabricate.file/output-file %)
+                    output-file
                     (get-output-filename
                      (str "./" (% :site.fabricate.file/filename)
                           "." (% :site.fabricate.file/output-extension))
@@ -170,6 +171,7 @@
    [:site.fabricate.file/filename :string]
    [:site.fabricate.page/unparsed-content :string]])
 
+
 (def parsed-state
   (m/schema
    [:map {:closed true
@@ -189,6 +191,17 @@
      [:orn
       [:path :string]
       [:file [:fn sketch/file?]]]]]))
+
+(defn parse-contents
+  {:malli/schema [:=> [:cat read-state :map] parsed-state]}
+  [{:keys [site.fabricate.page/unparsed-content
+           site.fabricate.file/filename]
+    :as page-data}
+   {:keys [site.fabricate/settings]}]
+  (-> page-data
+      (assoc :site.fabricate.page/parsed-content
+             (read/parse unparsed-content {:filename filename}))
+      (populate-page-meta settings)))
 
 (def evaluated-state
   (mu/closed-schema
@@ -253,9 +266,10 @@
     [:site.fabricate.page/rendered-content :string]]))
 
 (defn eval-parsed-page
-  {:malli/schema [:=> [:cat parsed-state] evaluated-state]}
+  {:malli/schema [:=> [:cat parsed-state :map] evaluated-state]}
   [{:keys [site.fabricate.page/parsed-content
-           site.fabricate.page/namespace] :as page-data}]
+           site.fabricate.page/namespace] :as page-data}
+   site-opts]
   (let [nmspc (create-ns namespace)
         evaluated (read/eval-all parsed-content true nmspc)
         page-meta (let [m (ns-resolve nmspc 'metadata)]
@@ -280,16 +294,8 @@
    file-state (fn [{:keys [site.fabricate.file/input-file] :as page-data} _]
                 (assoc page-data :site.fabricate.page/unparsed-content
                        (slurp input-file)))
-   read-state
-   (fn [{:keys [site.fabricate.page/unparsed-content
-                site.fabricate.file/filename]
-         :as page-data}
-        {:keys [site.fabricate/settings]}]
-     (-> page-data
-         (assoc :site.fabricate.page/parsed-content
-                (read/parse unparsed-content {:filename filename}))
-         (populate-page-meta settings)))
-   parsed-state (fn [m _] (eval-parsed-page m))
+   read-state parse-contents
+   parsed-state eval-parsed-page
    markdown-state (fn [{:keys [site.fabricate.page/evaluated-content]
                         :as page-data} _]
                     (assoc page-data :site.fabricate.page/rendered-content
