@@ -12,33 +12,40 @@
             [dorothy.jvm :refer [render]])) 🔚
 
 ✳(def metadata {:title "A Reference to Fabricate's FSM event loop"
-               :page-style (garden/css styles/docs)})🔚
+                :page-style
+                (garden/css
+                 (conj styles/docs
+                       [:.node [:text {:font-family "Overpass, sans-serif"}]]))})🔚
 
 ✳=[:h1 {:class "xl-text"} (:title metadata)]🔚
 
 This page describes how Fabricate's main event loop is organized using a state machine and visually depicts that state machine.
 
 ✳(def example-graph
-  (dot/digraph [{:bgcolor :transparent :fontname "Overpass Regular"}
-                (dot/subgraph :main [{:style :filled, :color :lightgrey, :label "Hiccup"}
-                                     (dot/node-attrs {:style :filled, :color :white})
+  (dot/digraph
+   [ {:bgcolor :transparent :fontname "Overpass"
+     :fontnames "svg"}
+    (dot/subgraph :main [{:style :filled, :color :lightgrey, :label "Hiccup"}
+                         (dot/node-attrs {:style :filled, :color :white})
 
-                                     [:evaluated :> :html]])
+                         [:evaluated :> :html]])
 
-                (dot/subgraph :markdown [
-                                         {:color :blue, :label "Markdown"}
-                                         (dot/node-attrs {:style :filled})
-                                         [:evaluated :> :markdown]])
+    (dot/subgraph
+     :markdown [
+                {:color :blue, :label "Markdown"
+                 :fontname "Overpass" :fontnames "hd"}
+                (dot/node-attrs {:style :filled})
+                [:evaluated :> :markdown]])
 
-                [:input :file]
-                [:file :read]
-                [:read :parsed]
-                [:parsed :evaluated]
-                [:html :end]
-                [:markdown :end]
+    [:input :file]
+    [:file :read]
+    [:read :parsed]
+    [:parsed :evaluated]
+    [:html :end]
+    [:markdown :end]
 
-                [:input {:shape :diamond}]
-                [:end   {:shape :square}]]))🔚
+    [:input {:shape :diamond}]
+    [:end   {:shape :square}]]))🔚
 
 ✳=[:div (render (dot/dot example-graph) {:format :svg})]🔚
 
@@ -66,45 +73,24 @@ This page describes how Fabricate's main event loop is organized using a state m
                (fn [v] (fsm/advance fsm-ops v write/initial-state)) {:fsm/value v}))]))
        (into {})))🔚
 
-✳(comment
-
-   (do (println "test fsm:")
-       (keys
-        (:fsm/value (fsm/complete fsm-ops
-                                  {:fsm/value "README.md.fab"}
-                                  write/default-site-settings))))
-
-   (:errors
-    (m/explain
-     write/read-state
-     (:fsm/value (fsm/complete
-                  fsm-ops
-                  (last (iterated-fsms "README.md.fab"))
-                  write/default-site-settings))
-
-     ))
-
-   (keys (write/eval-parsed-page
-          (write/parse-contents
-           (:fsm/value (fsm/complete
-                        fsm-ops
-                        (last (iterated-fsms "README.md.fab"))
-                        write/default-site-settings))
-           write/default-site-settings)
-
-          write/default-site-settings))
-
-   )🔚
-
 ✳=[:pre
  (apply conj [:code {:class "language-clojure"}]
         (map (fn [[k v]]
-               (apply conj [:div [:h5 k]]
-                      (map #(if (:fsm/matched-state %)
-                              [:span " "
-                               (:fsm/name
-                                (m/properties (:fsm/matched-state % )))]) v))
-               ) iterated-fsms))]🔚
+               (->> v
+                    (map #(if (:fsm/matched-state %)
+                            (:fsm/name
+                             (m/properties (:fsm/matched-state % )))))
+                    (partition 2 1)
+                    (filter #(not= nil (first %)))
+                    (map (fn [[s1 s2]] [s1 s2]))
+                    (#(dot/digraph
+                       (concat [{:bgcolor :transparent :rankdir "LR"} %])))
+                    (dot/dot)
+                    (#(render % {:format :svg}))
+                    (conj [:div [:h5 k]]))
+               ) iterated-fsms) ) ]🔚
+
+
 
 ✳=[:h3 {:class "l-text"} "State definitions"]🔚
 
