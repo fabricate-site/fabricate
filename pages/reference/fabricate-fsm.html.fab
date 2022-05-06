@@ -47,8 +47,6 @@ This page describes how Fabricate's main event loop is organized using a state m
     [:input {:shape :diamond}]
     [:end   {:shape :square}]]))🔚
 
-✳=[:div (render (dot/dot example-graph) {:format :svg})]🔚
-
 ✳(def terminal-fsm-states
   (filter (fn [s]
             (let [p (m/properties s)]
@@ -73,22 +71,26 @@ This page describes how Fabricate's main event loop is organized using a state m
                (fn [v] (fsm/advance fsm-ops v write/initial-state)) {:fsm/value v}))]))
        (into {})))🔚
 
-✳=[:pre
- (apply conj [:code {:class "language-clojure"}]
-        (map (fn [[k v]]
-               (->> v
-                    (map #(if (:fsm/matched-state %)
-                            (:fsm/name
-                             (m/properties (:fsm/matched-state % )))))
-                    (partition 2 1)
-                    (filter #(not= nil (first %)))
-                    (map (fn [[s1 s2]] [s1 s2]))
-                    (#(dot/digraph
-                       (concat [{:bgcolor :transparent :rankdir "LR"} %])))
-                    (dot/dot)
-                    (#(render % {:format :svg}))
-                    (conj [:div [:h5 k]]))
-               ) iterated-fsms) ) ]🔚
+✳=
+
+(->> iterated-fsms
+     vals
+     (map
+      (fn [vs]
+        (->> vs
+             (map
+              #(if (:fsm/matched-state %)
+                 (:fsm/name
+                  (m/properties (:fsm/matched-state % )))))
+             (partition 2 1)
+             (filter #(not= nil (first %))))))
+     (apply concat)
+     distinct
+     (map #(into [] %))
+     (#(dot/digraph
+          (concat [{:bgcolor :transparent :rankdir "LR"} %])))
+     (dot/dot)
+     (#(render % {:format :svg}))) 🔚
 
 
 
