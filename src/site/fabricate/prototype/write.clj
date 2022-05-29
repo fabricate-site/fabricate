@@ -290,18 +290,22 @@
 ;;
 ;; and also include these operations in the state map
 (def default-operations
-  {input-state (fn [f _] {:site.fabricate.file/input-file (io/as-file f)
-                          :site.fabricate.file/filename f})
-   file-state (fn [{:keys [site.fabricate.file/input-file] :as page-data} _]
+  {input-state (fn input-file
+                 [f _] {:site.fabricate.file/input-file (io/as-file f)
+                        :site.fabricate.file/filename f})
+   file-state (fn read-file
+                [{:keys [site.fabricate.file/input-file] :as page-data} _]
                 (assoc page-data :site.fabricate.page/unparsed-content
                        (slurp input-file)))
    read-state parse-contents
    parsed-state eval-parsed-page
-   markdown-state (fn [{:keys [site.fabricate.page/evaluated-content]
-                        :as page-data} _]
+   markdown-state (fn markdown-str
+                    [{:keys [site.fabricate.page/evaluated-content]
+                      :as page-data} _]
                     (assoc page-data :site.fabricate.page/rendered-content
                            (reduce str evaluated-content)))
-   html-state (fn [page-data state]
+   html-state (fn render-hiccup
+                [page-data state]
                 (let [final-hiccup (evaluated->hiccup page-data state)]
                   (assoc page-data
                          :site.fabricate.page/evaluated-content final-hiccup
@@ -310,9 +314,10 @@
                                {:escape-strings? false}
                                final-hiccup)))))
    rendered-state
-   (fn [{:keys [site.fabricate.page/rendered-content
-                site.fabricate.file/output-file] :as page-data}
-        settings]
+   (fn write-file
+     [{:keys [site.fabricate.page/rendered-content
+              site.fabricate.file/output-file] :as page-data}
+      settings]
      (do
        (println "writing page content to" output-file)
        (spit output-file rendered-content)
@@ -512,7 +517,7 @@
    (slurp "./pages/extended-forms.html.fab"))
 
 
-  (do (fsm/complete default-operations "./pages/reference/template-structure.html.fab"
+  (do (fsm/complete default-operations "./pages/reference/fabricate-fsm.html.fab"
                     @state)
       nil)
 
