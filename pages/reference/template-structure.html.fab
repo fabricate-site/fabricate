@@ -11,17 +11,12 @@
 ✳(def metadata {:title "A Reference to Fabricate's Page Templates"
 :page-style (garden/css
 (concat styles/docs
-(list [:article {:display "grid" :grid-template-columns "repeat(8, 1fr)"
-#_ #_ :max-width "100%"
-:column-gap "10px"}
-[:p {:grid-column "span 8"
-:hyphens "auto"}]
-[:pre {:grid-column-start 1}]
-[:.example-rows {:grid-column-start 1}]
-       [:h1 :h2 :h3 :h4 :h5 :h6
-        {:grid-column "span 8"
-         :max-width "65ch"}]]
-      )))})🔚
+        (list [:.example-rows {:grid-column-start 1}]
+              [:h1 :h2 :h3 :h4 :h5 :h6
+               {:grid-column "3 / 10"
+                :max-width "65ch"}]
+              [:pre {:grid-column "3 / 10"}]
+              )))})🔚
 ✳=[:h1 {:class "xl-text"} (:title metadata)]🔚
 
 This page has an informal explanation of the parts that make up a Fabricate page, using inputs and outputs paired together for demonstration purposes.
@@ -171,7 +166,6 @@ Sometimes it's preferable to group multiple forms together along with paragraphs
 :close (str "]//" (last grammar/delimiters))})🔚
 
 ✳=[:h4 "Form Definition"]🔚
-
 ✳=[:pre [:p [:code (:open extended-form-example) ]]
    [:p [:code (:contents extended-form-example) ]]
    [:p [:code (:close extended-form-example) ]]]🔚

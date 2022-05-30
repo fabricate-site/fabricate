@@ -1,50 +1,17 @@
-✳ (ns site.fabricate.docs.fabricate
-  (:require [garden.core :as garden]
-            [garden.selectors :refer [root]]
-            [garden.stylesheet :as stylesheet]
-            [site.fabricate.styles :as styles]
-            [site.fabricate.prototype.check]
-            [site.fabricate.prototype.read]
-            [site.fabricate.prototype.schema]
-            [site.fabricate.prototype.fsm]
-            [site.fabricate.prototype.write]
-            [site.fabricate.prototype.page])) 🔚
+✳(ns site.fabricate.docs.fabricate
+  (:require
+   [garden.core :as garden]
+   [garden.selectors :refer [root]]
+   [garden.stylesheet :as stylesheet]
+   [site.fabricate.styles :as styles]
+   [site.fabricate.prototype.check]
+   [site.fabricate.prototype.read]
+   [site.fabricate.prototype.schema]
+   [site.fabricate.prototype.fsm]
+   [site.fabricate.prototype.write]
+   [site.fabricate.prototype.page])) 🔚
 
-✳ (def page-css
-  (garden/css styles/docs)
-    #_(garden/css
-       (garden.stylesheet/at-import "https://fonts.googleapis.com/css2?family=Epilogue:ital@0..1,wght@100..900" )
-       (garden.stylesheet/at-import "https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap")
-       (garden.stylesheet/at-import  "https://fonts.googleapis.com/css2?family=Overpass+Mono&display=swap")
-       [:html {:font-family "'Atkinson Hyperlegible', sans-serif"
-               :font-size "1rem"
-               :line-height "1.25"
-               :max-width "60ch"
-               :box-sizing "border-box"
-               :background-color "#EEE"}]
-       [:h1 :h2 :h3 :h4 :h5 :h6 {:font-family "Epilogue"
-                                 :text-transform "uppercase"}
-        [:code {:text-transform "none"}]]
-       [:html :body :div :header :article :nav :main :footer
-        {:max-width "none"}]
-       [:h1 {:font-size (str (Math/pow 1.618033 3) "em")
-             :margin-bottom "0em"
-             :margin-top "0em"
-             :line-height "1.25"
-             :font-weight "850"}]
-       [:h2 {:font-size (str (Math/pow 1.618033 2) "em")
-             :margin-top (str (Math/pow 1.618033 -2) "em")
-             :margin-bottom "0em"}]
-       [:h3 :h4 :h5 :h6 {:margin-bottom "0em"}]
-       [:hr {:border "0.25em solid #B4501D"}]
-       [:dt {:margin-top "0em"}]
-       [:dd {:margin-top "0em"}]
-       [:code {:font-family "Overpass Mono"}]
-       [:pre {:white-space "pre-wrap"
-              :font-family "Overpass Mono"
-              :font-size "0.95rem"}]
-
-       )) 🔚
+✳ (def page-css (garden/css styles/docs)) 🔚
 
 ✳(def metadata {:title "Fabricate"
                 :page-style page-css} )🔚
