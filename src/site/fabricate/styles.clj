@@ -16,31 +16,27 @@
    (stylesheet/at-font-face {:font-family "Newsreader"
                              :src "url(/media/Newsreader[opsz,wght].woff2) format('woff')"})
    [:article {:font-family "'Overpass', sans-serif"
-              :font-size "22px"
+              :font-size "min(4vmin, 22px)"
               :color "#222"
               #_ #_ :margin-left "1vw"
               :line-height "1.29em"
               :display "grid"
-              :grid-template-columns "repeat(30, 8ch)"
-              :grid-column-gap "3ch"
+              :grid-template-columns "repeat(12, minmax(5px, 1fr))"
+              :grid-column-gap "1rem"
               :grid-row-gap "0.5em"}]
    [:aside {:margin-left "1.75vw" :font-size "0.8em" :font-weight "400"}]
    [(select/aside select/before) {:content "\"🤔\"" :left "0" :position "absolute" :padding "0.5em" :margin-left "1.5vw"}]
    [:h1 :h2 :h3 :h4 :h5 :h6
     {:font-weight "900"
-     :grid-column-start 1
-     :grid-column-end 12
      :font-family "'Overpass', sans-serif"
      :margin-bottom "0.25em"
      :margin-top "0em"}]
    [:body {:background-color "#E2DED6"}]
-
-   [:p {#_ #_:max-width "65ch"
-        #_ #_ :grid-column-start 1
-        :grid-column "4 / 9"
+   [:p {:grid-column "4 / 9"
         :margin-bottom "0.5em"
         :padding "0px"
-        :margin-top "0em"}]
+        :margin-top "0em"
+        :hyphens "auto"}]
    [:div {:grid-column "3 / 10"
           :margin-bottom "0em"
           :margin-top "0em"}]
@@ -48,6 +44,10 @@
              :margin-top "0em"
              :margin-bottom "0em"}
     [:li {:margin-bottom "0.5em"}]]
+  (stylesheet/at-media
+   {:max-width "750px"}
+   [:p :ul :ol :pre {:grid-column "2 / 11"}]
+   [:div {:grid-column "1 / 12"}])
    [:code {:font-family "'Overpass Mono', monospace"
            :background-color "#EEE"}]
    [:pre {:background-color "#EEE" :white-space "pre-wrap"
