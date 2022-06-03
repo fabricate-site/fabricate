@@ -9,14 +9,17 @@
  [site.fabricate.prototype.page])) 🔚
 
 ✳(def metadata {:title "Tutorial: Creating Documentation for Clojure Projects with Fabricate" :page-style (garden/css styles/docs) })🔚
-✳= [:div [:h1 {:class "xl-text"} (:title metadata)] [:hr]]🔚
+✳=
+(let [[title subtitle] (clojure.string/split (:title metadata) #":")]
+  [:div [:h1 {:class "xl-text"} title]
+   [:h3 subtitle] [:hr]])🔚
 ✳=[:h2 "Introduction"]🔚
 ✳=[:h3 "What you'll learn in this tutorial:"]🔚
-- How to use Fabricate alongside your own code to document your project.
+How to use Fabricate alongside your own code to document your project.
 
 ✳=[:h3 "What you'll need to get started:"]🔚
-- A Clojure project
-- An installation of the Clojure CLI and tools.deps (any version after 1.10.1.697)
+✳=[:ul [:li "A Clojure project"]
+[:li "An installation of the Clojure CLI and tools.deps (any version after 1.10.1.697)"]]🔚
 
 If your project already uses ✳=[:code "deps.edn"]🔚 and ✳=[:code "tools.deps"]🔚 you won't need to make any configuration changes apart from adding an alias. If you use lein or boot, you'll need to do a bit more setup. Lein and boot support are covered in separate guides.
 
@@ -57,9 +60,7 @@ In your Clojure project's folder, you will have a file called ✳=[:code "deps.e
 This file is just an EDN map, defining in plain text an associative array much like Clojure's own hash maps. If you've used JSON before, you can think of EDN like Clojure's version of JSON. The important part is this file maps from certain keys to values - you can add Fabricate to the project by updating the ✳=[:code ":aliases"]🔚 key with a new key. You might already have aliases defined for your project, in which case you'll add another one for Fabricate. If you don't, then you can just add an ✳=[:code ":aliases"]🔚 key with the same information.
 
 
-✳//[:div {:style (garden/style {:display "flex" :gap "10px" :font-size "0.75em"})}
-
-✳= [:div {:style (garden/style {:flex "40%"})}
+✳= [:div {:style (garden/style {:width "40ch"})}
 [:h5 "If you already have aliases defined"]
 [:pre [:code {:class "language-clojure"}
        ":aliases {
@@ -86,8 +87,6 @@ This file is just an EDN map, defining in plain text an associative array much l
 [:ins "     :sha \"7fb30c0ead0c03ef0cc4c0133a2329752e0db37b\"}}"]
 [:ins "}"] "…"
        ]]]🔚
-
-]//🔚
 
 Once you have this alias, you can test it by launching your Clojure REPL with it:
 

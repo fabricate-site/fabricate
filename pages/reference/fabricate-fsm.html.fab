@@ -16,13 +16,15 @@
                 :page-style
                 (garden/css
                  (conj styles/docs
-                       [:.node [:text {:font-family "Overpass Mono, monospace"}]]
-                       [:.edge [:text {:font-family "Overpass Mono, monospace"
+                       [:.node [:text {:font-family "'Spline Sans Mono', monospace"}]]
+                       [:.edge [:text {:font-family "'Spline Sans Mono', monospace"
                                        :font-size "0.6em"}]]))})🔚
 
 ✳=[:h1 {:class "xl-text"} (:title metadata)]🔚
 
 This page describes how Fabricate's main event loop is organized using a state machine and visually depicts that state machine.
+
+✳=[:pre "some incomplete text"]🔚
 
 ✳(def example-graph
   (dot/digraph
@@ -138,10 +140,13 @@ Fabricate pages' states are defined using ordinary Clojure maps. At each success
 These are the visualizations of each state for a page, produced using ✳=[:code "malli.util/dot"]🔚.
 
 ✳=
-(apply conj [:div]
+(apply conj [:div {:style (garden/style {:grid-column "2 / 13"
+                                         :max-width "100vw"}) }]
 (map (fn [[k _]]
-[:div [:h5 (:fsm/name (m/properties k))]
-  [:p (:fsm/description (m/properties k))]
-  (render (md/transform k) {:format :svg})]
+       [:div {:style (garden/style {:overflow :scroll})}
+        [:h5 (:fsm/name (m/properties k))]
+        [:p (:fsm/description (m/properties k))]
+
+        (render (md/transform k) {:format :svg})]
               ) write/default-operations))
 🔚

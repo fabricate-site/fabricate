@@ -1,6 +1,7 @@
 ✳(ns site.fabricate.docs.fsm
                  (:require [site.fabricate.prototype.page :refer :all]
 [site.fabricate.prototype.read :as read]
+[site.fabricate.styles :as styles]
                            [clojure.repl :as repl]
                            [garden.core :as garden]
 [garden.stylesheet :refer [at-import]]))🔚
@@ -10,28 +11,8 @@
 :description "Using precise schemas to map from data states to functions in Clojure."
 :page-style
    (garden/css
-    (list
-     (at-import "https://fonts.googleapis.com/css2?family=Inria+Sans:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Inter:wght@900&display=swap")
-     [:body {:background-color "#EEEDED"}]
-     [:article {:max-width "40em"
-                :font-size "22px"
-                :line-height "1.35em"
-                :font-family "'Inria Sans', sans-serif"
-                :border-left-color "#dc4032"
-                :border-left-style "solid"
-                :border-left-width "2em"}
-      [:section {:padding-left "2.2em"}]
-      [:h1 :h2 :h3 :h4 {:font-family "Inter"}]
-      [:h1 {:font-size "2.5rem"
-            :line-height "1.35em"}]
-      [:h2 {:font-size "1.7rem"}]
-      [:h3 {:font-size "1.5rem"}]
-      [:h4 {:font-size "1.3rem"}]
-      [:pre {:white-space "pre-wrap"
-             :font-size "0.95rem"}]
-      ]
-
-     )
+    (concat
+     styles/docs)
     )}) 🔚
 
 ✳= [:header [:h1 (:title metadata)]
@@ -62,7 +43,12 @@ How should those states be defined? Fabricate already ✳=[:a {:href "https://gi
 
 Let's take a tour through Fabricate's ✳= [:code "fsm"] 🔚 namespace. The implementation is extremely simple right now, consisting of two functions:
 
-✳= [:pre [:code {:class "language-clojure"} (repl/source-fn 'site.fabricate.prototype.fsm/advance)]] 🔚
+✳= [:pre {:style (garden/style {:font-size "0.85em"})}
+  (-> 'site.fabricate.prototype.fsm/advance
+      repl/source-fn
+      read-string
+      expr->hiccup)
+  ] 🔚
 
 ✳= [:pre [:code {:class "language-clojure"} (repl/source-fn 'site.fabricate.prototype.fsm/complete)]] 🔚
 
