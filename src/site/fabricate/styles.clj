@@ -33,10 +33,12 @@
      :margin-bottom "0.25em"
      :margin-top "0em"}]
    [:body {:background-color "#E2DED6"}]
-   [:p {:grid-column "3 / 10"
+   [:p {:grid-column "2 / 10"
         :margin-bottom "0.5em"
         :padding "0px"
         :margin-top "0em"
+        :text-align "justify"
+        :text-justify "inter-word"
         :hyphens "auto"}]
    [:div {:grid-column "2 / 12"
           :margin-bottom "0em"
@@ -47,14 +49,16 @@
     [:li {:margin-bottom "0.4em"
           :margin-left "-2rem"
           :padding-left "0em"}]]
-   [:figure :blockquote {:grid-column "3 / 12"}]
+   [:figure {:margin-left "0em"}]
+   [:figure :blockquote {:grid-column "2 / 10"}]
+   [:blockquote {:margin-left "2em" :margin-right "2em"}]
    [:code {:font-family "'Spline Sans Mono', monospace"
            :font-weight "500"
            :font-size "0.92em"
            :white-space "pre-wrap"
            :background-color "#EEE"}]
    [:pre {:background-color "#EEE" :white-space "pre-wrap"
-          :grid-column "3 / 12"
+          :grid-column "2 / 12"
           :margin-bottom "0.5em"
           :font-weight "450"
           :line-height "1.45rem"
@@ -66,9 +70,14 @@
                                  :font-weight "700"
                                  :content "\"+\""}]
     [(select/ins select/after) {:content "\"\"" :display "block"}]]
+   [:dl {:display "grid" :grid-column-gap "0.5em"}
+    [:dt {:grid-column "1 / 3 !important" :font-weight "600"}]
+    [:dd {:grid-column "3 !important"
+          :margin-left "0em" :min-width "25ch"}]]
+
    (stylesheet/at-media
     {:max-width "900px"}
-    [:p :ul :ol {:grid-column "2 / 11"}]
+    [:p :ul :ol {:grid-column "1 / 10"}]
     [:div {:grid-column "1 / 13"}]
     [:pre :figure :blockquote {:grid-column "2 / 13"}]
     [:h1 :h2 :h3 :h4 :h5 :h6
@@ -88,12 +97,6 @@
     {:font-family "'Spline Sans Mono', monospace"}
     [:.keyword {:color "#7f2c28"}]
     [:.string {:color "#7a7533"}]]
-   [:figure {:margin-left "0.25vw"
-             :margin-right "0.25vw"
-             :margin-top "0.5em"
-             :margin-bottom "0.5em"}]
-   [:blockquote {:margin-left "0.25em"
-                 :margin-right "0.25em"}]
    [:a {:margin-bottom "0em"
         :text-decoration "none"
         :color "#337E80"}]
