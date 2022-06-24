@@ -63,7 +63,7 @@
         value)
       (let [matched-schema (-> union-schema
                                m/children
-                               (nth (first parsed) #_(inc (first parsed)))
+                               (nth (first parsed))
                                last)
             op (get fsm-map matched-schema
                     (get fsm-map (m/form matched-schema)
@@ -94,7 +94,9 @@
   "Completes the fsm by advancing through states until the same value is produced twice."
   {:malli/schema [:=> [:cat state-action-map :any [:* :any]] :any]}
   [fsm-map value & args]
-  (let [fsm-states (iterate #(apply advance fsm-map % args) value)]
+  (let [fsm-states (iterate  ;; #(apply advance fsm-map % args)
+                    (fn [s] (apply advance fsm-map s args))
+                    value)]
     (reduce (fn [current-state next-state]
               (if (= current-state next-state)
                 (reduced current-state)

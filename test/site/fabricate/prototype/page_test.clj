@@ -49,11 +49,12 @@
               [:span {:class "language-clojure symbol"} "%&amp;"] ")"]
              (#'site.fabricate.prototype.page/fn-node->hiccup
               (node/coerce '#(apply + 3 %&)))))
-    #_(t/is
-     (any? ()))
-    )
+    (t/is (= [:span {:class "language-clojure comment"} ";" " a comment" [:br]]
+             (str->hiccup "; a comment\n(+ 3 4)")))
 
-  )
+    (t/is (any?
+           (str->hiccup "(defn myfunc [a] \n; commentary\n (inc a))")
+           ))))
 
 (t/deftest metadata-transforms
   (t/testing "Metadata transformation"

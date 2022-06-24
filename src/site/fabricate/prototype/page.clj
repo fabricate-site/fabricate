@@ -9,7 +9,9 @@
     [counted-double-list ft-split-at ft-concat]]
    [malli.core :as m]
    [clojure.string :as string]
+   [clojure.repl :refer [source-fn]]
    [rewrite-clj.node :as node :refer [tag sexpr]]
+   [rewrite-clj.parser :as p]
    [rewrite-clj.zip :as z]
    [site.fabricate.prototype.read :as read]
    [site.fabricate.prototype.read.grammar :as grammar]
@@ -531,6 +533,13 @@
 (defmethod node->hiccup :comma [node]
   (span (name (tag node)) ","))
 
+(defmethod node->hiccup :comment [node]
+  (span (name (tag node)) (:prefix node)
+        (string/replace (:s node) "\n" "")
+        [:br]))
+
+(-> "; a comment\n; another comment\n(+ 1 1)"
+    p/parse-string-all)
 
 
 (defn expr->hiccup
@@ -539,7 +548,25 @@
   [expr]
   (node->hiccup (rewrite-clj.node/coerce expr)))
 
+(defn fn->spec-form [fn-sym]
+  (-> fn-sym
+      source-fn
+      read-string
+      rest
+      (#(clojure.spec.alpha/conform :clojure.core.specs.alpha/defn-args %))
+      expr->hiccup))
+
+(defn str->hiccup
+  "Converts the given Clojure string into a hiccup element"
+  {:malli/schema [:=> [:cat :string] [:vector :any]]}
+  [expr-str]
+  (node->hiccup (p/parse-string expr-str)))
+
 (comment
+  (clojure.repl/doc p/parse)
+
+  (clojure.repl/doc p/parse-string-all)
+  (clojure.repl/doc p/parse-string)
 
   (node->hiccup (rewrite-clj.node/coerce 'sym))
 
