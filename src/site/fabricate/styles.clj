@@ -96,7 +96,10 @@
    [:.language-clojure
     {:font-family "'Spline Sans Mono', monospace"}
     [:.keyword {:color "#7f2c28"}]
-    [:.string {:color "#7a7533"}]]
+    [:.string {:color "#7a7533"}]
+    [:.symbol {:color "#4f2c28"}]
+    [:.comment {:font-weight "300"
+                :color "#555"}]]
    [:a {:margin-bottom "0em"
         :text-decoration "none"
         :color "#337E80"}]
