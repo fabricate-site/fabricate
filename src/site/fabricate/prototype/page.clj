@@ -478,8 +478,8 @@
   (:whitespace node))
 
 (defmethod node->hiccup :multi-line [node]
-  (span "string"
-        (interpose [:br] (:lines node))))
+  (apply span "string" "\"" (concat (interpose [:br] (:lines node))
+                                    ["\""])))
 
 (defmethod node->hiccup :map [node]
   (apply span "map" "{" (conj (mapv node->hiccup (:children node)) "}")))
