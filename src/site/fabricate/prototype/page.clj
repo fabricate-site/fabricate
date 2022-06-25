@@ -548,13 +548,15 @@
   [expr]
   (node->hiccup (rewrite-clj.node/coerce expr)))
 
-(defn fn->spec-form [fn-sym]
+(defn fn->spec-form
+  "Converts the given function symbol into the conformed spec for function definition"
+  {:malli/schema [:=> [:cat :symbol] [:vector :any]]}
+  [fn-sym]
   (-> fn-sym
       source-fn
       read-string
       rest
-      (#(clojure.spec.alpha/conform :clojure.core.specs.alpha/defn-args %))
-      expr->hiccup))
+      (#(clojure.spec.alpha/conform :clojure.core.specs.alpha/defn-args %))))
 
 (defn str->hiccup
   "Converts the given Clojure string into a hiccup element"
