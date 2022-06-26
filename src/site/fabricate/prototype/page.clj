@@ -516,6 +516,20 @@
   (if (fn-list? node) (fn-node->hiccup node)
       (apply span "list" "(" (conj (mapv node->hiccup (:children node)) ")"))))
 
+(defmethod node->hiccup :forms [node]
+  (apply span (name (tag node)) (map node->hiccup (:children node))))
+
+(defmethod node->hiccup :quote [node]
+  (apply span (name (tag node)) "'"
+         (map node->hiccup (:children node))))
+
+(defmethod node->hiccup :uneval [node]
+  (apply span (name (tag node)) "#_"
+         (map node->hiccup (:children node))))
+
+(defmethod node->hiccup :deref [node]
+  (apply span (name (tag node)) "@"
+         (map node->hiccup (:children node))))
 
 (defmethod node->hiccup :set [node]
   (apply span (name (tag node))
@@ -565,6 +579,13 @@
   (node->hiccup (p/parse-string expr-str)))
 
 (comment
+
+ "(def\n markdown-state\n (mu/closed-schema\n  (mu/merge\n   evaluated-state\n   [:map\n    {:closed true,\n     :fsm/name &quot;Markdown&quot;,\n     :fsm/description\n     &quot;Fabricate markdown input evaluated as markdown string&quot;}\n    [:site.fabricate.file/output-extension [:enum &quot;md&quot; &quot;markdown&quot;]]])))\n"
+  (p/parse-string
+   (last (read/include-def 'markdown-state "./src/site/fabricate/prototype/write.clj"))
+
+   )
+
   (clojure.repl/doc p/parse)
 
   (clojure.repl/doc p/parse-string-all)
