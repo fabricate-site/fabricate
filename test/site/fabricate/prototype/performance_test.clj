@@ -65,7 +65,7 @@
 
 (t/deftest ^:performance page-parsing
   (t/testing "performance of page parsing"
-    (let [f (slurp "pages/fabricate.html.fab")]
+    (let [f (slurp "pages/index.html.fab")]
       (profiler/profile (dotimes [_ 500] (read/parse f)))
       (bench/quick-bench (read/parse f)))))
 

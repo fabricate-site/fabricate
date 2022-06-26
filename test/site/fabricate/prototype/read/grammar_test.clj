@@ -75,8 +75,9 @@ text
 
 (t/deftest pages
   (t/testing "ambiguity"
-    (doseq [f ["./pages/finite-schema-machines.html.fab"
-               "./pages/fabricate.html.fab"
+    (doseq [f ["./pages/background/finite-schema-machines.html.fab"
+               "./pages/fab.html.fab"
+               "./pages/index.html.fab"
                "./README.md.fab"]]
       (let [c (slurp f)]
         (t/testing (str "in input file: " f)
@@ -118,10 +119,10 @@ Multi-line form here
 ]//🔚
 ")
 
-  (template (slurp "./pages/fabricate.html.fab"))
+  (template (slurp "./pages/index.html.fab"))
 
   (template
-   (slurp "./pages/finite-schema-machines.html.fab")))
+   (slurp "./pages/background/finite-schema-machines.html.fab")))
 
 (def pathological-input-schema
     "Malli schema for problematic input cases"

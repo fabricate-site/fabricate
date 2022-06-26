@@ -7,6 +7,8 @@
             [hiccup.util :as util]
             [clojure.pprint :refer [pprint]]
             [clojure.tools.reader :as r]
+            [rewrite-clj.zip :as z]
+            [rewrite-clj.parser :as p]
             [malli.core :as m]
             [malli.util :as mu]
             [malli.generator :as mg]
@@ -340,9 +342,10 @@
   "Excerpts the source code of the given symbol in the given file."
   {:malli/schema
    [:function
-    [:=> [:cat [:map [:render-fn [:fn fn?]]
-                [:def-syms [:set :symbol]]
-                [:container [:vector :any]]]
+    [:=> [:cat [:map
+                [:render-fn {:optional true} [:fn fn?]]
+                [:def-syms {:optional true} [:set :symbol]]
+                [:container {:optional true} [:vector :any]]]
           :symbol :string]
      [:vector :any]]
     [:=> [:cat :symbol :string] [:vector :any]]]}
@@ -361,6 +364,14 @@
                (conj container (render-fn e))
                (recur source)))))))
   ([sym f] (include-def {} sym f)))
+
+(defn include-form
+  "Return the form in the file matching the predicate as a rewrite-clj node."
+  {:malli/schema
+   [:=> [:cat :string [:fn fn?]] :any]}
+  [src-file pred]
+  (let [fzip (z/of-file src-file)]
+    (z/node (z/find-next-depth-first fzip #(pred (z/sexpr %))))))
 
 (def file-metadata-schema
   (m/schema

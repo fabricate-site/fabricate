@@ -16,6 +16,9 @@
 
 (declare test-state)
 
+(def test-operations
+  (dissoc default-operations rendered-state))
+
 (t/use-fixtures :once
   (fn [f]
     (let [prior-exec clojure.lang.Agent/soloExecutor
@@ -62,6 +65,20 @@
                       populate-page-meta))))
 
 (t/deftest doc-rendering
+
+  (doseq [e (:examples (m/properties input-state))]
+    (t/testing (str "example file: " e)
+      (let [final (fsm/complete test-operations e initial-state)
+            final-debug (fsm/complete test-operations {:fsm/value e} initial-state)]
+        (t/is
+         (contains?
+          final
+          :site.fabricate.page/rendered-content)
+         "Example FSMs should complete successfully")
+        (t/is (contains? (:fsm/value final-debug)
+               :site.fabricate.page/rendered-content)
+              "Example FSMs should complete in debug mode"))))
+
   (t/testing "readme"
     (t/is (string?
            (-> "./README.md.fab"

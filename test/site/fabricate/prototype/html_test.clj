@@ -47,6 +47,7 @@
    #_#_:wbr [:wbr]
    :hr [:hr]
    :br [:br]
+   :wbr [:wbr]
    :abbr [:abbr {:title "ACME Corporation"} "ACME"]
    :ol [:ol [:li "item"] [:li "item2"]]
    :hgroup [:hgroup [:h1 "big header"] [:h4 "small header"]]

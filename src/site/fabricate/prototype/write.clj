@@ -133,7 +133,8 @@
                                 :output-file :site.fabricate.file/output-file
                                 :title :site.fabricate.page/title})))
        (#(assoc % :site.fabricate.file/output-file
-                (or output-file
+                (or (:site.fabricate.file/output-file %)
+                    output-file
                     (get-output-filename
                      (str "./" (% :site.fabricate.file/filename)
                           "." (% :site.fabricate.file/output-extension))
@@ -149,25 +150,33 @@
 
 ;; maybe make these state schema var names less ambiguous
 (def input-state
-  [:and {:fsm/description "Fabricate input path represented as string"}
+  [:and {:fsm/description "Fabricate input path represented as string"
+         :fsm/name "Input"
+         :examples ["pages/background/finite-schema-machines.html.fab"
+                    "pages/index.html.fab"
+                    "README.md.fab"]}
    :string [:fn #(.endsWith % ".fab")]])
 
 (def file-state
   [:map {:closed true
+         :fsm/name "File"
          :fsm/description "Fabricate input represented as java.io.File entry in page map"}
    [:site.fabricate.file/input-file [:fn sketch/file?]]
    [:site.fabricate.file/filename :string]])
 
 (def read-state
   [:map {:closed true
+         :fsm/name "Read"
          :fsm/description "Fabricate input read in as string"}
    [:site.fabricate.file/input-file [:fn sketch/file?]]
    [:site.fabricate.file/filename :string]
    [:site.fabricate.page/unparsed-content :string]])
 
+
 (def parsed-state
   (m/schema
    [:map {:closed true
+          :fsm/name "Parsed"
           :fsm/description "Fabricate input parsed and metadata associated with page map"}
     [:site.fabricate.file/input-file [:fn sketch/file?]]
     [:site.fabricate.file/template-suffix
@@ -184,6 +193,17 @@
       [:path :string]
       [:file [:fn sketch/file?]]]]]))
 
+(defn parse-contents
+  {:malli/schema [:=> [:cat read-state :map] parsed-state]}
+  [{:keys [site.fabricate.page/unparsed-content
+           site.fabricate.file/filename]
+    :as page-data}
+   {:keys [site.fabricate/settings]}]
+  (-> page-data
+      (assoc :site.fabricate.page/parsed-content
+             (read/parse unparsed-content {:filename filename}))
+      (populate-page-meta settings)))
+
 (def evaluated-state
   (mu/closed-schema
    (mu/merge
@@ -191,6 +211,7 @@
     (m/schema
      [:map
       {:closed true
+       :fsm/name "Evaluated"
        :fsm/description "Fabricate contents evaluated after parsing"}
       [:site.fabricate.page/evaluated-content [:fn #(or (list? %) (vector? %))]]
       [:site.fabricate.page/metadata {:optional true} [:map {:closed false}]]]))))
@@ -200,6 +221,7 @@
    (mu/merge
     evaluated-state
     [:map {:closed true
+           :fsm/name "HTML"
            :fsm/description "Fabricate input evaluated as hiccup vector"}
      [:site.fabricate.file/output-extension [:enum  "html"]]])))
 
@@ -208,6 +230,7 @@
    (mu/merge
     evaluated-state
     [:map {:closed true
+           :fsm/name "Markdown"
            :fsm/description "Fabricate markdown input evaluated as markdown string"}
      [:site.fabricate.file/output-extension [:enum  "md" "markdown"]]])))
 
@@ -228,7 +251,8 @@
                             evaluated-content))]
     [:html
      (doc-header metadata)
-     [:body [:article body-content]
+     [:body
+      [:main body-content]
       [:footer
        [:div [:a {:href "/"} "Home"]]]]]))
 
@@ -236,14 +260,17 @@
   (mu/merge
    evaluated-state
    [:map {:fsm/description "Fabricate input rendered to output string"
+          :fsm/name "Rendered"
+          :fsm/side-effect? true        ; indicating that the associated state performs a side effect
           :open true
           :fsm/state :fsm/exit}         ; indicating the exit state
     [:site.fabricate.page/rendered-content :string]]))
 
 (defn eval-parsed-page
-  {:malli/schema [:=> [:cat parsed-state] evaluated-state]}
+  {:malli/schema [:=> [:cat parsed-state :map] evaluated-state]}
   [{:keys [site.fabricate.page/parsed-content
-           site.fabricate.page/namespace] :as page-data}]
+           site.fabricate.page/namespace] :as page-data}
+   site-opts]
   (let [nmspc (create-ns namespace)
         evaluated (read/eval-all parsed-content true nmspc)
         page-meta (let [m (ns-resolve nmspc 'metadata)]
@@ -263,26 +290,22 @@
 ;;
 ;; and also include these operations in the state map
 (def default-operations
-  {input-state (fn [f _] {:site.fabricate.file/input-file (io/as-file f)
-                          :site.fabricate.file/filename f})
-   file-state (fn [{:keys [site.fabricate.file/input-file] :as page-data} _]
+  {input-state (fn input-file
+                 [f _] {:site.fabricate.file/input-file (io/as-file f)
+                        :site.fabricate.file/filename f})
+   file-state (fn read-file
+                [{:keys [site.fabricate.file/input-file] :as page-data} _]
                 (assoc page-data :site.fabricate.page/unparsed-content
                        (slurp input-file)))
-   read-state
-   (fn [{:keys [site.fabricate.page/unparsed-content
-                site.fabricate.file/filename]
-         :as page-data}
-        {:keys [site.fabricate/settings]}]
-     (-> page-data
-         (assoc :site.fabricate.page/parsed-content
-                (read/parse unparsed-content {:filename filename}))
-         (populate-page-meta settings)))
-   parsed-state (fn [m _] (eval-parsed-page m))
-   markdown-state (fn [{:keys [site.fabricate.page/evaluated-content]
-                        :as page-data} _]
+   read-state parse-contents
+   parsed-state eval-parsed-page
+   markdown-state (fn markdown-str
+                    [{:keys [site.fabricate.page/evaluated-content]
+                      :as page-data} _]
                     (assoc page-data :site.fabricate.page/rendered-content
                            (reduce str evaluated-content)))
-   html-state (fn [page-data state]
+   html-state (fn render-hiccup
+                [page-data state]
                 (let [final-hiccup (evaluated->hiccup page-data state)]
                   (assoc page-data
                          :site.fabricate.page/evaluated-content final-hiccup
@@ -291,9 +314,10 @@
                                {:escape-strings? false}
                                final-hiccup)))))
    rendered-state
-   (fn [{:keys [site.fabricate.page/rendered-content
-                site.fabricate.file/output-file] :as page-data}
-        settings]
+   (fn write-file
+     [{:keys [site.fabricate.page/rendered-content
+              site.fabricate.file/output-file] :as page-data}
+      settings]
      (do
        (println "writing page content to" output-file)
        (spit output-file rendered-content)
@@ -448,12 +472,10 @@
 
   (-> state
       (send (constantly initial-state))
-      (send-off draft!)
-      await)
+      (send-off draft!))
 
   (-> state
-      (send-off stop!)
-      await)
+      (send-off stop!))
 
 
   (keys @state)
@@ -476,15 +498,28 @@
    initial-state )
 
 
-  (fsm/complete default-operations "./pages/finite-schema-machines.html.fab")
+  (fsm/complete default-operations
+                "./pages/background/finite-schema-machines.html.fab"
+                @state)
 
   (fsm/complete default-operations "./pages/extended-forms.html.fab"
                 state)
 
+  (fsm/complete default-operations
+                "./pages/reference/template-structure.html.fab"
+                @state)
+
+  (fsm/complete default-operations
+                "./pages/index.html.fab"
+                @state)
+
   (site.fabricate.prototype.read.grammar/template
    (slurp "./pages/extended-forms.html.fab"))
 
-  (fsm/complete default-operations "./pages/fabricate.html.fab")
+
+  (do (fsm/complete default-operations "./pages/reference/fabricate-fsm.html.fab"
+                    @state)
+      nil)
 
   (def finite-schema-machines (fsm/complete default-operations "./pages/finite-schema-machines.html.fab"))
 

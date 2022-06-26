@@ -9,6 +9,10 @@
     [counted-double-list ft-split-at ft-concat]]
    [malli.core :as m]
    [clojure.string :as string]
+   [clojure.repl :refer [source-fn]]
+   [rewrite-clj.node :as node :refer [tag sexpr]]
+   [rewrite-clj.parser :as p]
+   [rewrite-clj.zip :as z]
    [site.fabricate.prototype.read :as read]
    [site.fabricate.prototype.read.grammar :as grammar]
    [site.fabricate.prototype.schema :as schema]))
@@ -178,10 +182,9 @@
 
 (defn- reconstruct [s sequence-type]
   (cond (= clojure.lang.PersistentList sequence-type)
-           (apply list s)
-           (= clojure.lang.PersistentVector sequence-type)
-           (into [] s) :else (into [] s)))
-
+        (apply list s)
+        (= clojure.lang.PersistentVector sequence-type)
+        (into [] s) :else (into [] s)))
 
 (defn- final-match? [re s]
   (and (= 1 (count (re-seq re s)))
@@ -207,9 +210,7 @@
   (loop [ct 0 m (re-matcher #"\n\n" "abc\n\ndef\n\nghi")]
     (let [f? (.find m)]
       (if (not f?) ct
-          (recur (inc ct) m))))
-
-  )
+          (recur (inc ct) m)))))
 
 (defn parse-paragraphs
   "Detects the paragraphs within the form"
@@ -225,7 +226,7 @@
          res
          (cond
            ; don't detect in specific elements
-           (#{:svg :dl :figure} (first form)) form
+           (#{:svg :dl :figure :pre} (first form)) form
            ;; (non-hiccup-seq? form)
            ;; recurse?
            ;; (parse-paragraphs (apply conj default-form form) opts)
@@ -288,6 +289,8 @@
                               (filter #(not (empty? %)))
                               (map #(conj default-form %))))
                   ;; skip empty or whitespace strings
+                  ;; or not:
+                  #_ #_
                   (and (string? next)
                        (or (empty? next)
                            (re-matches #"\s+" next))) acc
@@ -447,3 +450,194 @@
               ctrl-char ""}}]
   (let [[start end] grammar/delimiters]
     (str start ctrl-char (format-fn form) end)))
+
+(defn- span [class & contents]
+  (apply conj
+         [:span {:class (str "language-clojure " class)}]
+         contents))
+
+(defmulti node->hiccup tag)
+
+(defn- atom-class [node]
+  (cond (:k node) "keyword"
+        (:lines node) "string"
+        (contains? node :value)
+        (let [v (:value node)]
+          (cond (number? v) "number"
+                (string? v) "string"
+                (nil? v) "nil"
+                (symbol? v) "symbol"
+                :else (name (tag node))))
+        :else (println (tag node) (keys node)
+                       (sexpr node) (type (sexpr node)))))
+
+(defmethod node->hiccup :token [node]
+  (span (atom-class node) (hu/escape-html (str node))))
+
+(defmethod node->hiccup :whitespace [node]
+  (:whitespace node))
+
+(defmethod node->hiccup :multi-line [node]
+  (apply span "string" "\"" (concat (interpose [:br] (:lines node))
+                                    ["\""])))
+
+(defmethod node->hiccup :map [node]
+  (apply span "map" "{" (conj (mapv node->hiccup (:children node)) "}")))
+
+(defn- fn-list? [node]
+  (and (= (:tag node) :list) (= 'fn* (:value (first (:children node))))))
+
+(defn- fn-node->hiccup [node]
+  (let [contents (:children node)
+        [_ params body] (sexpr node)
+        r (cond
+            (= 0 (count params)) {}
+            (= 1 (count params)) {(first params) '%}
+            (and (= 2 (count params)) (= '& (first params)))
+            {(second params) '%&}
+            :else
+            (into {} (map-indexed
+                      (fn [ix sym]
+                        [sym (symbol (str "%" (inc ix)))])
+                      params)))
+        edited-node
+        (z/node (z/postwalk (z/edn (node/coerce body))
+                            (fn select [zloc] (symbol? (z/sexpr zloc)))
+                            (fn visit [zloc] (z/edit zloc  #(get r % %)))))]
+    (apply span (name (tag node))
+           "#(" (conj (mapv node->hiccup (:children edited-node)) ")"))))
+
+(defmethod node->hiccup :fn [node]
+  ;; this is a really tricky one, as it involves
+  ;; rewriting the expanded function to resemble the input
+  (fn-node->hiccup node))
+
+(defmethod node->hiccup :list [node]
+  (if (fn-list? node) (fn-node->hiccup node)
+      (apply span "list" "(" (conj (mapv node->hiccup (:children node)) ")"))))
+
+(defmethod node->hiccup :forms [node]
+  (apply span (name (tag node)) (map node->hiccup (:children node))))
+
+(defmethod node->hiccup :quote [node]
+  (apply span (name (tag node)) "'"
+         (map node->hiccup (:children node))))
+
+(defmethod node->hiccup :uneval [node]
+  (apply span (name (tag node)) "#_"
+         (map node->hiccup (:children node))))
+
+(defmethod node->hiccup :deref [node]
+  (apply span (name (tag node)) "@"
+         (map node->hiccup (:children node))))
+
+(defmethod node->hiccup :set [node]
+  (apply span (name (tag node))
+         "#{" (conj (mapv node->hiccup (:children node)) "}")))
+
+(defmethod node->hiccup :newline [node]
+  (repeat (count (:newlines node)) [:br]))
+
+(defmethod node->hiccup :vector [node]
+  (apply span "vector" "[" (conj (mapv node->hiccup (:children node)) "]")))
+
+(defmethod node->hiccup :meta [node]
+  (apply span (name (tag node)) "^" (mapv node->hiccup (:children node))))
+
+(defmethod node->hiccup :comma [node]
+  (span (name (tag node)) ","))
+
+(defmethod node->hiccup :comment [node]
+  (span (name (tag node)) (:prefix node)
+        (string/replace (:s node) "\n" "")
+        [:br]))
+
+(-> "; a comment\n; another comment\n(+ 1 1)"
+    p/parse-string-all)
+
+
+(defn expr->hiccup
+  "Converts the given expression into a hiccup element tokenzed into spans by the value type."
+  {:malli/schema [:=> [:cat :any] [:vector :any]]}
+  [expr]
+  (node->hiccup (rewrite-clj.node/coerce expr)))
+
+(defn fn->spec-form
+  "Converts the given function symbol into the conformed spec for function definition"
+  {:malli/schema [:=> [:cat :symbol] [:vector :any]]}
+  [fn-sym]
+  (-> fn-sym
+      source-fn
+      read-string
+      rest
+      (#(clojure.spec.alpha/conform :clojure.core.specs.alpha/defn-args %))))
+
+(defn str->hiccup
+  "Converts the given Clojure string into a hiccup element"
+  {:malli/schema [:=> [:cat :string] [:vector :any]]}
+  [expr-str]
+  (node->hiccup (p/parse-string expr-str)))
+
+(comment
+
+ "(def\n markdown-state\n (mu/closed-schema\n  (mu/merge\n   evaluated-state\n   [:map\n    {:closed true,\n     :fsm/name &quot;Markdown&quot;,\n     :fsm/description\n     &quot;Fabricate markdown input evaluated as markdown string&quot;}\n    [:site.fabricate.file/output-extension [:enum &quot;md&quot; &quot;markdown&quot;]]])))\n"
+  (p/parse-string
+   (last (read/include-def 'markdown-state "./src/site/fabricate/prototype/write.clj"))
+
+   )
+
+  (clojure.repl/doc p/parse)
+
+  (clojure.repl/doc p/parse-string-all)
+  (clojure.repl/doc p/parse-string)
+
+  (node->hiccup (rewrite-clj.node/coerce 'sym))
+
+  (expr->hiccup '(def myvar 183))
+
+  (expr->hiccup '(38 29 "a" :kw sym))
+  (expr->hiccup '[38 29 "a" :kw sym])
+  (expr->hiccup #{38 29 "a" :kw})
+  (expr->hiccup '#(+ 3 %))
+
+  (=
+   (rewrite-clj.node/coerce [:em{:class"tiny"}"text"])
+   (rewrite-clj.node/coerce [:em {:class "tiny"} "text"])
+
+   )
+  (:children
+   (rewrite-clj.node/coerce [:em{:class"tiny"}"text"]))
+
+  (:whitespace (second (:children
+                        (rewrite-clj.node/coerce [:em {:class "tiny"} "text"]))))
+
+  (expr->hiccup [:em {:class "tiny"} "text"])
+
+  (=
+   (rewrite-clj.node/coerce [:em{:class "tiny"}"text"])
+
+   (rewrite-clj.node/coerce [:em {:class "tiny"} "text"]))
+
+  (= (rewrite-clj.node/coerce :a)
+     (rewrite-clj.node/coerce :a)
+     )
+
+
+
+  (rewrite-clj.node/coerce 'sym)
+
+  (fn-node->hiccup (rewrite-clj.node/coerce '#(+ 3 %)))
+
+  (fn-list? (rewrite-clj.node/coerce '#(+ 3 %)))
+
+
+  (:tag (rewrite-clj.node/coerce '#(+ 3 %)))
+
+
+  (= 'fn* (:value (first (:children (rewrite-clj.node/coerce `#(+ 3 %))))))
+
+
+  (let [n (rewrite-clj.node/coerce '#(+ 3 %))]
+    (into {} (map (fn [k v] [k v]) (keys n) (vals n))))
+
+  (node->hiccup (rewrite-clj.node/coerce {:a 3})))

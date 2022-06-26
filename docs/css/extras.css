@@ -1,0 +1,25 @@
+.stack > * + * {
+  display: flex;
+  margin-top: 2.058rem;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+[class^='stack'] > * {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.stack-large > * + * {
+  margin-top: 1.272019rem;
+  border: 2px solid black;
+}
+
+.stack-small > * + * {
+    margin-top: 1.5rem;
+    border: 1px solid black;
+}
+
+.stack:only-child {
+  height: 100%;
+}

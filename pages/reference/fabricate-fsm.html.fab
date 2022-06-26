@@ -1,0 +1,152 @@
+✳(ns site.fabricate.docs.reference.fsm
+  (:require [site.fabricate.prototype.page :as page]
+            [garden.core :as garden]
+            [clojure.string :as str]
+            [site.fabricate.styles :as styles]
+            [site.fabricate.prototype.fsm :as fsm]
+            [site.fabricate.prototype.schema :as schema]
+            [site.fabricate.prototype.write :as write]
+            [malli.core :as m]
+            [malli.util :as mu]
+            [malli.dot :as md]
+            [dorothy.core :as dot]
+            [dorothy.jvm :refer [render]])) 🔚
+
+✳(def metadata {:title "A Reference to Fabricate's FSM event loop"
+                :page-style
+                (garden/css
+                 (conj styles/docs
+                       [:.node [:text {:font-family "'Spline Sans Mono', monospace"}]]
+                       [:.edge [:text {:font-family "'Spline Sans Mono', monospace"
+                                       :font-size "0.6em"}]]))})🔚
+
+✳=[:h1 {:class "xl-text"} (:title metadata)]🔚
+
+This page describes how Fabricate's main event loop is organized using a state machine and visually depicts that state machine.
+
+✳=[:pre "some incomplete text"]🔚
+
+✳(def example-graph
+  (dot/digraph
+   [ {:bgcolor :transparent :fontname "Overpass"
+     :fontnames "svg"}
+    (dot/subgraph :main [{:style :filled, :color :lightgrey, :label "Hiccup"}
+                         (dot/node-attrs {:style :filled, :color :white})
+
+                         [:evaluated :> :html]])
+
+    (dot/subgraph
+     :markdown [
+                {:color :blue, :label "Markdown"
+                 :fontname "Overpass" :fontnames "hd"}
+                (dot/node-attrs {:style :filled})
+                [:evaluated :> :markdown]])
+
+    [:input :file]
+    [:file :read]
+    [:read :parsed]
+    [:parsed :evaluated]
+    [:html :end]
+    [:markdown :end]
+
+    [:input {:shape :diamond}]
+    [:end   {:shape :square}]]))🔚
+
+✳(def terminal-fsm-states
+  (filter (fn [s]
+            (let [p (m/properties s)]
+                      (and (= :fsm/exit (:fsm/state p))
+                           (:fsm/side-effect? p))))
+          (keys write/default-operations)))🔚
+
+✳(def fsm-ops (apply dissoc write/default-operations terminal-fsm-states))🔚
+
+✳ (def iterated-fsms
+  (->> (:examples (m/properties write/input-state))
+       (map
+        (fn [v]
+          [v (reduce
+              (fn [states next-state]
+                (if (= (:fsm/value (peek states))
+                       (:fsm/value next-state))
+                  (reduced states)
+                  (conj states next-state)))
+              []
+              (iterate
+               (fn [v] (fsm/advance fsm-ops v write/initial-state)) {:fsm/value v}))]))
+       (into {})))🔚
+
+✳(defn get-fsm-fn-by-prop [fsm-fn-map prop value]
+  (->> fsm-fn-map
+       keys
+       (filter #(= (get (m/properties %) prop) value))
+       first
+       (#(get fsm-fn-map %)))) 🔚
+
+✳=
+
+(->> iterated-fsms
+     vals
+     (map
+      (fn [vs]
+        (->> vs
+             (map
+              #(if (:fsm/matched-state %)
+                 (let [f (get-fsm-fn-by-prop
+                          write/default-operations
+                          :fsm/name (:fsm/name (m/properties (:fsm/matched-state %))))]
+                   {:name (:fsm/name
+                           (m/properties (:fsm/matched-state % )))
+                    :fn-name
+                    (as-> (str f) $
+                      (clojure.repl/demunge $)
+                      (or (re-find #"(.+)--\d+@" $)
+                          (re-find #"(.+)@" $))
+                      (last $)
+                      (let [[nmspc nm] (str/split $ #"/" 2)]
+                        (str (get (into {} (map (fn [[k v]] [(str v) k])
+                                                (ns-aliases *ns*)))
+                                  nmspc) "/" nm)))})))
+             (partition 2 1)
+             (filter #(not= nil (first %)))
+             (map (fn [[s1 s2]] [(:name s1) (:name s2)
+                                 {:xlabel (or (:fn-name s1) (:fn-name s2))}])))))
+     (apply concat)
+     distinct
+     (map #(into [] %))
+     (#(dot/digraph
+        (concat [{:bgcolor :transparent :rankdir "TD"
+                  :pad "0.35"
+                  :splines "false" :sep "+40" #_ #_ :nodesep "2.0"}
+                 (dot/node-attrs {:shape "box"})
+                 (dot/edge-attrs {#_ #_:tailport "s"})
+                 %])))
+     (dot/dot)
+     (#(render % {:format :svg}))
+     (into [:div])) 🔚
+
+This diagram indicates that the possible states for a Fabricate page are pretty simple, with only a single branch based on the output file type. Fabricate's Markdown output evaluates the Clojure code in each embedded expression and inserts the result into the string of Markdown text, which is useful for defining dynamic content in the README file.
+
+Fabricate pages' states are defined using ordinary Clojure maps. At each successive stage of the FSM, more keys with more data are added to the map, allowing for the shape of the data itself to define what functions to call next to process it further. Those states are defined using ✳=[:code "malli"]🔚 schemas, which are mapped to functions in the ✳=[:code (str ('page (ns-aliases *ns*)))]🔚 namespace using - you guessed it - an ordinary Clojure map. The map here is simplified from its actual source, mapping from the names of the operations to the functions.
+
+✳=[:pre [:code {:class "language-clojure"}
+       (->> write/default-operations
+            (map (fn [[s f]] [(:fsm/name (m/properties s)) f]))
+            (into {})
+            page/expr->hiccup)]]🔚
+
+✳=[:h3 {:class "l-text"} "State definitions"]🔚
+
+These are the visualizations of each state for a page, produced using ✳=[:code "malli.util/dot"]🔚.
+
+✳=
+(apply conj [:div {:style (garden/style {:grid-column "2 / 13"
+                                         :max-width "100vw"}) }]
+(map (fn [[k _]]
+       [:div {:style (garden/style {:overflow :scroll})}
+        [:h5 (:fsm/name (m/properties k))]
+        [:p (:fsm/description (m/properties k))]
+
+        (render (md/transform k) {:format :svg})]
+              ) write/default-operations))
+🔚

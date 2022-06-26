@@ -15,3 +15,5 @@
 .hg/
 docs/**/*.html
 docs/*.html
+docs/**/*.woff
+docs/**/*.woff2

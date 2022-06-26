@@ -75,7 +75,7 @@
     #_:input :kbd #_:label :mark #_:math #_:meter #_:noscript
     #_:object #_:output #_:picture #_:progress :q #_:ruby :s :samp
     :script #_:select :small :span :strong :sub :sup #_:svg
-    #_:textarea :time :var #_:video #_ :wbr})
+    #_:textarea :time :var #_:video :wbr})
 
 (def phrasing-subtags
   "MDN list of tags that are phrasing content when they contain only phrasing content."
@@ -234,6 +234,7 @@
                       [:map [:dir [:enum "ltr" "rtl"]]])
             [:* [:schema [:ref ::phrasing-content]]])
      ::br (->hiccup-schema :br global-attributes nil)
+     ::wbr (->hiccup-schema :wbr global-attributes nil)
      #_ ::button
      #_ ::canvas
      ::cite (->hiccup-schema
