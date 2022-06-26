@@ -42,10 +42,14 @@ These guides will get you up and running with Fabricate, so you can use it as a 
 This ✳=[:a {:href "./tutorials/fabricate-for-docs.html"} "first tutorial"]🔚 allows you to use Fabricate to document a project or library you've built.
 
 ✳= [:div [:h4 "Tutorial 2: Using Fabricate to create a website"] ]🔚
+🏗️ To be published.
+
 In the second tutorial, you will learn how to publish all the pages you create using Fabricate as a website.
 
 
 ✳= [:div [:h3 {:class "text-l"} "How-to guides"] ]🔚
+🏗 To be published.
+
 ✳= [:ul [:li "Visualizing data using inline SVGs"]
 [:li "Syncing your website with a web server"]
 [:li "Publishing your website on Netlify"]
@@ -64,16 +68,17 @@ The namespace descriptions, automatically generated from the namespace forms, in
 ✳(defn ns->hiccup [ns form]
   (let [ns-var (find-ns ns)
         metadata (meta ns-var)]
-    (apply conj form [:h4 #_{:class "stack-small"} [:code (str ns)]]
+    (apply conj form [:h4 [:code (str ns)]]
            (into [:dl]
                  (apply concat
                         (for [[k v] (select-keys (meta ns-var) [:doc])]
-                          [[:dt #_ {:class "stack-small"} [:code (str k)]] [:dd (clojure.string/replace v (re-pattern "\n\\s+") " ")]])))
+                          [[:dt [:code (str k)]] [:dd (clojure.string/replace v (re-pattern "\n\\s+") " ")]])))
            [])))🔚
 
-✳= [:div {:class "stack"}
-    (apply conj [:ul #_{:class "stack"}]
-           (map #(ns->hiccup % [:li #_{:class "stack-large"}])
+✳= [:div {:class "stack"
+           :style (garden/style {:grid-column "2 / 10"})}
+    (apply conj [:ul ]
+           (map #(ns->hiccup % [:li])
                 ['site.fabricate.prototype.schema
                  'site.fabricate.prototype.html
                  'site.fabricate.prototype.read

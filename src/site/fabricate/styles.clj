@@ -43,7 +43,7 @@
    [:div {:grid-column "2 / 12"
           :margin-bottom "0em"
           :margin-top "0em"}]
-   [:ul :ol {:grid-column "3 / 11"
+   [:ul :ol {:grid-column "2 / 11"
              :margin-top "0em"
              :margin-bottom "0em"}
     [:li {:margin-bottom "0.4em"
