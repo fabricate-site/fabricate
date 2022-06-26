@@ -367,6 +367,8 @@
 
 (defn include-form
   "Return the form in the file matching the predicate as a rewrite-clj node."
+  {:malli/schema
+   [:=> [:cat :string [:fn fn?]] :any]}
   [src-file pred]
   (let [fzip (z/of-file src-file)]
     (z/node (z/find-next-depth-first fzip #(pred (z/sexpr %))))))
