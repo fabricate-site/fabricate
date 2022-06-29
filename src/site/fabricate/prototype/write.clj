@@ -47,19 +47,20 @@
 
 (def state-schema
   "Schema for the agent containing the state of fabricate."
-  [:map
-   [:site.fabricate/settings
-    [:map
-     [:site.fabricate.file/input-dir :string]
-     [:site.fabricate.file/output-dir :string]
-     [:site.fabricate.file/template-suffix :string]
-     [:site.fabricate.server/config :map]
-     [:site.fabricate.file/operations fsm/state-action-map]
-     [:site.fabricate.page/doc-header ifn?]]]
-   [:site.fabricate/pages [:map-of :string page-metadata-schema]]
-   [:site.fabricate.app/watcher {:optional true}
-    [:fn #(instance? clojure.lang.Agent %)]]
-   [:site.fabricate.app/server {:optional true} :any]])
+  (m/schema
+   [:map
+    [:site.fabricate/settings
+     [:map
+      [:site.fabricate.file/input-dir :string]
+      [:site.fabricate.file/output-dir :string]
+      [:site.fabricate.file/template-suffix :string]
+      [:site.fabricate.server/config :map]
+      [:site.fabricate.file/operations fsm/state-action-map]
+      [:site.fabricate.page/doc-header ifn?]]]
+    [:site.fabricate/pages [:map-of :string page-metadata-schema]]
+    [:site.fabricate.app/watcher {:optional true}
+     [:fn #(instance? clojure.lang.Agent %)]]
+    [:site.fabricate.app/server {:optional true} :any]]))
 
 (defn get-output-filename
   "Creates the output filename for the given input"
@@ -282,7 +283,7 @@
 ;;
 ;; and also include these operations in the state map
 (def default-operations
-  "Default render loop for Fabricate projects."
+  "Default render loop for Fabricate projects. Defined as a mapping of malli schemas describing states to the functions that process data in that state. See the fsm namespace for additional information."
   {input-state (fn input-file
                  [f _] {:site.fabricate.file/input-file (io/as-file f)
                         :site.fabricate.file/filename f})

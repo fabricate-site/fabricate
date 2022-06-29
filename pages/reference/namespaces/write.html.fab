@@ -38,5 +38,6 @@
          (reduce (fn [l [k v]]
 (conj l [:dt [:code {:class "language-clojure symbol"} k]]
       [:dd [:dl [:dt "Description"] [:dd (:doc (meta v))]
-            [:dt "Type"] [:dd [:code (type (var-get v))]]]]))
+            [:dt "Type"]
+            [:dd [:code (page/expr->hiccup (type (var-get v)))]]]]))
                  [:dl]))]🔚

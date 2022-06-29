@@ -527,6 +527,11 @@
   (apply span (name (tag node)) "#_"
          (map node->hiccup (:children node))))
 
+(defmethod node->hiccup :regex [node]
+  (span (name (tag node)) "#"
+         (map node->hiccup
+              (:children node))))
+
 (defmethod node->hiccup :deref [node]
   (apply span (name (tag node)) "@"
          (map node->hiccup (:children node))))

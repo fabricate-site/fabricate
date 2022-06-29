@@ -39,6 +39,7 @@
         :margin-top "0em"
         :text-align "justify"
         :text-justify "inter-word"
+        :text-align-last "left"
         :hyphens "auto"}]
    [:div {:grid-column "2 / 12"
           :margin-bottom "0em"
@@ -70,10 +71,14 @@
                                  :font-weight "700"
                                  :content "\"+\""}]
     [(select/ins select/after) {:content "\"\"" :display "block"}]]
-   [:dl {:display "grid" :grid-column-gap "0.5em"}
+   [:dl {:display "grid" :grid-column-gap "0.5em"
+         :grid-row-gap "0.65em"}
     [:dt {:grid-column "1 / 3 !important" :font-weight "600"}]
     [:dd {:grid-column "3 !important"
           :margin-left "0em" :min-width "25ch"}]]
+   [:dl [:dl {:display "block"}
+         [:dt {:grid-column "auto"}]
+         [:dd {:grid-column "auto"}]]]
 
    (stylesheet/at-media
     {:max-width "900px"}
