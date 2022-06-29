@@ -28,6 +28,7 @@
    [http.server :as server]))
 
 (def page-metadata-schema
+  "Schema describing the keys and values used by Fabricate to store metadata about pages."
   [:map
    [:site.fabricate.file/input-file [:orn [:path :string]
                                      [:file [:fn sketch/file?]]]]
@@ -60,39 +61,16 @@
     [:fn #(instance? clojure.lang.Agent %)]]
    [:site.fabricate.app/server {:optional true} :any]])
 
-(defn template-str->hiccup
-  "Attempts to parse the given string"
-  {:malli/schema [:=> [:cat :string :map] [:vector :any]]}
-  ([content-str {:keys [page-fn path]
-                 :or {page-fn (comp read/eval-all read/parse)
-                      path "[no file path given]"}}]
-   (try
-     (page-fn content-str)
-     (catch Exception e
-       (do (println (format "Caught an exception for %s: \n\n %s"
-                            path (.getMessage e)))
-           ::read/parse-error))))
-  ([content-str] (template-str->hiccup content-str {})))
-
 (defn get-output-filename
+  "Creates the output filename for the given input"
   {:malli/schema [:=> [:cat :string :string :string] :string]}
   ([path in-dir out-dir]
    (clojure.string/replace
     path (re-pattern (str "^" in-dir))
     out-dir)))
 
-(defn hiccup->html-str
-  {:malli/schema [:=> [:cat :keyword
-                       [:fn (::html/head html/element-validators)]
-                       [:fn (::html/body html/element-validators)]]
-                  :string]}
-  [[tag head body]]
-  (str "<!DOCTYPE html>\n<html>"
-       (hiccup/html {:escape-strings? false} head)
-       (hiccup/html body)
-       "</html>"))
-
 (defn get-template-files
+  "Get the Fabricate input template files in the given directory"
   {:malli/schema [:=> [:cat :string :string]
                   [:* :string]]}
   [dir suffix]
@@ -105,6 +83,7 @@
        (map #(.toString %))))
 
 (defn populate-page-meta
+  "Get the metadata for the given page."
   {:malli/schema
    [:=> [:cat page-metadata-schema :map]
     page-metadata-schema]}
@@ -116,30 +95,30 @@
     :as page-data}
    {:keys [site.fabricate.file/input-dir
            site.fabricate.file/output-dir] :as site-settings}]
-   (-> page-data
-       (assoc :site.fabricate.page/namespace
-              (or (read/yank-ns parsed-content)
-                  namespace
-                  (symbol (str "tmp-ns." (Math/abs (hash parsed-content))))))
-       (merge (read/get-file-metadata (.getPath input-file)))
-       (merge (-> parsed-content
-                  read/get-metadata
-                  last
-                  (select-keys [:namespace :output-file :title
-                                :site.fabricate.page/namespace
-                                :site.fabricate.file/output-file
-                                :site.fabricate.page/title])
-                  (rename-keys {:namespace :site.fabricate.page/namespace
-                                :output-file :site.fabricate.file/output-file
-                                :title :site.fabricate.page/title})))
-       (#(assoc % :site.fabricate.file/output-file
-                (or (:site.fabricate.file/output-file %)
-                    output-file
-                    (get-output-filename
-                     (str "./" (% :site.fabricate.file/filename)
-                          "." (% :site.fabricate.file/output-extension))
-                     input-dir
-                     output-dir))))))
+  (-> page-data
+      (assoc :site.fabricate.page/namespace
+             (or (read/yank-ns parsed-content)
+                 namespace
+                 (symbol (str "tmp-ns." (Math/abs (hash parsed-content))))))
+      (merge (read/get-file-metadata (.getPath input-file)))
+      (merge (-> parsed-content
+                 read/get-metadata
+                 last
+                 (select-keys [:namespace :output-file :title
+                               :site.fabricate.page/namespace
+                               :site.fabricate.file/output-file
+                               :site.fabricate.page/title])
+                 (rename-keys {:namespace :site.fabricate.page/namespace
+                               :output-file :site.fabricate.file/output-file
+                               :title :site.fabricate.page/title})))
+      (#(assoc % :site.fabricate.file/output-file
+               (or (:site.fabricate.file/output-file %)
+                   output-file
+                   (get-output-filename
+                    (str "./" (% :site.fabricate.file/filename)
+                         "." (% :site.fabricate.file/output-extension))
+                    input-dir
+                    output-dir))))))
 
 
 ;; fsm based implementation here
@@ -150,30 +129,37 @@
 
 ;; maybe make these state schema var names less ambiguous
 (def input-state
-  [:and {:fsm/description "Fabricate input path represented as string"
-         :fsm/name "Input"
-         :examples ["pages/background/finite-schema-machines.html.fab"
-                    "pages/index.html.fab"
-                    "README.md.fab"]}
-   :string [:fn #(.endsWith % ".fab")]])
+  "Starting state for Fabricate templates: path as a string."
+  (m/schema
+   [:and {:fsm/description "Fabricate input path represented as string"
+          :fsm/name "Input"
+          :examples ["pages/background/finite-schema-machines.html.fab"
+                     "pages/index.html.fab"
+                     "README.md.fab"]}
+    :string [:fn #(.endsWith % ".fab")]]))
 
 (def file-state
-  [:map {:closed true
-         :fsm/name "File"
-         :fsm/description "Fabricate input represented as java.io.File entry in page map"}
-   [:site.fabricate.file/input-file [:fn sketch/file?]]
-   [:site.fabricate.file/filename :string]])
+  "Fabricate input represented as java.io.File entry in page map"
+  (m/schema
+   [:map {:closed true
+          :fsm/name "File"
+          :fsm/description "Fabricate input represented as java.io.File entry in page map"}
+    [:site.fabricate.file/input-file [:fn sketch/file?]]
+    [:site.fabricate.file/filename :string]]))
 
 (def read-state
-  [:map {:closed true
-         :fsm/name "Read"
-         :fsm/description "Fabricate input read in as string"}
-   [:site.fabricate.file/input-file [:fn sketch/file?]]
-   [:site.fabricate.file/filename :string]
-   [:site.fabricate.page/unparsed-content :string]])
+  "Fabricate input read in as string"
+  (m/schema
+   [:map {:closed true
+          :fsm/name "Read"
+          :fsm/description "Fabricate input read in as string"}
+    [:site.fabricate.file/input-file [:fn sketch/file?]]
+    [:site.fabricate.file/filename :string]
+    [:site.fabricate.page/unparsed-content :string]]))
 
 
 (def parsed-state
+  "Fabricate input parsed and metadata associated with page map"
   (m/schema
    [:map {:closed true
           :fsm/name "Parsed"
@@ -194,6 +180,7 @@
       [:file [:fn sketch/file?]]]]]))
 
 (defn parse-contents
+  "Parses the contents of the given template map."
   {:malli/schema [:=> [:cat read-state :map] parsed-state]}
   [{:keys [site.fabricate.page/unparsed-content
            site.fabricate.file/filename]
@@ -205,6 +192,7 @@
       (populate-page-meta settings)))
 
 (def evaluated-state
+  "Fabricate contents evaluated after parsing"
   (mu/closed-schema
    (mu/merge
     parsed-state
@@ -217,6 +205,7 @@
       [:site.fabricate.page/metadata {:optional true} [:map {:closed false}]]]))))
 
 (def html-state
+  "Fabricate input evaluated as hiccup vector"
   (mu/closed-schema
    (mu/merge
     evaluated-state
@@ -226,6 +215,7 @@
      [:site.fabricate.file/output-extension [:enum  "html"]]])))
 
 (def markdown-state
+  "Fabricate markdown input evaluated as markdown string"
   (mu/closed-schema
    (mu/merge
     evaluated-state
@@ -257,16 +247,18 @@
        [:div [:a {:href "/"} "Home"]]]]]))
 
 (def rendered-state
+  "Fabricate input rendered to output string"
   (mu/merge
    evaluated-state
    [:map {:fsm/description "Fabricate input rendered to output string"
           :fsm/name "Rendered"
-          :fsm/side-effect? true        ; indicating that the associated state performs a side effect
+          :fsm/side-effect? true ; indicating that the associated state performs a side effect
           :open true
           :fsm/state :fsm/exit}         ; indicating the exit state
     [:site.fabricate.page/rendered-content :string]]))
 
 (defn eval-parsed-page
+  "Evaluate the given page after parsing."
   {:malli/schema [:=> [:cat parsed-state :map] evaluated-state]}
   [{:keys [site.fabricate.page/parsed-content
            site.fabricate.page/namespace] :as page-data}
@@ -290,6 +282,7 @@
 ;;
 ;; and also include these operations in the state map
 (def default-operations
+  "Default render loop for Fabricate projects."
   {input-state (fn input-file
                  [f _] {:site.fabricate.file/input-file (io/as-file f)
                         :site.fabricate.file/filename f})
@@ -324,6 +317,7 @@
        page-data))})
 
 (def default-site-settings
+  "Default configuration for Fabricate projects."
   {:site.fabricate.file/template-suffix ".fab"
    :site.fabricate.file/input-dir "./pages"
    :site.fabricate.file/output-dir "./docs"
@@ -335,15 +329,18 @@
     :port 8002
     :no-cache true}})
 
-(def initial-state {:site.fabricate/settings default-site-settings
-                    :site.fabricate/pages {}})
+(def initial-state
+  "Starting state for Fabricate's application components."
+  {:site.fabricate/settings default-site-settings
+   :site.fabricate/pages {}})
 
 (def state
-  "This agent holds the current state of all the pages created by fabricate, the application settings, and the state of the application itself"
+  "This agent holds the current state of all the pages created by Fabricate, the application settings, and the state of the application itself"
   (agent initial-state))
 
 
 (defn rerender
+  "Render the given page on file change."
   {:malli/schema
    [:=> [:cat [:map [:file :any] [:count :int] [:action :keyword]]
          state-schema]
@@ -388,6 +385,7 @@
   )
 
 (defn draft!
+  "Render all the Fabricate templates once, then launches a file watcher to rerender the templates on save. Also launches a web server to view the rendered pages locally."
   {:malli/schema [:=> [:cat state-schema] state-schema]}
   [{:keys [site.fabricate/settings site.fabricate/pages]
     :as application-state-map}]
@@ -420,6 +418,7 @@
      :site.fabricate.app/server @srv)))
 
 (defn publish!
+  "Render all the fabricate templates."
   {:malli/schema
    [:=> [:cat [:map [:files [:* :string]]
                [:dirs [:* :string]]]]

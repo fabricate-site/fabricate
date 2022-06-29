@@ -1,0 +1,42 @@
+✳(ns site.fabricate.docs.reference.namespaces.write
+     (:require [site.fabricate.prototype.write :as write]
+               [site.fabricate.prototype.page :as page]
+               [malli.core :as m]
+               [garden.core :as garden]
+               [site.fabricate.styles :as styles]))🔚
+
+✳(def metadata {:title "site.fabricate.prototype.write Namespace"
+               :page-style  (garden/css styles/docs)})🔚
+✳(def write-ns (find-ns 'site.fabricate.prototype.write))🔚
+
+✳=[:h1 [:code "site.fabricate.prototype.write"] " Namespace"]🔚
+
+✳=[:div (:doc (meta write-ns))]🔚
+
+✳(def vars (ns-publics write-ns))🔚
+
+✳=[:h2 "Functions"]🔚
+
+✳= [:div (->> vars
+         (filter (fn [[k v]] (fn? (var-get v))))
+         (reduce (fn [l [k v]]
+(conj l [:dt [:code {:class "language-clojure symbol"} k]]
+      [:dd [:dl
+            [:dt "Description" ]
+            [:dd (:doc (meta v))]
+            [:dt "Arguments"]
+            [:dd [:pre [:code
+                        {:class "language-clojure"}
+                        (page/expr->hiccup (:arglists (meta v)))]]]
+            ]]))
+                 [:dl]))]🔚
+
+✳=[:h2 "Constants"]🔚
+
+✳= [:div (->> vars
+         (filter (fn [[k v]] (not (fn? (var-get v)))))
+         (reduce (fn [l [k v]]
+(conj l [:dt [:code {:class "language-clojure symbol"} k]]
+      [:dd [:dl [:dt "Description"] [:dd (:doc (meta v))]
+            [:dt "Type"] [:dd [:code (type (var-get v))]]]]))
+                 [:dl]))]🔚
