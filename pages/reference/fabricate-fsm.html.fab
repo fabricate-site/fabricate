@@ -24,8 +24,6 @@
 
 This page describes how Fabricate's main event loop is organized using a state machine and visually depicts that state machine.
 
-✳=[:pre "some incomplete text"]🔚
-
 ✳(def example-graph
   (dot/digraph
    [ {:bgcolor :transparent :fontname "Overpass"
