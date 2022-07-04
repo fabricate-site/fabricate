@@ -1,0 +1,46 @@
+✳(ns site.fabricate.docs.reference.namespaces.schema
+     (:require
+            [site.fabricate.prototype.page :as page]
+            [site.fabricate.prototype.schema :as schema]
+               [malli.core :as m]
+               [garden.core :as garden]
+               [site.fabricate.styles :as styles]))🔚
+
+✳(def metadata {:title "site.fabricate.prototype.schema Namespace"
+               :page-style  (garden/css styles/docs)})🔚
+✳(def doc-ns (find-ns 'site.fabricate.prototype.schema))🔚
+
+✳=[:div
+  [:h1 [:code "site.fabricate.prototype.schema"] " Namespace"]
+   (:doc (meta doc-ns))]🔚
+
+✳(def vars (ns-publics doc-ns))🔚
+
+✳=[:h2 "Functions"]🔚
+
+✳= [:div (->> vars
+         (filter (fn [[k v]] (fn? (var-get v))))
+         (reduce (fn [l [k v]]
+(conj l [:dt [:code {:class "language-clojure symbol"} k]]
+      [:dd [:dl
+            [:dt "Description" ]
+            [:dd (:doc (meta v))]
+            [:dt "Arguments"]
+            [:dd
+             (apply conj [:ul {:style (garden/style {:list-style-type "none"})}]
+                    (map (fn [a]
+                           [:li [:code {:class "language-clojure"}
+                                 (page/expr->hiccup a)]])
+                         (:arglists (meta v))))]]]))
+                 [:dl]))]🔚
+
+✳=[:h2 "Constants"]🔚
+
+✳= [:div (->> vars
+         (filter (fn [[k v]] (not (fn? (var-get v)))))
+         (reduce (fn [l [k v]]
+(conj l [:dt [:code {:class "language-clojure symbol"} k]]
+      [:dd [:dl [:dt "Description"] [:dd (:doc (meta v))]
+            [:dt "Type"]
+            [:dd [:code (page/expr->hiccup (type (var-get v)))]]]]))
+                 [:dl]))]🔚
