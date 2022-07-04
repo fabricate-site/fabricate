@@ -25,14 +25,19 @@
   (m/schema [:map-of [:fn schema/malli?] [:fn ifn?]]))
 
 (def fsm-value-map
-  [:map
-   [:fsm/value :any]
-   [:fsm/previous-state {:optional true} [:or :keyword :string [:fn schema/malli?]]]
-   [:fsm/matched-state {:optional true} [:fn schema/malli?]]
-   [:fsm/error {:optional true} :map]])
+  "Malli schema for maps defining finite schema machines."
+  (m/schema
+   [:map
+    [:fsm/value :any]
+    [:fsm/previous-state {:optional true} [:or :keyword :string [:fn schema/malli?]]]
+    [:fsm/matched-state {:optional true} [:fn schema/malli?]]
+    [:fsm/error {:optional true} :map]]))
 
-(def ^{:malli/schema [:=> [:cat :any] :boolean]}
-  fsm-value-map? (m/validator fsm-value-map))
+(def
+  ^{:malli/schema [:=> [:cat :any] :boolean]}
+  fsm-value-map?
+   "Predicate indicating whether the given value defines a finite schema machine."
+  (m/validator fsm-value-map))
 
 (defn advance
   "Takes a value, matches it against the schema keys defined in the

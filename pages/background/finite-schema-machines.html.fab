@@ -35,7 +35,7 @@ How should those states be defined? Fabricate already ✳=[:a {:href "https://gi
 
 ✳= [:h2 "A simple implementation"] 🔚
 
-Let's take a tour through Fabricate's ✳= [:code "fsm"] 🔚 namespace. The implementation is extremely simple right now, consisting of two functions:
+Let's take a tour through Fabricate's ✳= [:code [:a {:href "/reference/namespaces/site.fabricate.prototype.fsm.html"} "fsm"]] 🔚 namespace. The implementation is extremely simple right now, consisting of two functions:
 
 ✳= [:pre [:code {:class "language-clojure"}
           (-> 'site.fabricate.prototype.fsm/advance
