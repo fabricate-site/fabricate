@@ -4,7 +4,7 @@
         rewrite-clj/rewrite-clj {:mvn/version "1.0.699-alpha"}
         instaparse/instaparse {:mvn/version "1.4.10"}
         hiccup/hiccup {:mvn/version "2.0.0-alpha2"}
-        metosin/malli {:mvn/version "0.8.0"}
+        metosin/malli {:mvn/version "0.8.8"}
         org.clojure/data.finger-tree {:mvn/version "0.0.3"}
         juxt/dirwatch {:mvn/version "0.2.5"}
         com.gfredericks/test.chuck {:mvn/version "0.2.10"}
