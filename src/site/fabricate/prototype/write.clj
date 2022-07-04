@@ -29,20 +29,21 @@
 
 (def page-metadata-schema
   "Schema describing the keys and values used by Fabricate to store metadata about pages."
-  [:map
-   [:site.fabricate.file/input-file [:orn [:path :string]
-                                     [:file [:fn sketch/file?]]]]
-   [:site.fabricate.file/template-suffix {:optional true} :string]
-   [:site.fabricate.page/parsed-content {:optional true} [:fn vector?]]
-   [:site.fabricate.page/title {:optional true} :string]
-   [:site.fabricate.page/hiccup-content {:optional true} html/html]
-   [:site.fabricate.page/rendered-content {:optional true} :string]
-   [:site.fabricate.page/namespace {:optional true} :symbol]
-   [:site.fabricate.page/stylesheet {:optional true} :string]
-   [:site.fabricate.file/output-file {:optional true}
-    [:orn [:undefined nil?]
-     [:path :string]
-     [:file [:fn sketch/file?]]]]])
+  (m/schema
+   [:map
+    [:site.fabricate.file/input-file [:orn [:path :string]
+                                      [:file [:fn sketch/file?]]]]
+    [:site.fabricate.file/template-suffix {:optional true} :string]
+    [:site.fabricate.page/parsed-content {:optional true} [:fn vector?]]
+    [:site.fabricate.page/title {:optional true} :string]
+    [:site.fabricate.page/hiccup-content {:optional true} html/html]
+    [:site.fabricate.page/rendered-content {:optional true} :string]
+    [:site.fabricate.page/namespace {:optional true} :symbol]
+    [:site.fabricate.page/stylesheet {:optional true} :string]
+    [:site.fabricate.file/output-file {:optional true}
+     [:orn [:undefined nil?]
+      [:path :string]
+      [:file [:fn sketch/file?]]]]]))
 
 
 (def state-schema
@@ -499,7 +500,7 @@
 
 
   (fsm/complete default-operations
-                "./pages/background/finite-schema-machines.html.fab"
+                "./pages/reference/namespaces/site.fabricate.prototype.write.html.fab"
                 @state)
 
   (fsm/complete default-operations "./pages/extended-forms.html.fab"

@@ -25,10 +25,12 @@
             [:dt "Description" ]
             [:dd (:doc (meta v))]
             [:dt "Arguments"]
-            [:dd [:pre [:code
-                        {:class "language-clojure"}
-                        (page/expr->hiccup (:arglists (meta v)))]]]
-            ]]))
+            [:dd
+             (apply conj [:ul {:style (garden/style {:list-style-type "none"})}]
+                    (map (fn [a]
+                           [:li [:code {:class "language-clojure"}
+                                 (page/expr->hiccup a)]])
+                         (:arglists (meta v))))]]]))
                  [:dl]))]🔚
 
 ✳=[:h2 "Constants"]🔚
