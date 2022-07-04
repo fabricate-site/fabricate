@@ -17,6 +17,8 @@
 
 This page has an informal explanation of the parts that make up a Fabricate page, using inputs and outputs paired together for demonstration purposes.
 
+A formal definition of the grammar is included in the documentation for the ✳=[:a {:href "/reference/namespaces/site.fabricate.prototype.read.grammar.html"} [:code "site.fabricate.prototype.read.grammar"] " namespace"]🔚.
+
 ✳=[:h3 "Basic Expressions"]🔚
 
 An expression starts and ends with the asterisk and END emojis: ✳=(into [:code] grammar/delimiters)🔚. You can then use some optional control characters to change how that expression will be used by Fabricate. All expressions in those emoji will be evaluated after Fabricate reads the page template and parses it.

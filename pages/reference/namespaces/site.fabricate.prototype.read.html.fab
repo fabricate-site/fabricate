@@ -13,6 +13,8 @@
   [:h1 [:code "site.fabricate.prototype.read"] " Namespace"]
    (:doc (meta doc-ns))]🔚
 
+The grammar of page templates is defined in the ✳=[:a {:href "/reference/namespaces/site.fabricate.prototype.read.grammar.html"} [:code "site.fabricate.prototype.read.grammar"] " namespace"]🔚. This namespace builds on that one to walk through the parse tree of Clojure expressions produced by the template grammar and evaluate them.
+
 An overview of the template grammar with examples is provided in the page ✳=[:a {:href "/reference/template-structure.html"} "A Reference to Fabricate's Page Templates"]🔚.
 
 ✳(def vars (ns-publics doc-ns))🔚

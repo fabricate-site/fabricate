@@ -1,0 +1,34 @@
+✳(ns site.fabricate.docs.reference.namespaces.grammar
+     (:require [site.fabricate.prototype.read.grammar :as grammar]
+               [instaparse.core :as insta]
+               [instaparse.print :refer [Parser->str]]
+               [site.fabricate.prototype.page :as page]
+               [malli.core :as m]
+               [garden.core :as garden]
+               [site.fabricate.styles :as styles])) 🔚
+
+✳(def metadata {:title "site.fabricate.prototype.read.grammar Namespace"
+               :page-style  (garden/css styles/docs)}) 🔚
+✳(def doc-ns (find-ns 'site.fabricate.prototype.read.grammar)) 🔚
+
+✳=[:div
+  [:h1 [:code "site.fabricate.prototype.read.grammar"] " Namespace"]
+   (:doc (meta doc-ns))]🔚
+
+✳(def vars (ns-publics doc-ns)) 🔚
+✳=[:h2 "The grammar definition"]🔚
+This ✳=[:a {:href "https://github.com/engelberg/instaparse"} [:code "Instaparse"]]🔚 grammar defines the structure of Fabricate templates. Once parsed into an Instaparse parse tree, the ✳=[:a {:href "/reference/namespaces/site.fabricate.prototype.read.html"} [:code "read"] " namespace"]🔚 walks the parsed template and evaluates the expressions embedded within it. The grammar, as defined, intentionally does not concern itself with whether the contents of the expressions in each template are syntactically valid Clojure forms; that task is left to the reader. Defining the grammar this way allows Clojure read errors to be caught and handled on a form-by-form basis instead of throwing an error for the whole page.
+
+✳=[:pre (Parser->str (var-get ('template vars)))]🔚
+
+For an informal guide to how these templates get used with examples, please see the page ✳=[:a {:href "/reference/template-structure.html"} "A Reference to Fabricate's Page Templates"]🔚.
+✳=[:h2 "Constants"]🔚
+
+✳= [:div (->> vars
+         (filter (fn [[k v]] (not (fn? (var-get v)))))
+         (reduce (fn [l [k v]]
+(conj l [:dt [:code {:class "language-clojure symbol"} k]]
+      [:dd [:dl [:dt "Description"] [:dd (:doc (meta v))]
+            [:dt "Type"]
+            [:dd [:code (page/expr->hiccup (type (var-get v)))]]]]))
+                 [:dl]))]🔚
