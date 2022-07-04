@@ -46,9 +46,13 @@ This ✳=[:a {:href "./tutorials/fabricate-for-docs.html"} "first tutorial"]🔚
 
 In the second tutorial, you will learn how to publish all the pages you create using Fabricate as a website.
 
-
 ✳= [:div [:h3 {:class "text-l"} "How-to guides"] ]🔚
-🏗 To be published.
+
+✳=[:div [:h4 "Supporting Fabricate in Emacs"]]🔚
+
+Consult ✳=[:a {:href "/how-to-guides/emacs-setup.html"} "this guide"]🔚 to add support for Fabricate's templates to Emacs.
+
+Further guides (to be published 🏗.)
 
 ✳= [:ul [:li "Visualizing data using inline SVGs"]
 [:li "Syncing your website with a web server"]

@@ -1,0 +1,20 @@
+✳(ns site.fabricate.docs.guides.emacs
+  (:require [site.fabricate.prototype.page :as page]
+            [site.fabricate.prototype.read :as read]
+            [garden.core :as garden]
+            [site.fabricate.styles :as styles])) 🔚
+
+✳(def metadata {:title "Supporting Fabricate's templates in Emacs"
+               :page-style (garden/css styles/docs)}) 🔚
+✳=[:h1 (:title metadata)]🔚
+
+In its current state, Fabricate is best supported by the Emacs text editor. This is because of the very convenient package ✳=[:a {:href "https://polymode.github.io/"} [:code "polymode"]]🔚, which allows for context-sensitive definitions of major modes based on a syntax that uses regular expressions.
+
+I welcome those knowledgeable enough about other editors to add support for Fabricate's syntax to add instructions via a ✳=[:a {:href "https://github.com/fabricate-site/fabricate/issues"} "Github issue"]🔚.
+
+The easiest way to set things up is via ✳=[:a {:href "https://jwiegley.github.io/use-package/"} "use-package"]🔚. Here's how it works:
+
+✳=[:pre [:code
+       (read/include-source "resources/fabricate-polymode.el")]]🔚
+
+Adding this to your config will give you the mode ✳=[:code "poly-fabricate-mode"]🔚, which uses ✳=[:code "fundamental-mode"]🔚 for basic text and ✳=[:code "clojure-mode"]🔚 for Fabricate expressions. Fully compatible with Cider + REPL use; Fabricate exists in large part because I wanted a static website generator as responsive as my REPL. Now I have it, and you do too.
