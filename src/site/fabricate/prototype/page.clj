@@ -412,8 +412,11 @@
 
 (def ogp-properties
   {:title "og:title"
+   "title" "og:title"
    :description "og:description"
-   :site-title "og:site_name"})
+   "description" "og:description"
+   :site-title "og:site_name"
+   "site-title" "og:site_name"})
 
 (defn doc-header
   "Returns a default header from a map with a post's metadata."
