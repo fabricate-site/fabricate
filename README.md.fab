@@ -32,6 +32,10 @@ Some more text
 ```
 If you want to use Clojure code to generate a sequence of elements, or otherwise computationally derive the contents of a HTML element, you have all of Clojure at your disposal. Enjoy.
 
+### Documentation
+
+Please visit [`fabricate.site`](https://fabricate.site) for full documentation, usage guides, and reference to Fabricate's namespaces. These documents are generated using Fabricate.
+
 ### Status: sketch/pre-alpha.
 Do not expect stability from Fabricate at this stage.
 
