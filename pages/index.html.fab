@@ -68,7 +68,7 @@ The namespace descriptions, automatically generated from the namespace forms, in
 ✳(defn ns->hiccup [ns form]
   (let [ns-var (find-ns ns)
         metadata (meta ns-var)]
-    (apply conj form [:h4 [:code (str ns)]]
+    (apply conj form [:h4 [:code [:a {:href (str "/reference/namespaces/" ns ".html")} (str ns)]]]
            (into [:dl]
                  (apply concat
                         (for [[k v] (select-keys (meta ns-var) [:doc])]
@@ -78,7 +78,9 @@ The namespace descriptions, automatically generated from the namespace forms, in
 ✳= [:div {:class "stack"
            :style (garden/style {:grid-column "2 / 10"})}
     (apply conj [:ul ]
-           (map #(ns->hiccup % [:li])
+           (map #(ns->hiccup
+                  %
+                  [:li ])
                 ['site.fabricate.prototype.schema
                  'site.fabricate.prototype.html
                  'site.fabricate.prototype.read
