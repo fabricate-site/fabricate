@@ -25,13 +25,16 @@
                   entries)))))
 
 (defn subschema
+  "Uses the registry of the provided schema to create a schema for one of the reference schemas in that registry."
   {:malli/schema (m/schema [:=> [:cat [:fn malli?] [:or :keyword :string]] [:fn malli?]])}
   [schema new-ref]
   (let [{:keys [registry]
          :as props} (m/properties schema)]
     (m/schema [:schema props new-ref])))
 
-(def regex [:fn #(instance? java.util.regex.Pattern %)])
+(def regex
+  "Malli schema for regular expressions"
+  (m/schema [:fn #(instance? java.util.regex.Pattern %)]))
 
 (defn ns-form?
   "Returns true if the given form is a valid Clojure (ns ...) special form"
