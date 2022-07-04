@@ -397,8 +397,9 @@
             ""
             (subs (.toString local-f) 0
                   li)))
-        [fname output-extension suffix]
-        (string/split (.toString (.getFileName local-f)) (re-pattern "\\."))]
+        [_ fname output-extension suffix]
+        (re-matches #"(^.*?)[.]([^.]+)[.]([^.]+)$"
+                    (.toString (.getFileName local-f)))]
     {:site.fabricate.file/filename (if (= "" local-subdir) fname (str local-subdir "/" fname))
      :site.fabricate.file/output-extension output-extension
      :site.fabricate.file/template-suffix (str "." suffix)}))

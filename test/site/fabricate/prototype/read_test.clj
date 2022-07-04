@@ -25,6 +25,12 @@
               :site.fabricate.file/template-suffix ".fab"}
              (get-file-metadata "./README.md.fab")))
 
+    (t/is (= {:site.fabricate.file/filename "pages/reference/namespaces/site.fabricate.prototype.write"
+              :site.fabricate.file/output-extension "html"
+              :site.fabricate.file/template-suffix ".fab"}
+             (get-file-metadata
+              "./pages/reference/namespaces/site.fabricate.prototype.write.html.fab")))
+
     (t/is (= {:site.fabricate.file/filename "some.dir/docs/README"
               :site.fabricate.file/output-extension "md"
               :site.fabricate.file/template-suffix ".fab"}
