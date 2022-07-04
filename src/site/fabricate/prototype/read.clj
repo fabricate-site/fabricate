@@ -1,5 +1,5 @@
 (ns site.fabricate.prototype.read
-  "Parsing + evaluation utilities for embedded clojure forms.
+  "Parsing + evaluation utilities for embedded Clojure forms.
   The functions in this namespace split the text into a sequence of Hiccup forms and embedded expressions,
   which is then traversed again to evaluate it, embedding (or not) the results
   of those expressions within the Hiccup document."
@@ -19,26 +19,8 @@
             [clojure.string :as string]
             [clojure.java.io :as io]))
 
-(defn nil-or-empty?
-  {:malli/schema [:=> [:cat :any] :boolean]}
-  [v]
-  (if (seqable? v) (empty? v)
-      (nil? v)))
-
-(defn conj-non-nil
-  {:malli/schema [:=> [:cat [:schema [:* :any]] [:* :any]]
-                  [:schema [:* :any]]]}
-  [s & args]
-  (reduce conj s (filter #(not (nil-or-empty? %)) args)))
-
-(defn md5
-  {:malli/schema [:=> [:cat :string] :string]}
-  [^String s]
-  (let [algorithm (java.security.MessageDigest/getInstance "MD5")
-        raw (.digest algorithm (.getBytes s))]
-    (format "%032x" (BigInteger. 1 raw))))
-
 (def parsed-expr-schema
+  "Schema describing the map used by Fabricate to evaluate forms embedded within page templates."
   (m/schema
    [:map
     [:expr-src {:doc "The source expression as a string"} :string]
@@ -53,11 +35,13 @@
      :string]]))
 
 (def evaluated-expr-schema
+  "Schema describing a map containing the results of an evaluated Fabricate expression."
   (-> parsed-expr-schema
       (mu/assoc :result :any)
       (mu/assoc :error [:or :nil :map])))
 
 (defn parsed-form->expr-map
+  "Transforms the results of a parsed Fabricate expression into the map used for evaluation."
   {:malli/schema [:=> [:cat [:schema [:cat :string :string :string]]]
                   parsed-expr-schema]}
   [parsed-form]
@@ -91,6 +75,7 @@
         "+=" (assoc m :expr read-results :display true)))))
 
 (defn extended-form->form
+  "Converts the parsed grammar describing an extended form to a Hiccup form."
   {:malli/schema [:=> [:cat [:schema [:* :string]]] [:* :any]]}
   [[tag open front-matter [_ & forms] close :as ext-form]]
   (let [delims (str open close)
@@ -137,6 +122,7 @@
       parsed-form->expr-map))
 
 (defn read-template
+  "Parses the given template and adds line and column metadata to the forms."
   {:malli/schema [:=> [:cat :string] parsed-schema]}
   [template-txt]
   (let [attempt (template template-txt)]
@@ -151,6 +137,7 @@
       (insta/add-line-and-column-info-to-metadata template-txt attempt))))
 
 (defn render-src
+  "Escapes special characters in the source code form. Optionally removes a do block around the form."
   {:malli/schema [:=> [:cat :any :boolean] :string]}
   ([src-expr rm-do?]
    (let [exp (if (and rm-do?
@@ -174,9 +161,11 @@
     (concat line-info [", "] column-info)))
 
 (def error-form-schema
-  [:tuple [:= :div] [:= [:h6 "Error"]]
-   [:schema [:cat [:= :dl] [:* :any]]]
-   [:schema [:cat [:= :details] [:* :any]]]])
+  "Malli schema describing Hiccup forms that contain error messages"
+  (m/schema
+   [:tuple [:= :div] [:= [:h6 "Error"]]
+    [:schema [:cat [:= :dl] [:* :any]]]
+    [:schema [:cat [:= :details] [:* :any]]]]))
 
 (defn form->hiccup
   "If the form has no errors, return its results.
@@ -206,6 +195,7 @@
 ;; if it doesn't, return a map describing the error
 
 (defn eval-parsed-expr
+  "Evaluates the given expression form. Returns the value of the evaluated expression by default. Can optionally return a map with the value and also perform post-validation on the resulting value."
   {:malli/schema
    [:=> [:cat parsed-expr-schema :boolean [:fn fn?]]
     [:or :map :any]]}
@@ -253,7 +243,7 @@
   ([expr] (eval-parsed-expr expr false)))
 
 (defn yank-ns
-  "Pulls the namespace out of the first expression in the parse tree."
+  "Pulls the namespace form out of the first expression in the parse tree."
   {:malli/schema
    [:=> [:cat parsed-schema] [:or [:sequential :any] :symbol]]}
   [expr-tree]
@@ -267,19 +257,16 @@
       (second first-expr)
       nil)))
 
-;; An alternative design choice: rather than making the ns form
-;; special and required as the first fabricate form, make the metadata map
-;; special and just put the unevaluated ns form within it.
-
 (def metadata-schema
   "Malli schema for unevaluated metadata form/map"
-  [:catn
-   [:def [:= 'def]]
-   [:name [:= 'metadata]]
-   [:meta-map :map]])
+  (m/schema
+   [:catn
+    [:def [:= 'def]]
+    [:name [:= 'metadata]]
+    [:meta-map :map]]))
 
 (defn get-metadata
-  "Get the metadata form from the parse tree"
+  "Get the metadata form from the parse tree."
   {:malli/schema [:=> [:cat parsed-schema] [:map]]}
   [expr-tree]
   (->> expr-tree
@@ -307,6 +294,7 @@
   (mg/generate [:cat [:schema [:cat [:* :int]]]]))
 
 (defn eval-all
+  "Walks the parsed template and evaluates all the embedded expressions within it. Returns a Hiccup form."
   {:malli/schema
    (m/schema
     [:function
@@ -328,6 +316,7 @@
   ([parsed-form] (eval-all parsed-form true)))
 
 (defn include-source
+  "Includes the source code in the given file as a [:pre] Hiccup element."
   {:malli/schema [:=> [:cat :map :string] [:vector :any]]}
   ([{:keys [details]
      :or {details nil}
@@ -374,6 +363,7 @@
     (z/node (z/find-next-depth-first fzip #(pred (z/sexpr %))))))
 
 (def file-metadata-schema
+  "Schema describing a map of file metadata used by fabricate"
   (m/schema
    [:map {:description "File metadata used by fabricate"}
     [:site.fabricate.file/filename {:description "The title of the template file, absent any prefixes"} :string]
@@ -383,6 +373,7 @@
     [:site.fabricate.file/modified {:optional true :description "When the file was modified"} :string]]))
 
 (defn get-file-metadata
+  "Get the metadata of the file used by Fabricate."
   {:malli/schema [:=> [:cat :string] file-metadata-schema]}
   [file-path]
   (let [wd (-> "."
@@ -405,6 +396,7 @@
      :site.fabricate.file/template-suffix (str "." suffix)}))
 
 (defn ->dir-local-path
+  "Convert the given path to a path relative to the current working directory (project root by default)."
   {:malli/schema [:=> [:cat [:fn #(.isInstance java.io.File %)]]
                   :any]}
   [file]
@@ -425,6 +417,7 @@
              (mt/transformer {:name :get})))
 
 (defn parse
+  "Parses the template into a Hiccup expression with unevaluated forms."
   {:malli/schema
    [:function
     [:=> [:cat :string

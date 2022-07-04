@@ -13,7 +13,6 @@
    [rewrite-clj.node :as node :refer [tag sexpr]]
    [rewrite-clj.parser :as p]
    [rewrite-clj.zip :as z]
-   [site.fabricate.prototype.read :as read]
    [site.fabricate.prototype.read.grammar :as grammar]
    [site.fabricate.prototype.schema :as schema]))
 
@@ -338,13 +337,28 @@
   (let [attrs (if (map? v) v {:content v})]
     [:meta (merge {:name (if (keyword? k) (str (name k)) k)} attrs)]))
 
+
+(defn nil-or-empty?
+  {:malli/schema [:=> [:cat :any] :boolean]}
+  [v]
+  (if (seqable? v) (empty? v)
+      (nil? v)))
+
+(defn conj-non-nil
+  {:malli/schema [:=> [:cat [:schema [:* :any]] [:* :any]]
+                  [:schema [:* :any]]]}
+  [s & args]
+  (reduce conj s (filter #(not (nil-or-empty? %)) args)))
+
+
+
 (defn metadata-map->head-elements
   "Return the contents of the metadata map as a sequence of Hiccup elements"
   {:malli/schema [:=> [:cat :map] [:vector :any]]}
   [{:keys [page-style scripts title]    ; some keys are special
     :as metadata}]
   (let [rest (dissoc metadata :page-style :scripts)]
-    (apply read/conj-non-nil
+    (apply conj-non-nil
            (map ->meta rest)
            page-style
            scripts)))
@@ -410,7 +424,7 @@
         (-> metadata
             (dissoc :title :page-style :scripts)
             (#(merge default-metadata-map %)))]
-    (apply read/conj-non-nil
+    (apply conj-non-nil
            [:head
             [:title (str (:site-title page-meta) " | " title)]
             [:link {:rel "stylesheet" :href "https://raw.githubusercontent.com/jensimmons/cssremedy/master/css/remedy.css"}]
@@ -584,12 +598,6 @@
   (node->hiccup (p/parse-string expr-str)))
 
 (comment
-
- "(def\n markdown-state\n (mu/closed-schema\n  (mu/merge\n   evaluated-state\n   [:map\n    {:closed true,\n     :fsm/name &quot;Markdown&quot;,\n     :fsm/description\n     &quot;Fabricate markdown input evaluated as markdown string&quot;}\n    [:site.fabricate.file/output-extension [:enum &quot;md&quot; &quot;markdown&quot;]]])))\n"
-  (p/parse-string
-   (last (read/include-def 'markdown-state "./src/site/fabricate/prototype/write.clj"))
-
-   )
 
   (clojure.repl/doc p/parse)
 
