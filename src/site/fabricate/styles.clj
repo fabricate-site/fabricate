@@ -4,12 +4,14 @@
    [garden.selectors :as select]
    [garden.stylesheet :as stylesheet]))
 
+(def ^:private roboto-flex-import-url
+  "https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wdth,wght@8..144,85..151,100..1000&display=swap")
+
 (def docs
   (list
-   (stylesheet/at-import "https://fonts.googleapis.com/css2?family=Radio+Canada:ital,wght@0,300..700;1,300..700")
+   (stylesheet/at-import roboto-flex-import-url)
    (stylesheet/at-import "https://fonts.googleapis.com/css2?family=Spline+Sans+Mono:wght@300..700&display=swap")
-   [:article {:font-family #_"'Radio Canada', 'Overpass', sans-serif"
-              "'Roboto Flex',sans-serif"
+   [:article {:font-family "'Roboto Flex',sans-serif"
               :font-optical-sizing "auto"
               :font-size "min(4vmin, 20px)"
               :font-variation-settings "'wdth' 91"
@@ -33,6 +35,9 @@
      :margin-bottom "0.25em"
      :margin-top "0em"}]
    [:body {:background-color "#E2DED6"}]
+   [:footer {:font-family "'Roboto Flex', sans-serif"
+             :font-variation-settings "'wdth' 125"
+             :font-weight "500"}]
    [:p {:grid-column "2 / 10"
         :margin-bottom "0.5em"
         :padding "0px"
