@@ -17,3 +17,6 @@ docs/**/*.html
 docs/*.html
 docs/**/*.woff
 docs/**/*.woff2
+
+# Local Netlify folder
+.netlify
