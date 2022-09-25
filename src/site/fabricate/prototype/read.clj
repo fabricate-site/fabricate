@@ -40,6 +40,8 @@
       (mu/assoc :result :any)
       (mu/assoc :error [:or :nil :map])))
 
+(def ^:private read-str (comp z/sexpr z/of-string))
+
 (defn parsed-form->expr-map
   "Transforms the results of a parsed Fabricate expression into the map used for evaluation."
   {:malli/schema [:=> [:cat [:schema [:cat :string :string :string]]]
@@ -48,7 +50,7 @@
   (let [[t form-or-ctrl? form?]  parsed-form
         parse-metadata (meta parsed-form)
         read-results
-        (try (r/read-string (or form? form-or-ctrl?))
+        (try (read-str (or form? form-or-ctrl?))
              (catch Exception e
                {:error
                 (let [em (Throwable->map e)]
@@ -82,7 +84,7 @@
         parsed-front-matter
         (if (= "" front-matter) '()
             (map (fn [e] {:expr-src (str e) :expr e})
-                 (r/read-string (str open front-matter close))))]
+                 (read-str (str open front-matter close))))]
     (with-meta (cond (= delims "[]") (apply conj [] (concat parsed-front-matter forms))
                      (= delims "()") (concat () parsed-front-matter forms))
       (meta ext-form))))
@@ -327,32 +329,7 @@
          [:pre [:code {:class "language-clojure"} source-code]])))
   ([file-path] (include-source {} file-path)))
 
-(defn include-def
-  "Excerpts the source code of the given symbol in the given file."
-  {:malli/schema
-   [:function
-    [:=> [:cat [:map
-                [:render-fn {:optional true} [:fn fn?]]
-                [:def-syms {:optional true} [:set :symbol]]
-                [:container {:optional true} [:vector :any]]]
-          :symbol :string]
-     [:vector :any]]
-    [:=> [:cat :symbol :string] [:vector :any]]]}
-  ([{:keys [render-fn def-syms container]
-     :or {render-fn render-src
-          def-syms #{'def 'defn}
-          container [:pre [:code {:class "language-clojure"}]]}} sym f]
-   (with-open [r (clojure.java.io/reader f)]
-     (loop [source (java.io.PushbackReader. r)]
-       (if (not (.ready source)) :not-found
-           (let [e (try (r/read source)
-                        (catch Exception e nil))]
-             (if (and (list? e)
-                      (def-syms (first e))
-                      (= sym (symbol (second e))))
-               (conj container (render-fn e))
-               (recur source)))))))
-  ([sym f] (include-def {} sym f)))
+
 
 (defn include-form
   "Return the form in the file matching the predicate as a rewrite-clj node."

@@ -195,16 +195,22 @@
               [:details [:summary "Source expression"] [:pre [:code "((+ 2 3)"]]]]))
 
       (t/is
-       (= [:div [:h6 "Error"]
-           [:dl [:dt "Error type"] [:dd [:code "clojure.lang.ExceptionInfo"]] [:dt "Error message"] [:dd [:code "Unexpected EOF while reading item 1 of list."]]
-            [:dt "Error phase"] [:dd [:code ""]]
-            [:dt "Location"]
-            [:dd
-             '("Line " [:strong 1] ", " "Columns " [:strong 1 "-" 12])]]
-           [:details [:summary "Source expression"]
-            [:pre [:code {:class "language-clojure"} "((+ 2 3)"]]]]
-          (eval-parsed-expr (first (parse "✳((+ 2 3)🔚")) true))
-
+       (=
+        [:div
+         [:h6 "Error"]
+         [:dl
+          [:dt "Error type"]
+          [:dd [:code "clojure.lang.ExceptionInfo"]]
+          [:dt "Error message"]
+          [:dd [:code "Unexpected EOF. [at line 1, column 9]"]]
+          [:dt "Error phase"]
+          [:dd [:code ""]]
+          [:dt "Location"]
+          [:dd '("Line " [:strong 1] ", " "Columns " [:strong 1 "-" 12])]]
+         [:details
+          [:summary "Source expression"]
+          [:pre [:code {:class "language-clojure"} "((+ 2 3)"]]]]
+        (eval-parsed-expr (first (parse "✳((+ 2 3)🔚")) true))
        "Expression parsing errors should be surfaced in the output")
 
       (t/is (not (nil? (:error (eval-parsed-expr (first (parse "✳=((+ 2 3)🔚")) false))))))
@@ -243,7 +249,7 @@
                  (eval-all parsed)))
             "In-form defs should be evaluated successfully.")
 
-      (t/is (= [[:figure [:img {:src "https://upload.wikimedia.org/wikipedia/commons/9/90/Pterodroma_mollis_light_morph_-_SE_Tasmania_2019.jpg"} ]
+      (t/is (= [[:figure [:img {:src "https://upload.wikimedia.org/wikipedia/commons/9/90/Pterodroma_mollis_light_morph_-_SE_Tasmania_2019.jpg"}]
                  [:figcaption "soft-plumaged petrel"]]]
                (->  "✳=[:figure [:img {:src \"https://upload.wikimedia.org/wikipedia/commons/9/90/Pterodroma_mollis_light_morph_-_SE_Tasmania_2019.jpg\"} ]
                 [:figcaption \"soft-plumaged petrel\"]]🔚"
