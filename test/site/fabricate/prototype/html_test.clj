@@ -159,3 +159,12 @@
                                          :href "http://google.com"}))
     (t/is (m/validate global-attributes {:title "some page"
                                          :href "/relative-page.html"}))))
+
+
+(t/deftest processing
+  (t/testing "Parse + unparse for elements"
+    (let [unparse-element (m/unparser element)]
+      (doseq [[tag elem] example-forms]
+        (if (not= :head tag)
+          (t/is (= elem (-> elem parse-element unparse-element))
+                (str "<" (name tag) "> should parse and unparse correctly")))))) )
