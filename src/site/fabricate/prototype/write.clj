@@ -344,7 +344,7 @@
   {:site.fabricate/settings default-site-settings
    :site.fabricate/pages {}})
 
-(defn report-error [a err]
+(defn- report-error [a err]
   (println "Agent context:" (:context (meta a)))
   (let [err-map (Throwable->map err)
         agent-schema (:malli/schema (meta a))]
@@ -356,8 +356,10 @@
           (println "Valid?" (m/validate agent-schema @a))
           (println (m/explain agent-schema @a))))))
 
-(def valid-state? (m/validator state-schema))
-(def explain-state (m/explainer state-schema))
+(def ^{:malli/schema [:=> [:cat :any] :boolean]}
+  valid-state? (m/validator state-schema))
+(def ^{:malli/schema [:=> [:cat :any] :map]}
+  explain-state (m/explainer state-schema))
 
 (def state
   "This agent holds the current state of all the pages created by Fabricate, the application settings, and the state of the application itself"

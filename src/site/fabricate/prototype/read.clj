@@ -34,6 +34,10 @@
     [:file {:optional true :doc "The source file of the expression"}
      :string]]))
 
+(def ^{:malli/schema
+       [:=> [:cat :any] :boolean]}
+  fabricate-expr? (m/validator parsed-expr-schema))
+
 (def evaluated-expr-schema
   "Schema describing a map containing the results of an evaluated Fabricate expression."
   (-> parsed-expr-schema
@@ -310,7 +314,7 @@
      (binding [*ns* nmspc]
        (refer-clojure)
        (clojure.walk/postwalk
-        (fn [i] (if (m/validate parsed-expr-schema i)
+        (fn [i] (if (fabricate-expr? i)
                   (eval-parsed-expr i simplify?)
                   i))
         parsed-form))))
