@@ -8,9 +8,11 @@
             [clojure.set :as set]
             [clojure.data]
             [malli.core :as m]
+            [malli.error :as me]
             [malli.util :as mu]
             [http.server :as server]
             [clojure.test :as t]
+            [clojure.pprint :as pprint]
             [babashka.curl :as curl])
   (:import  [java.util.concurrent Executors]))
 
@@ -25,7 +27,21 @@
           test-exec (Executors/newWorkStealingPool 20)]
       (set-agent-send-executor! test-exec)
       (set-agent-send-off-executor! test-exec)
-      (def test-state (agent initial-state))
+      (def test-state (agent initial-state
+                             :meta {:context :site.fabricate/app-test
+                                    :malli/schema state-schema}
+                             :validator #(do
+                                           (t/is (valid-schema?
+                                                  state-schema
+                                                  %
+                                                  "App state should conform after modification"))
+                                           (valid-state? %))
+                             #_ #_ :error-handler (fn [a err]
+                                                    (t/is (valid-state? @a)
+                                                          "State should be valid")
+                                                    (pprint (me/humanize
+                                                             (explain-state @a))))
+                             :error-mode :continue))
       (with-instrumentation f)
       (println "stopping")
       (send test-state stop!)
@@ -283,10 +299,19 @@ Some more text")
       (t/is (= rendered-str (slurp "./test-resources/fab/outputs/test-file.html")))
 
       (io/delete-file (io/file "./test-resources/fab/inputs/test-file.html.fab"))
-      (io/delete-file (io/file "./test-resources/fab/outputs/test-file.html"))))
+      (io/delete-file (io/file "./test-resources/fab/outputs/test-file.html"))
 
-  ;; the rerender fn works when tested in isolation, but not
-  ;; when used via send!
+      (t/testing " in the context of an agent"
+        (let [rerender-agent (agent initial-state)
+              agent-valid?
+              (-> rerender-agent
+                  (send rerender {:file (io/file f) :count 1 :action :create})
+                  deref
+                  (valid-state?))]
+          (t/is agent-valid? "rerender should work with send-off")))))
+
+  ;; the rerender fn works when tested in isolation (with send and with regular calls)
+  ;; but not when used via send in the application context
 
   (t/testing "ability to manage server state using send and draft!"
     (let [url "http://localhost:9223"]
@@ -294,12 +319,11 @@ Some more text")
       (add-watch test-state
                  :test-validity
                  (fn [k reff old-state new-state]
-                   (t/is (valid-state? old-state) "Old state should be valid")
-                   (t/is (valid-state? new-state) "New state should be valid")))
+                   (t/is (valid-schema? state-schema old-state) "Old state should be valid")
+                   (t/is (valid-schema? state-schema new-state) "New state should be valid")))
       (println "0. overriding default state")
       (send test-state (constantly test-config))
       (await test-state)
-
       (t/is (= "./test-resources/fab/inputs/"
                (get-in @test-state
                        [:site.fabricate/settings

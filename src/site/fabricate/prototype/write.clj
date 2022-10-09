@@ -61,8 +61,15 @@
       [:site.fabricate.page/doc-header ifn?]]]
     [:site.fabricate/pages [:map-of :string page-metadata-schema]]
     [:site.fabricate.app/watcher {:optional true}
-     [:fn #(instance? clojure.lang.Agent %)]]
-    [:site.fabricate.app/server {:optional true} :any]]))
+     [:orn
+      [:running [:fn #(instance? clojure.lang.Agent %)]]
+      [:stopped [:= :stopped]]
+      [:error/shutdown [:= :error/shutdown]]]]
+    [:site.fabricate.app/server {:optional true}
+     [:orn
+      [:stopped [:= :stopped]]
+      [:error/shutdown [:= :error/shutdown]]
+      [:running any?]]]]))
 
 (defn get-output-filename
   "Creates the output filename for the given input"
@@ -488,12 +495,12 @@
               #(do
                  (println "closing file watcher")
                  (try (do (when (instance? clojure.lang.Agent %)
-                            (close-watcher %)) nil)
-                      (catch Exception e nil))))
+                            (close-watcher %)) :stopped)
+                      (catch Exception e :error/shutdown))))
       (update :site.fabricate.app/server
               #(do
                  (println "stopping file server")
-                 (when % (do (server/stop %) nil))
+                 (when % (do (server/stop %) :stopped))
                  #_(try (do (server/stop %) nil)
                         (catch Exception e nil))))))
 
