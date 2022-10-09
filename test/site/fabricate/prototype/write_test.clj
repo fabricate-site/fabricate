@@ -358,7 +358,7 @@ Some more text")
             extra-content-str
             :append true)
       (await test-state)
-      (Thread/sleep 250)
+      (Thread/sleep 500)
       (t/is (re-find #"four" (:body (curl/get (str url "/test-file.html") {:throw false})))
             "File should have contents updated by filewatcher")
 
