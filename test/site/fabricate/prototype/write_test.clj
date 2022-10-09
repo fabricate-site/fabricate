@@ -291,6 +291,11 @@ Some more text")
   (t/testing "ability to manage server state using send and draft!"
     (let [url "http://localhost:9223"]
 
+      (add-watch test-state
+                 :test-validity
+                 (fn [k reff old-state new-state]
+                   (t/is (valid-state? old-state) "Old state should be valid")
+                   (t/is (valid-state? new-state) "New state should be valid")))
       (println "0. overriding default state")
       (send test-state (constantly test-config))
       (await test-state)

@@ -363,12 +363,22 @@
                      v?))
          #_ #_:error-mode :continue))
 
+(comment
+  (add-watch state
+             :monitor-state
+             (fn [k reff old-state new-state]
+               (println "Previous state valid?" (valid-state? old-state))
+               (println "Current state valid?" (valid-state? new-state))))
+                                        ; doesn't seem to work.
+  (remove-watch state :monitor-state)
+
+  )
 
 (defn rerender
   "Render the given page on file change."
   {:malli/schema
-   [:=> [:cat [:map [:file :any] [:count :int] [:action :keyword]]
-         state-schema]
+   [:=> [:cat state-schema
+         [:map [:file :any] [:count :int] [:action :keyword]]]
     state-schema]}
   [{:keys [site.fabricate/settings site.fabricate/pages]
     :as application-state-map}
@@ -432,7 +442,7 @@
             (let [state-agent *agent*
                   fw (watch-dir
                       (fn [f]
-                        (do (send-off state-agent rerender f)))
+                        (do (send-off state-agent rerender f) nil))
                       (io/file input-dir))]
               (alter-meta! fw assoc :context :site.fabricate.app/watcher)
               (set-error-mode! fw :continue)
