@@ -276,6 +276,7 @@ Some more text")
           rendered-str (get-in res [:site.fabricate/pages
                                     "test-resources/fab/inputs/test-file.html.fab"
                                     :site.fabricate.page/rendered-content])]
+      (t/is (valid-state? res) "Rerender fn should return valid state maps")
       (t/is
        (re-find #"example" rendered-str))
 

@@ -11,6 +11,7 @@
    [clojure.java.io :as io]
    [clojure.string :as string]
    [clojure.set :as set :refer [rename-keys]]
+   [clojure.pprint :refer [pprint]]
    [hiccup2.core :as hiccup]
    [hiccup.core :as h]
    [hiccup.page :as hp]
@@ -336,9 +337,31 @@
   {:site.fabricate/settings default-site-settings
    :site.fabricate/pages {}})
 
+(defn report-error [a err]
+  (println "Agent context:" (:context (meta a)))
+  (let [err-map (Throwable->map err)
+        agent-schema (:malli/schema (meta a))]
+    (println "Agent error:")
+    (pprint err-map)
+    #_(when agent-schema
+        (do
+          (println "Agent schema:")
+          (println "Valid?" (m/validate agent-schema @a))
+          (println (m/explain agent-schema @a))))))
+
+(def valid-state? (m/validator state-schema))
+(def explain-state (m/explainer state-schema))
+
 (def state
   "This agent holds the current state of all the pages created by Fabricate, the application settings, and the state of the application itself"
-  (agent initial-state))
+  (agent initial-state :meta {:context :site.fabricate/app
+                              :malli/schema state-schema}
+         :error-handler report-error
+         :validator map?
+         #_(fn [s] (let [v? (valid-state? s)]
+                     (when-not v? (pprint (malli.error/humanize (explain-state s))))
+                     v?))
+         #_ #_:error-mode :continue))
 
 
 (defn rerender
@@ -411,7 +434,9 @@
                       (fn [f]
                         (do (send-off state-agent rerender f)))
                       (io/file input-dir))]
-              #_(set-error-mode! fw :continue)
+              (alter-meta! fw assoc :context :site.fabricate.app/watcher)
+              (set-error-mode! fw :continue)
+              (set-error-handler! fw report-error)
               fw)))]
     (assoc
      application-state-map
@@ -452,7 +477,8 @@
       (update :site.fabricate.app/watcher
               #(do
                  (println "closing file watcher")
-                 (try (do (when (instance? clojure.lang.Agent %)  (close-watcher %)) nil)
+                 (try (do (when (instance? clojure.lang.Agent %)
+                            (close-watcher %)) nil)
                       (catch Exception e nil))))
       (update :site.fabricate.app/server
               #(do
@@ -475,9 +501,9 @@
       (send (constantly initial-state))
       (send-off draft!))
 
-  (-> state
-      (send-off stop!))
-
+  (do
+    (send-off state stop!)
+    nil)
 
   (keys @state)
 
