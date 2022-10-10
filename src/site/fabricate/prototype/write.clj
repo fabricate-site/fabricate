@@ -419,7 +419,9 @@
           (println "rendered")
           (assoc-in application-state-map
                     [:site.fabricate/pages local-file]
-                    updated-page))))))
+                    updated-page)))
+      application-state-map)))
+
 
 (comment
   (fsm/complete
@@ -528,7 +530,8 @@
 
   (-> state
       (send (constantly initial-state))
-      (send-off draft!))
+      (send-off draft!)
+      )
 
   (do
     (send-off state stop!)
