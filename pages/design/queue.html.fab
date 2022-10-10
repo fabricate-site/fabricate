@@ -1,0 +1,32 @@
+✳ (ns site.fabricate.docs.design.queue
+  (:require
+   [clojure.string :as str]
+   [site.fabricate.prototype.write :as write]  
+   [garden.core  :as garden]
+   [garden.stylesheet :as stylesheet]
+   [site.fabricate.styles :as styles]
+   [site.fabricate.prototype.page :as page])) 🔚
+   
+✳(def metadata {:title "Design Doc for Work Queue"
+               :written  "2022-10-10"
+               :page-style (garden/css styles/docs)})🔚
+               
+✳=[:h1 {:class "xl-text"} (:title metadata)]🔚
+✳=[:h4 (str (:written metadata))]🔚
+
+The approach of "put everything in the same agent" is starting to show its  ✳=[:a {:href "https://github.com/fabricate-site/fabricate/commit/e6a972dbdeb4e93bab582d064a029844f4394cc1"} "limitations"]🔚. It would be better to use a work queue to manage the state of pages that need to be re-rendered. 
+✳=[:h2 "Preliminaries"]🔚
+ 
+Pages are (usually) independent of one another. This means they can be processed concurrently. 
+
+Clojure's PersistentQueues (by themselves) may not be the right choice, according to The Joy of Clojure:
+
+✳=[:blockquote "...it's important to point out that Clojure's PersistentQueue is a collection, not a workflow mechanism. Java has classes deriving from the java.util.concurrent.BlockingQueue interface for workflow, which often are useful in Clojure programs, and those aren't these. If you find yourself wanting to repeatedly check a work queue to see if there's an item of work to be popped off, or if you want to use a queue to send a task to another thread, you do not want the PersistentQueue, because it's an immutable structure; thus there's no way to inherently communicate changes from one worker to another."] 🔚
+
+Wrapping a PersistentQueue in a atom may be the way to obtain a synchronization point across threads. However, that type of explicit scheduling may not be necessary.
+
+✳=[:h2 "Futures"]🔚
+
+The page-rerendering loop could be implemented via ✳=[:code "future"]🔚. Since the contents of the page aren't actually needed by the main loop of Fabricate until they are to be written to output HTML, there could simply be a queue of Futures, executed in the background, then dereferenced sequentially when the program needs to write. This atomic operation could also ✳=[:code "swap!"]🔚 the finished page into an atom containing all the "current" pages.
+
+It isn't at all clear to me that it needs to be more complicated than this. ✳=[:code "core.async"]🔚 is probably overkill at this point.
