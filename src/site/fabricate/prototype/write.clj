@@ -366,7 +366,13 @@
   (agent initial-state :meta {:context :site.fabricate/app
                               :malli/schema state-schema}
          :error-handler report-error
-         :validator map?
+         :validator (fn [v]
+                      (let [m? (map? v)]
+                        (if (not m?)
+                          (do
+                            (println "Agent type" (type v))
+                            (throw (java.lang.RuntimeException. "App state not map")))
+                          true)))
          #_(fn [s] (let [v? (valid-state? s)]
                      (when-not v? (pprint (malli.error/humanize (explain-state s))))
                      v?))
@@ -376,8 +382,10 @@
   (add-watch state
              :monitor-state
              (fn [k reff old-state new-state]
+               (println "Context:" (:context (meta reff)))
                (println "Previous state valid?" (valid-state? old-state))
                (println "Current state valid?" (valid-state? new-state))))
+
                                         ; doesn't seem to work.
   (remove-watch state :monitor-state)
 
@@ -397,6 +405,7 @@
                 site.fabricate.file/operations]}
         settings]
     (if (and (#{:create :modify} action)
+             (not (re-find #"#" (.toString file)))
              (.endsWith (.toString file) template-suffix))
       (let [local-file
             (-> file
@@ -502,7 +511,8 @@
       (update :site.fabricate.app/server
               #(do
                  (println "stopping file server")
-                 (when % (do (server/stop %) :stopped))
+                 (when (and % (not (#{:stopped :error/shutdown})))
+                   (do (server/stop %) :stopped))
                  #_(try (do (server/stop %) nil)
                         (catch Exception e nil))))))
 
