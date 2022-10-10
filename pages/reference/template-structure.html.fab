@@ -1,19 +1,19 @@
 ✳(ns site.fabricate.docs.reference.templates
-(:require
- [clojure.string :as str]
- [site.fabricate.prototype.read :as read]
- [site.fabricate.prototype.page :as page]
- [site.fabricate.prototype.read.grammar :as grammar]
- [garden.core  :as garden]
- [garden.stylesheet :as stylesheet]
- [site.fabricate.styles :as styles]
- [site.fabricate.prototype.page :as page])) 🔚
-
+  (:require
+   [clojure.string :as str]
+   [site.fabricate.prototype.read :as read]
+   [site.fabricate.prototype.write :as write]  
+   [site.fabricate.prototype.read.grammar :as grammar]
+   [garden.core  :as garden]
+   [garden.stylesheet :as stylesheet]
+   [site.fabricate.styles :as styles]
+   [site.fabricate.prototype.page :as page])) 🔚
+   
 ✳(def metadata {:title "A Reference to Fabricate's Page Templates"
-:page-style (garden/css
-(concat styles/docs
-        (list [:.example-rows {:grid-column-start 1}])))})🔚
-✳=[:h1 {:class "xl-text"} (:title metadata)]🔚
+               :page-style (garden/css
+                            (concat styles/docs
+                                    (list [:.example-rows {:grid-column-start 1}])))})🔚
+                                    ✳=[:h1 {:class "xl-text"} (:title metadata)]🔚
 
 This page has an informal explanation of the parts that make up a Fabricate page, using inputs and outputs paired together for demonstration purposes.
 
@@ -180,4 +180,22 @@ Sometimes it's preferable to group multiple forms together along with paragraphs
 This page itself uses many of the "useful for" tips I mentioned in the first section. You might find the source code of the page instructive, so it is included below:
 
 ✳=[:pre {:class "small"}
-[:code (slurp "pages/reference/template-structure.html.fab")]]🔚
+ 
+ [:code (->> 
+         "pages/reference/template-structure.html.fab"
+         slurp
+         (#(read/parse %
+                       {:filename "pages/reference/template-structure.html.fab"}))
+         (clojure.walk/postwalk
+          (fn [i] (if (read/fabricate-expr? i)
+                    (let [[start end] grammar/delimiters
+                          ctrl-char
+                          (cond (and (contains? i :expr) (:display i)) "+="
+                                (:display i) "+"
+                                (contains? i :expr) "="
+                                (contains? i :exec) "")]
+                      [:span start ctrl-char
+                       (page/expr->hiccup (or (:expr i) (:exec i)))
+                       end])
+                    i)))
+         (apply list)) ]]🔚
