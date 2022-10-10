@@ -8,9 +8,11 @@
             [clojure.set :as set]
             [clojure.data]
             [malli.core :as m]
+            [malli.error :as me]
             [malli.util :as mu]
             [http.server :as server]
             [clojure.test :as t]
+            [clojure.pprint :as pprint]
             [babashka.curl :as curl])
   (:import  [java.util.concurrent Executors]))
 
@@ -25,7 +27,21 @@
           test-exec (Executors/newWorkStealingPool 20)]
       (set-agent-send-executor! test-exec)
       (set-agent-send-off-executor! test-exec)
-      (def test-state (agent initial-state))
+      (def test-state (agent initial-state
+                             :meta {:context :site.fabricate/app-test
+                                    :malli/schema state-schema}
+                             :validator #(do
+                                           (t/is (valid-schema?
+                                                  state-schema
+                                                  %
+                                                  "App state should conform after modification"))
+                                           (valid-state? %))
+                             #_ #_ :error-handler (fn [a err]
+                                                    (t/is (valid-state? @a)
+                                                          "State should be valid")
+                                                    (pprint (me/humanize
+                                                             (explain-state @a))))
+                             :error-mode :continue))
       (with-instrumentation f)
       (println "stopping")
       (send test-state stop!)
@@ -273,27 +289,40 @@ Some more text")
                 "./test-resources/fab/inputs/test-file.html.fab")
           res (rerender test-config
                         {:file (io/file f) :count 1 :action :create})
-          rendered-str (get-in res [:site.fabricate/pages
-                                    "test-resources/fab/inputs/test-file.html.fab"
-                                    :site.fabricate.page/rendered-content])]
+          rendered-str (get res :site.fabricate.page/rendered-content)]
+      (t/is (valid-schema? page-metadata-schema res)
+            "Rerender fn should return valid page maps")
       (t/is
        (re-find #"example" rendered-str))
 
       (t/is (= rendered-str (slurp "./test-resources/fab/outputs/test-file.html")))
 
       (io/delete-file (io/file "./test-resources/fab/inputs/test-file.html.fab"))
-      (io/delete-file (io/file "./test-resources/fab/outputs/test-file.html"))))
+      (io/delete-file (io/file "./test-resources/fab/outputs/test-file.html"))
 
-  ;; the rerender fn works when tested in isolation, but not
-  ;; when used via send!
+      (t/testing " in the context of an agent"
+        (let [rerender-agent (agent initial-state)
+              agent-valid?
+              (-> rerender-agent
+                  (send rerender {:file (io/file f) :count 1 :action :create})
+                  deref
+                  (valid-state?))]
+          (t/is agent-valid? "rerender should work with send-off")))))
+
+  ;; the rerender fn works when tested in isolation (with send and with regular calls)
+  ;; but not when used via send in the application context
 
   (t/testing "ability to manage server state using send and draft!"
     (let [url "http://localhost:9223"]
 
+      (add-watch test-state
+                 :test-validity
+                 (fn [k reff old-state new-state]
+                   (t/is (valid-schema? state-schema old-state) "Old state should be valid")
+                   (t/is (valid-schema? state-schema new-state) "New state should be valid")))
       (println "0. overriding default state")
       (send test-state (constantly test-config))
       (await test-state)
-
       (t/is (= "./test-resources/fab/inputs/"
                (get-in @test-state
                        [:site.fabricate/settings
@@ -305,6 +334,11 @@ Some more text")
       (await test-state)
       (t/is (#{200 304} (:status (curl/get url {:throw false})))
             "Server should start via agent")
+      (t/is (some? (type (get @test-state :site.fabricate.app/server)))
+            "Server should be found in state agent")
+
+      (t/is (some? (type (get @test-state :site.fabricate.app/watcher)))
+            "File watcher should be found in state agent")
 
       (println "2. initial write")
       (spit "./test-resources/fab/inputs/test-file.html.fab"
@@ -328,7 +362,7 @@ Some more text")
             extra-content-str
             :append true)
       (await test-state)
-      (Thread/sleep 250)
+      (Thread/sleep 500)
       (t/is (re-find #"four" (:body (curl/get (str url "/test-file.html") {:throw false})))
             "File should have contents updated by filewatcher")
 
@@ -339,7 +373,11 @@ Some more text")
       (await test-state)
 
       (t/is (nil? (:status (curl/get url {:throw false})))
-            "Server should shutdown via agent")))
+            "Server should shutdown via agent")
+      (t/is (= :stopped (:site.fabricate.app/server @test-state))
+            "Server shutdown should be indicated in state map")
+      (t/is (= :stopped (:site.fabricate.app/watcher @test-state))
+            "Watcher shutdown should be indicated in state map")))
 
   (println "deleting test dir")
   (delete-directory-recursive (io/file "test-resources/fab")))

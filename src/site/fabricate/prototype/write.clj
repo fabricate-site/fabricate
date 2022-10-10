@@ -11,6 +11,7 @@
    [clojure.java.io :as io]
    [clojure.string :as string]
    [clojure.set :as set :refer [rename-keys]]
+   [clojure.pprint :refer [pprint]]
    [hiccup2.core :as hiccup]
    [hiccup.core :as h]
    [hiccup.page :as hp]
@@ -60,8 +61,15 @@
       [:site.fabricate.page/doc-header ifn?]]]
     [:site.fabricate/pages [:map-of :string page-metadata-schema]]
     [:site.fabricate.app/watcher {:optional true}
-     [:fn #(instance? clojure.lang.Agent %)]]
-    [:site.fabricate.app/server {:optional true} :any]]))
+     [:orn
+      [:running [:fn #(instance? clojure.lang.Agent %)]]
+      [:stopped [:= :stopped]]
+      [:error/shutdown [:= :error/shutdown]]]]
+    [:site.fabricate.app/server {:optional true}
+     [:orn
+      [:stopped [:= :stopped]]
+      [:error/shutdown [:= :error/shutdown]]
+      [:running any?]]]]))
 
 (defn get-output-filename
   "Creates the output filename for the given input"
@@ -336,17 +344,58 @@
   {:site.fabricate/settings default-site-settings
    :site.fabricate/pages {}})
 
+(defn- report-error [a err]
+  (println "Agent context:" (:context (meta a)))
+  (let [err-map (Throwable->map err)
+        agent-schema (:malli/schema (meta a))]
+    (println "Agent error:")
+    (pprint err-map)
+    #_(when agent-schema
+        (do
+          (println "Agent schema:")
+          (println "Valid?" (m/validate agent-schema @a))
+          (println (m/explain agent-schema @a))))))
+
+(def ^{:malli/schema [:=> [:cat :any] :boolean]}
+  valid-state? (m/validator state-schema))
+(def ^{:malli/schema [:=> [:cat :any] :map]}
+  explain-state (m/explainer state-schema))
+
 (def state
   "This agent holds the current state of all the pages created by Fabricate, the application settings, and the state of the application itself"
-  (agent initial-state))
+  (agent initial-state :meta {:context :site.fabricate/app
+                              :malli/schema state-schema}
+         :error-handler report-error
+         :validator (fn [v]
+                      (let [m? (map? v)]
+                        (if (not m?)
+                          (do
+                            (println "Agent type" (type v))
+                            (throw (java.lang.RuntimeException. "App state not map")))
+                          true)))
+         #_(fn [s] (let [v? (valid-state? s)]
+                     (when-not v? (pprint (malli.error/humanize (explain-state s))))
+                     v?))
+         #_ #_:error-mode :continue))
 
+(comment
+  (add-watch state
+             :monitor-state
+             (fn [k reff old-state new-state]
+               (println "Context:" (:context (meta reff)))
+               (println "Previous state valid?" (valid-state? old-state))
+               (println "Current state valid?" (valid-state? new-state))))
+
+                                        ; doesn't seem to work.
+  (remove-watch state :monitor-state)
+
+  )
 
 (defn rerender
-  "Render the given page on file change."
+  "Render the given page on file change. Returns the completed page map."
   {:malli/schema
-   [:=> [:cat [:map [:file :any] [:count :int] [:action :keyword]]
-         state-schema]
-    state-schema]}
+   [:=> [:cat state-schema
+         [:map [:file :any] [:count :int] [:action :keyword]]] :map]}
   [{:keys [site.fabricate/settings site.fabricate/pages]
     :as application-state-map}
    {:keys [file count action]}]
@@ -354,21 +403,16 @@
                 site.fabricate.file/output-dir
                 site.fabricate.file/operations]}
         settings]
-    (if (and (#{:create :modify} action)
-             (.endsWith (.toString file) template-suffix))
-      (let [local-file
-            (-> file
-                read/->dir-local-path
-                (#(do (println "re-rendering") % %)))
-            updated-page
-            (fsm/complete operations
-                          local-file
-                          application-state-map)]
-        (do
-          (println "rendered")
-          (assoc-in application-state-map
-                    [:site.fabricate/pages local-file]
-                    updated-page))))))
+    (let [local-file
+          (-> file
+              read/->dir-local-path
+              (#(do (println "re-rendering" %) %)))
+          updated-page
+          (fsm/complete operations
+                        local-file
+                        application-state-map)]
+      (do (println "rendered") updated-page))))
+
 
 (comment
   (fsm/complete
@@ -408,11 +452,24 @@
             (println "establishing file watch")
             (let [state-agent *agent*
                   fw (watch-dir
-                      (fn [f]
-                        (do (send-off state-agent rerender f)))
+                      (fn [{:keys [file action] :as f}]
+                        (if (and (#{:create :modify} action)
+                                 (not (re-find #"#" (.toString file)))
+                                 (.endsWith (.toString file) template-suffix))
+                          (do (send-off
+                               state-agent
+                               (fn [s]
+                                 (let [p (rerender s f)
+                                       fname (:site.fabricate.file/filename p)]
+                                   (assoc-in s [:site.fabricate/pages fname] p))))
+                              nil)))
                       (io/file input-dir))]
-              #_(set-error-mode! fw :continue)
+              (alter-meta! fw assoc :context :site.fabricate.app/watcher)
+              (set-error-mode! fw :continue)
+              (set-error-handler! fw report-error)
               fw)))]
+
+
     (assoc
      application-state-map
      :site.fabricate/pages @written-pages
@@ -452,14 +509,20 @@
       (update :site.fabricate.app/watcher
               #(do
                  (println "closing file watcher")
-                 (try (do (when (instance? clojure.lang.Agent %)  (close-watcher %)) nil)
-                      (catch Exception e nil))))
+                 (try (do (when (instance? clojure.lang.Agent %)
+                            (close-watcher %)) :stopped)
+                      (catch Exception e :error/shutdown))))
       (update :site.fabricate.app/server
-              #(do
-                 (println "stopping file server")
-                 (when % (do (server/stop %) nil))
-                 #_(try (do (server/stop %) nil)
-                        (catch Exception e nil))))))
+              (fn [s]
+                (if (and s (not (#{:stopped :error/shutdown} s)))
+                  (do
+                    (println "stopping file server")
+                    (server/stop s) :stopped)
+                  (do (println "server not found")
+                      (println "server:" s)
+                      s)))
+              #_(try (do (server/stop %) nil)
+                     (catch Exception e nil)))))
 
 (.addShutdownHook (java.lang.Runtime/getRuntime)
                   (Thread. (fn []
@@ -473,11 +536,12 @@
 
   (-> state
       (send (constantly initial-state))
-      (send-off draft!))
+      (send-off draft!)
+      )
 
-  (-> state
-      (send-off stop!))
-
+  (do
+    (send-off state stop!)
+    nil)
 
   (keys @state)
 
