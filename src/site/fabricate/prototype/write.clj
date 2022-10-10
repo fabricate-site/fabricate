@@ -510,12 +510,16 @@
                             (close-watcher %)) :stopped)
                       (catch Exception e :error/shutdown))))
       (update :site.fabricate.app/server
-              #(do
-                 (println "stopping file server")
-                 (when (and % (not (#{:stopped :error/shutdown})))
-                   (do (server/stop %) :stopped))
-                 #_(try (do (server/stop %) nil)
-                        (catch Exception e nil))))))
+              (fn [s]
+                (if (and s (not (#{:stopped :error/shutdown} s)))
+                  (do
+                    (println "stopping file server")
+                    (server/stop s) :stopped)
+                  (do (println "server not found")
+                      (println "server:" s)
+                      s)))
+              #_(try (do (server/stop %) nil)
+                     (catch Exception e nil)))))
 
 (.addShutdownHook (java.lang.Runtime/getRuntime)
                   (Thread. (fn []

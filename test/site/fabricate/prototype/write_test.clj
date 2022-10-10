@@ -335,6 +335,11 @@ Some more text")
       (await test-state)
       (t/is (#{200 304} (:status (curl/get url {:throw false})))
             "Server should start via agent")
+      (t/is (some? (type (get @test-state :site.fabricate.app/server)))
+            "Server should be found in state agent")
+
+      (t/is (some? (type (get @test-state :site.fabricate.app/watcher)))
+            "File watcher should be found in state agent")
 
       (println "2. initial write")
       (spit "./test-resources/fab/inputs/test-file.html.fab"
@@ -369,7 +374,11 @@ Some more text")
       (await test-state)
 
       (t/is (nil? (:status (curl/get url {:throw false})))
-            "Server should shutdown via agent")))
+            "Server should shutdown via agent")
+      (t/is (= :stopped (:site.fabricate.app/server @test-state))
+            "Server shutdown should be indicated in state map")
+      (t/is (= :stopped (:site.fabricate.app/watcher @test-state))
+            "Watcher shutdown should be indicated in state map")))
 
   (println "deleting test dir")
   (delete-directory-recursive (io/file "test-resources/fab")))
