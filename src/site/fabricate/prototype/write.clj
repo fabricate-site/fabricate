@@ -392,11 +392,10 @@
   )
 
 (defn rerender
-  "Render the given page on file change."
+  "Render the given page on file change. Returns the completed page map."
   {:malli/schema
    [:=> [:cat state-schema
-         [:map [:file :any] [:count :int] [:action :keyword]]]
-    state-schema]}
+         [:map [:file :any] [:count :int] [:action :keyword]]] :map]}
   [{:keys [site.fabricate/settings site.fabricate/pages]
     :as application-state-map}
    {:keys [file count action]}]
@@ -412,11 +411,7 @@
           (fsm/complete operations
                         local-file
                         application-state-map)]
-      (do
-        (println "rendered")
-        (assoc-in application-state-map
-                  [:site.fabricate/pages local-file]
-                  updated-page)))))
+      (do (println "rendered") updated-page))))
 
 
 (comment
@@ -461,12 +456,20 @@
                         (if (and (#{:create :modify} action)
                                  (not (re-find #"#" (.toString file)))
                                  (.endsWith (.toString file) template-suffix))
-                          (do (send-off state-agent rerender f) nil)))
+                          (do (send-off
+                               state-agent
+                               (fn [s]
+                                 (let [p (rerender s f)
+                                       fname (:site.fabricate.file/filename p)]
+                                   (assoc-in s [:site.fabricate/pages fname] p))))
+                              nil)))
                       (io/file input-dir))]
               (alter-meta! fw assoc :context :site.fabricate.app/watcher)
               (set-error-mode! fw :continue)
               (set-error-handler! fw report-error)
               fw)))]
+
+
     (assoc
      application-state-map
      :site.fabricate/pages @written-pages
