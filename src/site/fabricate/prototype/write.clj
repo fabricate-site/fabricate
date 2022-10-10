@@ -404,23 +404,19 @@
                 site.fabricate.file/output-dir
                 site.fabricate.file/operations]}
         settings]
-    (if (and (#{:create :modify} action)
-             (not (re-find #"#" (.toString file)))
-             (.endsWith (.toString file) template-suffix))
-      (let [local-file
-            (-> file
-                read/->dir-local-path
-                (#(do (println "re-rendering") % %)))
-            updated-page
-            (fsm/complete operations
-                          local-file
-                          application-state-map)]
-        (do
-          (println "rendered")
-          (assoc-in application-state-map
-                    [:site.fabricate/pages local-file]
-                    updated-page)))
-      application-state-map)))
+    (let [local-file
+          (-> file
+              read/->dir-local-path
+              (#(do (println "re-rendering" %) %)))
+          updated-page
+          (fsm/complete operations
+                        local-file
+                        application-state-map)]
+      (do
+        (println "rendered")
+        (assoc-in application-state-map
+                  [:site.fabricate/pages local-file]
+                  updated-page)))))
 
 
 (comment
@@ -461,8 +457,11 @@
             (println "establishing file watch")
             (let [state-agent *agent*
                   fw (watch-dir
-                      (fn [f]
-                        (do (send-off state-agent rerender f) nil))
+                      (fn [{:keys [file action] :as f}]
+                        (if (and (#{:create :modify} action)
+                                 (not (re-find #"#" (.toString file)))
+                                 (.endsWith (.toString file) template-suffix))
+                          (do (send-off state-agent rerender f) nil)))
                       (io/file input-dir))]
               (alter-meta! fw assoc :context :site.fabricate.app/watcher)
               (set-error-mode! fw :continue)
