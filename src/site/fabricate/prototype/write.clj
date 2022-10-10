@@ -148,6 +148,29 @@
                      "README.md.fab"]}
     :string [:fn #(.endsWith % ".fab")]]))
 
+(def fw-create-modify-state
+  (m/schema
+   [:map {:closed true
+          :fsm/description "File creation/modification detected by dirwatch"
+          :fsm/name "Filewatch Create/Modify"
+                                        ; :examples [{:file }]
+          }
+    [:file :any]
+    [:count :int]
+    [:action [:enum :create :modify]]]))
+
+; file delete state could be mapped to an action to delete the corresponding output file
+(def fw-delete-state
+  (m/schema
+   [:map {:closed true
+          :fsm/description "File deletion detected by dirwatch"
+          :fsm/name "Filewatch Delete"
+          ;; #_ #_:examples [{:file }]
+          }
+    [:file :any]
+    [:count :int]
+    [:action [:= :delete]]]))
+
 (def file-state
   "Fabricate input represented as java.io.File entry in page map"
   (m/schema
