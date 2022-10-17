@@ -53,7 +53,13 @@
     (t/is (= "./docs/test-file.txt"
              (get-output-filename "./pages/test-file.txt"
                                   "./pages"
-                                  "./docs")))))
+                                  "./docs")
+             (get-output-filename "./pages/test-file.txt"
+                                  "./pages/"
+                                  "./docs")
+             (get-output-filename "./pages/test-file.txt"
+                                  "./pages/"
+                                  "./docs/")))))
 
 (t/deftest page-fsm
   (t/testing "page metadata"

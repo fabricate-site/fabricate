@@ -75,9 +75,11 @@
   "Creates the output filename for the given input"
   {:malli/schema [:=> [:cat :string :string :string] :string]}
   ([path in-dir out-dir]
-   (clojure.string/replace
-    path (re-pattern (str "^" in-dir))
-    out-dir)))
+   (let [out-dir (if (.endsWith out-dir "/") out-dir
+                     (str out-dir "/"))]
+     (clojure.string/replace
+      path (re-pattern (str "^" in-dir "/?"))
+      out-dir))))
 
 (defn get-template-files
   "Get the Fabricate input template files in the given directory"
