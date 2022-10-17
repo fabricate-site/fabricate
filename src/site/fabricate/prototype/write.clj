@@ -319,6 +319,10 @@
   {input-state (fn input-file
                  [f _] {:site.fabricate.file/input-file (io/as-file f)
                         :site.fabricate.file/filename f})
+   fw-create-modify-state
+   (fn fw-file [{:keys [file]} _]
+     {:site.fabricate.file/input-file file
+      :site.fabricate.file/filename (.toString file)})
    file-state (fn read-file
                 [{:keys [site.fabricate.file/input-file] :as page-data} _]
                 (assoc page-data :site.fabricate.page/unparsed-content
@@ -421,7 +425,7 @@
          [:map [:file :any] [:count :int] [:action :keyword]]] :map]}
   [{:keys [site.fabricate/settings site.fabricate/pages]
     :as application-state-map}
-   {:keys [file count action]}]
+   {:keys [file count action] :as s}]
   (let [{:keys [site.fabricate.file/template-suffix
                 site.fabricate.file/output-dir
                 site.fabricate.file/operations]}
@@ -432,7 +436,7 @@
               (#(do (println "re-rendering" %) %)))
           updated-page
           (fsm/complete operations
-                        local-file
+                        s
                         application-state-map)]
       (do (println "rendered") updated-page))))
 
