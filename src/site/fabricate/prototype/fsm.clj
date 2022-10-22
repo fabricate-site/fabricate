@@ -11,6 +11,7 @@
             [malli.util :as mu]
             [malli.error :as me]
             [malli.generator :as mg]
+            [com.brunobonacci.mulog :as u]
             [site.fabricate.prototype.schema :as schema]))
 
 (def state-action-map
@@ -54,17 +55,13 @@
   [fsm-map value & args]
   (let [union-schema (schema/unify (keys fsm-map))
         fsm-v-map? (fsm-value-map? value)
+        v (if fsm-v-map? (:fsm/value value) value)
         ;; value (if debug? (:fsm/value value) value)
-        parsed (m/parse union-schema
-                        (if fsm-v-map?
-                          (:fsm/value value) value))]
+        parsed (m/parse union-schema v)]
     (if (= :malli.core/invalid parsed)
       (do
-        (println "unmatched value"
-                 (me/humanize
-                  (m/explain
-                   union-schema
-                   (if fsm-v-map? (:fsm/value value) value))))
+        (u/log ::unmatched-value
+               :malli/error (me/humanize (m/explain union-schema v)))
         value)
       (let [matched-schema (-> union-schema
                                m/children
@@ -72,17 +69,24 @@
                                last)
             op (get fsm-map matched-schema
                     (get fsm-map (m/form matched-schema)
-                         (fn [v] (println "unmatched value") v)))]
+                         (fn [vv]
+                           (u/log ::unmatched-value
+                                  :malli/error
+                                  (me/humanize (m/explain union-schema vv)))
+                           vv)))]
         (do
-          (println "advancing fsm:" (get (m/properties matched-schema)
-                                         :fsm/description))
+          (u/log ::advance
+                 :fsm/description
+                 (get (m/properties matched-schema) :fsm/description)
+                 :fsm/name
+                 (get (m/properties matched-schema) :fsm/name))
           (if fsm-v-map?
             (let [rm
                   (try {:fsm/value (apply op (:fsm/value value) args)
                         :fsm/matched-state matched-schema}
                        (catch Exception e
                          (let [em (Throwable->map e)]
-                           (println em)
+                           (u/log ::error :fsm/error em)
                            {:fsm/value (:fsm/value value)
                             :fsm/error em
                             :fsm/matched-state matched-schema})))]
@@ -92,7 +96,7 @@
                 rm))
             (try (apply op value args)
                  (catch Exception e
-                   (println (Throwable->map e))
+                   (u/log ::error :fsm/error (Throwable->map e))
                    value))))))))
 
 (defn complete

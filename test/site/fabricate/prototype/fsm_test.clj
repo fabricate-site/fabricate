@@ -3,24 +3,33 @@
             [site.fabricate.prototype.test-utils :refer [with-instrumentation]]
             [malli.core :as m]
             [malli.instrument :as mi]
+            [com.brunobonacci.mulog :as u]
             [clojure.test :as t]))
 
-(t/use-fixtures :once with-instrumentation)
+(def pub (u/start-publisher! {:type :console :pretty? true}))
+
+(t/use-fixtures :once
+  with-instrumentation
+  (fn [f]
+    (u/log ::start)
+    (u/with-context {:type :test}
+      (f))
+    (pub)))
 
 (def example-fsm
-  {[:enum {:description "state 1"} 1] inc
-   [:enum {:description "state 2"} 2] inc
-   [:enum {:description "final state"} 3] identity})
+  {[:enum {:fsm/description "state 1"} 1] inc
+   [:enum {:fsm/description "state 2"} 2] inc
+   [:enum {:fsm/description "final state"} 3] identity})
 
 (def example-error-fsm
-  {[:= {:description "state 1"} 1] inc
-   [:= {:description "state 2"} 2] inc
-   [:= {:description "state 3"} 3]
+  {[:= {:fsm/description "state 1"} 1] inc
+   [:= {:fsm/description "state 2"} 2] inc
+   [:= {:fsm/description "state 3"} 3]
    (fn [_] (throw (Exception. "unknown error")))})
 
 (def fsm-additional-args
-  {[:= {:description "state 1"} 1] +
-   [:= {:description "state 2"} 2] (constantly 2)})
+  {[:= {:fsm/description "state 1"} 1] +
+   [:= {:fsm/description "state 2"} 2] (constantly 2)})
 
 (t/deftest finite-schema-machines
   (t/testing "schema"
@@ -54,3 +63,9 @@
     (t/is (= 3 (complete example-error-fsm 1)))
     (t/is (= 3 (complete example-error-fsm 2)))
     (t/is (= 3 (complete example-error-fsm 3)))))
+
+(comment
+  (complete example-fsm 2)
+
+  (u/trace)
+  )
