@@ -59,7 +59,10 @@
       [:site.fabricate.server/config :map]
       [:site.fabricate.file/operations fsm/state-action-map]
       [:site.fabricate.page/doc-header ifn?]]]
-    [:site.fabricate/pages [:map-of :string page-metadata-schema]]
+    [:site.fabricate/pages
+     [:orn
+      [:initial :nil]
+      [:running [:map-of :string page-metadata-schema]]]]
     [:site.fabricate.app/watcher {:optional true}
      [:orn
       [:running [:fn #(instance? clojure.lang.Agent %)]]
@@ -173,6 +176,22 @@
     [:count :int]
     [:action [:= :delete]]]))
 
+(defn delete-file!
+  {:malli/schema [:=> [:cat :map :map] page-metadata-schema]}
+  [{:keys [file] :as f}
+   {:keys [site.fabricate/settings]}]
+  (let [input-filename (.toString file)
+        output-filename
+        (-> input-filename
+            (get-output-filename
+             (.getParent file)
+             (:site.fabricate.file/output-dir settings))
+            (clojure.string/replace "\\.fab$" ""))]
+    (io/delete-file output-filename)
+    {:site.fabricate.file/input-file input-filename
+     :site.fabricate.file/filename output-filename
+     :site.fabricate.file/state :deleted}))
+
 (def file-state
   "Fabricate input represented as java.io.File entry in page map"
   (m/schema
@@ -181,6 +200,11 @@
           :fsm/description "Fabricate input represented as java.io.File entry in page map"}
     [:site.fabricate.file/input-file [:fn sketch/file?]]
     [:site.fabricate.file/filename :string]]))
+
+(defn read-input-file
+  [{:keys [site.fabricate.file/input-file] :as page-data} _]
+  (assoc page-data :site.fabricate.page/unparsed-content
+         (slurp input-file)))
 
 (def read-state
   "Fabricate input read in as string"
@@ -325,10 +349,7 @@
    (fn fw-file [{:keys [file]} _]
      {:site.fabricate.file/input-file file
       :site.fabricate.file/filename (.toString file)})
-   file-state (fn read-file
-                [{:keys [site.fabricate.file/input-file] :as page-data} _]
-                (assoc page-data :site.fabricate.page/unparsed-content
-                       (slurp input-file)))
+   file-state read-input-file
    read-state parse-contents
    parsed-state eval-parsed-page
    markdown-state (fn markdown-str
@@ -346,14 +367,15 @@
                                {:escape-strings? false}
                                final-hiccup)))))
    rendered-state
-   (fn write-file
+   (fn write-file!
      [{:keys [site.fabricate.page/rendered-content
               site.fabricate.file/output-file] :as page-data}
       settings]
      (do
        (println "writing page content to" output-file)
        (spit output-file rendered-content)
-       page-data))})
+       page-data))
+   fw-delete-state delete-file!})
 
 (def default-site-settings
   "Default configuration for Fabricate projects."
@@ -440,7 +462,8 @@
           (fsm/complete operations
                         s
                         application-state-map)]
-      (do (println "rendered") updated-page))))
+      (println "rendered")
+      updated-page)))
 
 
 (comment
@@ -480,24 +503,24 @@
           (do
             (println "establishing file watch")
             (let [state-agent *agent*
-                  fw (watch-dir
-                      (fn [{:keys [file action] :as f}]
-                        (if (and (#{:create :modify} action)
-                                 (not (re-find #"#" (.toString file)))
-                                 (.endsWith (.toString file) template-suffix))
-                          (do (send-off
-                               state-agent
-                               (fn [s]
-                                 (let [p (rerender s f)
-                                       fname (:site.fabricate.file/filename p)]
-                                   (assoc-in s [:site.fabricate/pages fname] p))))
-                              nil)))
-                      (io/file input-dir))]
+                  fw
+                  (watch-dir
+                   (fn [{:keys [file action] :as f}]
+                     (if (and
+                          (not (re-find #"#" (.toString file)))
+                          (.endsWith (.toString file) template-suffix))
+                       (do (send-off
+                            state-agent
+                            (fn [s]
+                              (let [p (rerender s f)
+                                    fname (:site.fabricate.file/filename p)]
+                                (assoc-in s [:site.fabricate/pages fname] p))))
+                           nil)))
+                   (io/file input-dir))]
               (alter-meta! fw assoc :context :site.fabricate.app/watcher)
               (set-error-mode! fw :continue)
               (set-error-handler! fw report-error)
               fw)))]
-
 
     (assoc
      application-state-map

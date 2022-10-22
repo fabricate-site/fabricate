@@ -27,21 +27,20 @@
           test-exec (Executors/newWorkStealingPool 20)]
       (set-agent-send-executor! test-exec)
       (set-agent-send-off-executor! test-exec)
-      (def test-state (agent initial-state
-                             :meta {:context :site.fabricate/app-test
-                                    :malli/schema state-schema}
-                             :validator #(do
-                                           (t/is (valid-schema?
-                                                  state-schema
-                                                  %
-                                                  "App state should conform after modification"))
-                                           (valid-state? %))
-                             #_ #_ :error-handler (fn [a err]
-                                                    (t/is (valid-state? @a)
-                                                          "State should be valid")
-                                                    (pprint (me/humanize
-                                                             (explain-state @a))))
-                             :error-mode :continue))
+      (def test-state
+        (agent initial-state
+               :meta {:context :site.fabricate/app-test
+                      :malli/schema state-schema}
+               :validator
+               #(do (t/is (valid-schema? state-schema %)
+                          "App state should conform after modification")
+                    (valid-state? %))
+               #_ #_ :error-handler (fn [a err]
+                                      (t/is (valid-state? @a)
+                                            "State should be valid")
+                                      (pprint (me/humanize
+                                               (explain-state @a))))
+               :error-mode :continue))
       (with-instrumentation f)
       (println "stopping")
       (send test-state stop!)
@@ -59,7 +58,13 @@
                                   "./docs")
              (get-output-filename "./pages/test-file.txt"
                                   "./pages/"
-                                  "./docs/")))))
+                                  "./docs/"))))
+
+  #_(t/testing "file deletion"
+      (let [test-path "test-resources/test.txt.fab"]
+        (spit test-path "some test text"))
+      (t/is (map? delete-file! {:file (io/file test-path)})))
+  )
 
 (t/deftest page-fsm
   (t/testing "page metadata"
@@ -228,18 +233,29 @@
 
 (t/deftest existing-pages
   (t/testing "existing pages"
-    (let [default-operations
-          (assoc default-operations
-                 rendered-state
-                 (fn [{:keys [site.fabricate.page/rendered-content]
-                       :as page-data}
-                      settings]
-                   (do
-                     (t/is (any? rendered-content))
-                     page-data)))]
+    (let [test-page-operations
+          (-> default-operations
+              (dissoc rendered-state)
+              (assoc
+               (mu/update-properties
+                rendered-state
+                assoc :fsm/name "Rendered + tested"
+                :fsm/description "Fabricate output rendered + tested"
+                :fsm/side-effect? false)
+               (fn [{:keys [site.fabricate.page/rendered-content]
+                     :as page-data}
+                    settings]
+                 (do
+                   (t/is (any? rendered-content))
+                   page-data))))]
       (doseq [page-path (get-template-files "./pages" ".fab")]
         (println "testing" page-path)
-        (fsm/complete default-operations page-path initial-state)))))
+        (let [{:keys [fsm/error fsm/value] :as completed}
+              (fsm/complete test-page-operations
+                            {:fsm/value page-path}
+                            initial-state)]
+          (t/is (nil? error)
+                "Rerendering pages should not result in error states"))))))
 
 (comment
   (:status (curl/get "https://respatialized.github.io/" {:throw false}))
@@ -285,6 +301,10 @@ Some more text")
                  :port 9223})))
 
 (t/deftest application-state
+
+  (t/is (valid-schema? state-schema test-config))
+
+  #_(set-validator! test-state (constantly true))
   (println "creating test dir")
   (io/make-parents "./test-resources/fab/outputs/.nothing")
   (io/make-parents "./test-resources/fab/inputs/.nothing")
@@ -319,7 +339,8 @@ Some more text")
   ;; but not when used via send in the application context
 
   (t/testing "ability to manage server state using send and draft!"
-    (let [url "http://localhost:9223"]
+    (let [url "http://localhost:9223"
+          example-file "./test-resources/fab/inputs/test-file.html.fab"]
 
       (add-watch test-state
                  :test-validity
@@ -347,11 +368,16 @@ Some more text")
             "File watcher should be found in state agent")
 
       (println "2. initial write")
-      (spit "./test-resources/fab/inputs/test-file.html.fab"
-            test-fabricate-str)
-      (await test-state)
+      (spit example-file test-fabricate-str)
       (await (:site.fabricate.app/watcher @test-state))
-      (t/is (not (agent-error state))
+      (await test-state)
+      (Thread/sleep 500)
+      (t/is (map?
+             (get-in
+              @test-state
+              [:site.fabricate/pages "test-resources/fab/inputs/test-file"]))
+            "Page info should be present in state map after write")
+      (t/is (not (agent-error test-state))
             "File writing should not cause errors in state agent")
       (t/is (not (agent-error (:site.fabricate.app/watcher @test-state)))
             "File writing should not cause errors in watcher agent")
@@ -363,8 +389,11 @@ Some more text")
       (t/is (#{200 304} (:status (curl/get (str url "/test-file.html") {:throw false})))
             "File should be visible on server")
       (Thread/sleep 250)
+
+      (t/is (map? (get-in @test-state [:site.fabricate/pages example-file]))
+            "Page info should be present in state map after write, before update")
       (println "3. file update")
-      (spit "./test-resources/fab/inputs/test-file.html.fab"
+      (spit example-file
             extra-content-str
             :append true)
       (await test-state)
@@ -373,7 +402,15 @@ Some more text")
             "File should have contents updated by filewatcher")
 
       (Thread/sleep 250)
-      (println "4. shutdown")
+
+      (println "4. file deletion")
+      (io/delete-file example-file)
+      (await test-state)
+      (clojure.pprint/pprint @test-state)
+      (t/is (not (.exists (io/file example-file)))
+            "File watcher should remove output files corresponding to deleted input files.")
+
+      (println "5. shutdown")
       (send-off test-state stop!)
 
       (await test-state)
