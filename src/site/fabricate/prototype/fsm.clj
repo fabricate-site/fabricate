@@ -108,14 +108,15 @@
   "Completes the fsm by advancing through states until the same value is produced twice."
   {:malli/schema [:=> [:cat state-action-map :any [:* :any]] :any]}
   [fsm-map value & args]
-  (let [fsm-states (iterate  ;; #(apply advance fsm-map % args)
-                    (fn [s] (apply advance fsm-map s args))
-                    value)]
-    (reduce (fn [current-state next-state]
-              (if (= current-state next-state)
-                (reduced current-state)
-                next-state))
-            fsm-states)))
+  (let [fsm-states
+        (iterate (fn [s] (apply advance fsm-map s args)) value)]
+    (u/trace ::complete
+      (apply concat (select-keys (meta fsm-map) [:fsm/name]))
+      (reduce (fn [current-state next-state]
+                (if (= current-state next-state)
+                  (reduced current-state)
+                  next-state))
+              fsm-states))))
 
 (comment
 
