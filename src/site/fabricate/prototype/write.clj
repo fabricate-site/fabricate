@@ -340,12 +340,27 @@
    {:cors-allow-headers nil
     :dir (str (System/getProperty "user.dir") "/docs")
     :port 8002
-    :no-cache true}})
+    :no-cache true}
+   :site.fabricate.app.logger/config
+   {:type :console :pretty? true
+    :transform
+    (fn [events]
+      (->> events
+           (filter #(<= 800 (:log/level %)))
+           (map #(dissoc % :state/value :fsm/value))))}})
 
 (def initial-state
   "Starting state for Fabricate's application components."
   {:site.fabricate/settings default-site-settings
    :site.fabricate/pages {}})
+
+(comment
+
+  (get-in initial-state
+          [:site.fabricate/settings
+           :site.fabricate.app.logger/config])
+
+  )
 
 (defn- report-error [a err]
   (u/log ::agent-error :agent/context (:context (meta a))
@@ -432,7 +447,7 @@
   )
 
 (defn draft!
-  "Render all the Fabricate templates once, then launches a file watcher to rerender the templates on save. Also launches a web server to view the rendered pages locally."
+  "Render all the Fabricate templates once, then launches a file watcher to rerender the templates on save. Also launches a web server to view the rendered pages locally, and creates a logger that prints page rerender operations in the REPL."
   {:malli/schema [:=> [:cat state-schema] state-schema]}
   [{:keys [site.fabricate/settings site.fabricate/pages]
     :as application-state-map}]
@@ -473,14 +488,23 @@
               (alter-meta! fw assoc :context :site.fabricate.app/watcher)
               (set-error-mode! fw :continue)
               (set-error-handler! fw report-error)
-              fw)))]
+              fw)))
+        console-logger
+        (future
+          (u/start-publisher!
+           (let [conf (get settings
+                           :site.fabricate.app.logger/config)]
+             (println conf)
+             conf
+             )))]
 
 
     (assoc
      application-state-map
      :site.fabricate/pages @written-pages
      :site.fabricate.app/watcher @fw
-     :site.fabricate.app/server @srv)))
+     :site.fabricate.app/server @srv
+     :site.fabricate.app/logger @console-logger)))
 
 (defn publish!
   "Render all the fabricate templates."
@@ -527,7 +551,12 @@
                     (do (server/stop s) :stopped)
                     s)))
               #_(try (do (server/stop %) nil)
-                     (catch Exception e nil)))))
+                     (catch Exception e nil)))
+      (update :site.fabricate.app/logger
+              (fn [l]
+                (u/trace ::logger-stop
+                  [:log/level 800]
+                  (l)) nil))))
 
 (.addShutdownHook
  (java.lang.Runtime/getRuntime)
@@ -542,8 +571,7 @@
 
   (-> state
       (send (constantly initial-state))
-      (send-off draft!)
-      )
+      (send-off draft!))
 
   (do
     (send-off state stop!)
@@ -640,4 +668,8 @@
                      (io/file output-dir))))))) )
 
 
+  )
+
+(comment
+  ()
   )

@@ -13,10 +13,14 @@
             [http.server :as server]
             [clojure.test :as t]
             [clojure.pprint :as pprint]
-            [babashka.curl :as curl])
+            [babashka.curl :as curl]
+            [com.brunobonacci.mulog :as u])
   (:import  [java.util.concurrent Executors]))
 
 (declare test-state)
+(def test-logger
+  (u/start-publisher!
+   (get default-site-settings :site.fabricate.app.logger/config)))
 
 (def test-operations
   (dissoc default-operations rendered-state))
@@ -46,7 +50,8 @@
       (println "stopping")
       (send test-state stop!)
       (set-agent-send-executor! prior-exec)
-      (set-agent-send-off-executor! prior-exec))))
+      (set-agent-send-off-executor! prior-exec)
+      (test-logger))))
 
 (t/deftest file-utils
   (t/testing "output path fn"
@@ -342,6 +347,8 @@ Some more text")
       (t/is (some? (type (get @test-state :site.fabricate.app/watcher)))
             "File watcher should be found in state agent")
 
+      (t/is (some? (type (get @test-state :site.fabricate.app/logger)))
+            "App should launch logger")
       (println "2. initial write")
       (spit "./test-resources/fab/inputs/test-file.html.fab"
             test-fabricate-str)
