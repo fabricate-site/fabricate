@@ -59,7 +59,7 @@
 
     (let [exception-map
           (try
-            (#(throw-error [] (throw (Exception. "error"))))
+            (#(throw (Exception. "error")))
             (catch Exception e (Throwable->map e)))]
       (t/is (valid-schema? throwable-map-schema exception-map))
 

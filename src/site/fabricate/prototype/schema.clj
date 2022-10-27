@@ -71,19 +71,6 @@
                [:data {:optional true} :any]]]]
     [:trace [:vector :any]]]))
 
-(def throwable-map? (m/validator throwable-map-schema))
-
-(comment
-
-
-
-  (clojure.pprint/pprint
-   (try
-     (#(throw-error [] (throw (Exception. "error"))))
-     (catch Exception e (Throwable->map e))))
-
-
-
-
-
-  )
+(def
+  ^{:malli/schema [:=> [:cat :any] :boolean]}
+  throwable-map? (m/validator throwable-map-schema))
