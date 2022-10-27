@@ -15,6 +15,7 @@
             [malli.transform :as mt]
             [site.fabricate.prototype.schema :as schema]
             [site.fabricate.prototype.read.grammar :refer [template]]
+            [com.brunobonacci.mulog :as u]
             [instaparse.core :as insta]
             [clojure.string :as string]
             [clojure.java.io :as io]))
@@ -208,9 +209,13 @@
   ([{:keys [expr-src expr exec error result display
             fabricate.read/parse-error]
      :as expr-map} simplify? post-validator]
-   (let [evaluated-expr-map
+   (let [form-meta (meta expr-map)
+         evaluated-expr-map
          (try (assoc expr-map
-                     :result (eval (or exec expr))
+                     :result (u/trace
+                                 ::eval-parsed-expr
+                               (apply concat [:log/level 500] form-meta)
+                               (eval (or exec expr)))
                      :error (or nil error))
               (catch Exception e
                 (assoc expr-map
@@ -311,13 +316,15 @@
   ([parsed-form simplify? nmspc]
    (let [form-nmspc (yank-ns parsed-form)
          nmspc (if form-nmspc (create-ns form-nmspc) *ns*)]
-     (binding [*ns* nmspc]
-       (refer-clojure)
-       (clojure.walk/postwalk
-        (fn [i] (if (fabricate-expr? i)
-                  (eval-parsed-expr i simplify?)
-                  i))
-        parsed-form))))
+     (u/trace ::eval-parsed-template
+       [:log/level 500 ::template-ns (str nmspc)]
+       (binding [*ns* nmspc]
+         (refer-clojure)
+         (clojure.walk/postwalk
+          (fn [i] (if (fabricate-expr? i)
+                    (eval-parsed-expr i simplify?)
+                    i))
+          parsed-form)))))
   ([parsed-form simplify?] (eval-all parsed-form simplify? *ns*))
   ([parsed-form] (eval-all parsed-form true)))
 
