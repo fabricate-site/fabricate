@@ -345,7 +345,7 @@
     :transform
     (fn [events]
       (->> events
-           (filter #(<= 800 (:log/level %)))
+           (filter #(or (<= 800 (:log/level % 0))))
            (map #(dissoc % :state/value :fsm/value))))}})
 
 (def initial-state
@@ -453,45 +453,44 @@
   (let [{:keys [site.fabricate.file/input-dir
                 site.fabricate.file/template-suffix
                 site.fabricate.file/operations]} settings
+        console-logger
+        (u/start-publisher!
+         (get settings :site.fabricate.app.logger/config))
         srv (future
               (do
                 (u/trace ::server-start
-                  [:log/level 800]
-                  (server/start (:site.fabricate.server/config settings)))))
+                         [:log/level 800]
+                         (server/start (:site.fabricate.server/config settings)))))
         written-pages
         (future
           (u/trace ::initial-page-render
-            [:log/level 800]
-            (->> (get-template-files input-dir template-suffix)
-                 (pmap (fn [fp] [fp (fsm/complete operations fp application-state-map)]))
-                 (into {}))))
+                   [:log/level 800]
+                   (->> (get-template-files input-dir template-suffix)
+                        (pmap (fn [fp] [fp (fsm/complete operations fp application-state-map)]))
+                        (into {}))))
         fw
         (future
           (u/trace
-              ::file-watcher-start
-            [:log/level 800]
-            (let [state-agent *agent*
-                  fw (watch-dir
-                      (fn [{:keys [file action] :as f}]
-                        (if (and (#{:create :modify} action)
-                                 (not (re-find #"#" (.toString file)))
-                                 (.endsWith (.toString file) template-suffix))
-                          (do (send-off
-                               state-agent
-                               (fn [s]
-                                 (let [p (rerender s f)
-                                       fname (:site.fabricate.file/filename p)]
-                                   (assoc-in s [:site.fabricate/pages fname] p))))
-                              nil)))
-                      (io/file input-dir))]
-              (alter-meta! fw assoc :context :site.fabricate.app/watcher)
-              (set-error-mode! fw :continue)
-              (set-error-handler! fw report-error)
-              fw)))
-        console-logger
-        (future
-          (u/start-publisher!
-           (get settings :site.fabricate.app.logger/config)))]
+           ::file-watcher-start
+           [:log/level 800]
+           (let [state-agent *agent*
+                 fw (watch-dir
+                     (fn [{:keys [file action] :as f}]
+                       (if (and (#{:create :modify} action)
+                                (not (re-find #"#" (.toString file)))
+                                (.endsWith (.toString file) template-suffix))
+                         (do (send-off
+                              state-agent
+                              (fn [s]
+                                (let [p (rerender s f)
+                                      fname (:site.fabricate.file/filename p)]
+                                  (assoc-in s [:site.fabricate/pages fname] p))))
+                             nil)))
+                     (io/file input-dir))]
+             (alter-meta! fw assoc :context :site.fabricate.app/watcher)
+             (set-error-mode! fw :continue)
+             (set-error-handler! fw report-error)
+             fw)))]
 
 
     (assoc
@@ -499,7 +498,7 @@
      :site.fabricate/pages @written-pages
      :site.fabricate.app/watcher @fw
      :site.fabricate.app/server @srv
-     :site.fabricate.app/logger @console-logger)))
+     :site.fabricate.app/logger console-logger)))
 
 (defn publish!
   "Render all the fabricate templates."
