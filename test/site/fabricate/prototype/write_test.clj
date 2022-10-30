@@ -24,12 +24,7 @@
 (def test-logger
   (u/start-publisher!
    (-> default-site-settings
-       (get :site.fabricate.app.logger/config)
-       (update
-        :transform comp
-        (fn [events] ; this doesn't work because it's not called in a testing context
-          (map #(merge % (tu/gather-test-meta))
-               events))))))
+       (get :site.fabricate.app.logger/config))))
 
 (def test-operations
   (dissoc default-operations rendered-state))
@@ -286,11 +281,11 @@ Some more text")
                        %
                        "App state should conform after modification"))
                 (valid-state? %))
-             #_ #_ :error-handler (fn [a err]
-                                    (t/is (valid-state? @a)
-                                          "State should be valid")
-                                    (pprint (me/humanize
-                                             (explain-state @a))))
+             #_#_:error-handler (fn [a err]
+                                  (t/is (valid-state? @a)
+                                        "State should be valid")
+                                  (pprint (me/humanize
+                                           (explain-state @a))))
              :error-mode :continue))
     (println "stopping")
     (send test-state stop!)
@@ -400,3 +395,22 @@ Some more text")
 
     (println "deleting test dir")
     (delete-directory-recursive (io/file "test-resources/fab"))))
+
+(comment
+  ;; another method that doesn't work because all
+  ;; clojure.test/*testing-contexts* assignments are
+  ;; thread-local with (binding ...)
+
+  (add-watch #'t/*testing-vars*
+             :var-update
+             (fn [k reff old new]
+               (println new)
+               (u/update-global-context!
+                merge (tu/gather-test-meta))))
+
+  (add-watch #'t/*testing-contexts*
+             :context-update
+             (fn [k reff old new]
+               (println new)
+               (u/update-global-context!
+                merge (tu/gather-test-meta)))))
