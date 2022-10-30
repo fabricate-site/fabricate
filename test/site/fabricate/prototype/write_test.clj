@@ -2,7 +2,9 @@
   (:require [site.fabricate.prototype.write :as write :refer :all]
             [site.fabricate.prototype.read :as read]
             [site.fabricate.prototype.fsm :as fsm]
-            [site.fabricate.prototype.test-utils :refer [with-instrumentation]]
+            [site.fabricate.prototype.test-utils
+             :as tu
+             :refer [with-instrumentation]]
             [site.fabricate.sketch :as sketch]
             [clojure.java.io :as io]
             [clojure.set :as set]
@@ -21,7 +23,13 @@
 
 (def test-logger
   (u/start-publisher!
-   (get default-site-settings :site.fabricate.app.logger/config)))
+   (-> default-site-settings
+       (get :site.fabricate.app.logger/config)
+       (update
+        :transform comp
+        (fn [events] ; this doesn't work because it's not called in a testing context
+          (map #(merge % (tu/gather-test-meta))
+               events))))))
 
 (def test-operations
   (dissoc default-operations rendered-state))
