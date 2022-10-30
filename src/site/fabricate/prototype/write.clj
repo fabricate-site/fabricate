@@ -43,10 +43,9 @@
     [:site.fabricate.page/namespace {:optional true} :symbol]
     [:site.fabricate.page/stylesheet {:optional true} :string]
     [:site.fabricate.file/output-file {:optional true}
-     [:orn [:undefined nil?]
+     [:orn [:undefined :nil]
       [:path :string]
       [:file [:fn sketch/file?]]]]]))
-
 
 (def state-schema
   "Schema for the agent containing the state of fabricate."
@@ -492,11 +491,7 @@
         console-logger
         (future
           (u/start-publisher!
-           (let [conf (get settings
-                           :site.fabricate.app.logger/config)]
-             (println conf)
-             conf
-             )))]
+           (get settings :site.fabricate.app.logger/config)))]
 
 
     (assoc

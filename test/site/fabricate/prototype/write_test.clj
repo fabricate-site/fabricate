@@ -31,21 +31,23 @@
           test-exec (Executors/newWorkStealingPool 20)]
       (set-agent-send-executor! test-exec)
       (set-agent-send-off-executor! test-exec)
-      (def test-state (agent initial-state
-                             :meta {:context :site.fabricate/app-test
-                                    :malli/schema state-schema}
-                             :validator #(do
-                                           (t/is (valid-schema?
-                                                  state-schema
-                                                  %
-                                                  "App state should conform after modification"))
-                                           (valid-state? %))
-                             #_ #_ :error-handler (fn [a err]
-                                                    (t/is (valid-state? @a)
-                                                          "State should be valid")
-                                                    (pprint (me/humanize
-                                                             (explain-state @a))))
-                             :error-mode :continue))
+      (def test-state
+        (agent initial-state
+               :meta {:context :site.fabricate/app-test
+                      :malli/schema state-schema}
+               :validator
+               #(do
+                  (t/is (valid-schema?
+                         state-schema
+                         %
+                         "App state should conform after modification"))
+                  (valid-state? %))
+               #_ #_ :error-handler (fn [a err]
+                                      (t/is (valid-state? @a)
+                                            "State should be valid")
+                                      (pprint (me/humanize
+                                               (explain-state @a))))
+               :error-mode :continue))
       (with-instrumentation f)
       (println "stopping")
       (send test-state stop!)
@@ -163,8 +165,6 @@
            initial-state)
           out-keys  (->> output keys (into #{}))
           out-file (:site.fabricate.file/output-file output)]
-      (println out-keys)
-      (println out-file)
       (t/is (set/subset?
              #{:site.fabricate.page/parsed-content
                :site.fabricate.page/namespace}
@@ -239,8 +239,8 @@
                      (t/is (any? rendered-content))
                      page-data)))]
       (doseq [page-path (get-template-files "./pages" ".fab")]
-        (println "testing" page-path)
-        (fsm/complete default-operations page-path initial-state)))))
+        (t/testing (str ": " page-path)
+          (fsm/complete default-operations page-path initial-state))))))
 
 (comment
   (:status (curl/get "https://respatialized.github.io/" {:throw false}))
