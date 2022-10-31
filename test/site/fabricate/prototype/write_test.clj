@@ -21,6 +21,9 @@
 
 (declare test-state)
 
+(u/set-global-context!
+ {:clojure.test/namespace (str *ns*)})
+
 (def test-logger
   (u/start-publisher!
    (-> default-site-settings
@@ -29,7 +32,8 @@
 (def test-operations
   (dissoc default-operations rendered-state))
 
-(t/use-fixtures :once with-instrumentation)
+(t/use-fixtures :once with-instrumentation
+  (fn reset-log-context [f] (f) (u/set-global-context! {})))
 
 (t/deftest file-utils
   (t/testing "output path fn"
@@ -287,15 +291,16 @@ Some more text")
                                   (pprint (me/humanize
                                            (explain-state @a))))
              :error-mode :continue))
-    (println "stopping")
-    (send test-state stop!)
-    (set-agent-send-executor! prior-exec)
-    (set-agent-send-off-executor! prior-exec)
     (println "creating test dir")
+
+    (u/update-global-context!
+     merge (tu/gather-test-meta))
     (io/make-parents "./test-resources/fab/outputs/.nothing")
     (io/make-parents "./test-resources/fab/inputs/.nothing")
 
     (t/testing "rerender fn"
+      (u/update-global-context!
+       merge (tu/gather-test-meta))
       (let [f (do (spit "./test-resources/fab/inputs/test-file.html.fab"
                         test-fabricate-str)
                   "./test-resources/fab/inputs/test-file.html.fab")
@@ -312,7 +317,7 @@ Some more text")
         (io/delete-file (io/file "./test-resources/fab/inputs/test-file.html.fab"))
         (io/delete-file (io/file "./test-resources/fab/outputs/test-file.html"))
 
-        (t/testing " in the context of an agent"
+        (t/testing "in the context of an agent"
           (let [rerender-agent (agent initial-state)
                 agent-valid?
                 (-> rerender-agent
@@ -325,6 +330,8 @@ Some more text")
     ;; but not when used via send in the application context
 
     (t/testing "ability to manage server state using send and draft!"
+      (u/update-global-context!
+       merge (tu/gather-test-meta))
       (let [url "http://localhost:9223"]
 
         (add-watch test-state
@@ -394,7 +401,12 @@ Some more text")
               "Watcher shutdown should be indicated in state map")))
 
     (println "deleting test dir")
-    (delete-directory-recursive (io/file "test-resources/fab"))))
+    (delete-directory-recursive (io/file "test-resources/fab"))
+
+    (println "stopping")
+    (send test-state stop!)
+    (set-agent-send-executor! prior-exec)
+    (set-agent-send-off-executor! prior-exec)))
 
 (comment
   ;; another method that doesn't work because all
