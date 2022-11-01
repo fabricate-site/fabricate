@@ -404,7 +404,6 @@ Some more text")
     (delete-directory-recursive (io/file "test-resources/fab"))
 
     (println "stopping")
-    (send test-state stop!)
     (set-agent-send-executor! prior-exec)
     (set-agent-send-off-executor! prior-exec)))
 

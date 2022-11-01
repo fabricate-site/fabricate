@@ -69,6 +69,9 @@
      [:orn
       [:stopped [:= :stopped]]
       [:error/shutdown [:= :error/shutdown]]
+      [:running any?]]]
+    [:site.fabricate.app/logger {:optional true}
+     [:orn [:stopped :nil]
       [:running any?]]]]))
 
 (defn get-output-filename
@@ -346,7 +349,8 @@
     (fn [events]
       (->> events
            (filter #(or (<= 800 (:log/level % 0))))
-           (map #(dissoc % :state/value :fsm/value))))}})
+           (map #(dissoc % :state/value :fsm/value))
+           distinct))}})
 
 (def initial-state
   "Starting state for Fabricate's application components."
@@ -548,9 +552,10 @@
                      (catch Exception e nil)))
       (update :site.fabricate.app/logger
               (fn [l]
-                (u/trace ::logger-stop
-                  [:log/level 800]
-                  (l)) nil))))
+                (u/log ::logger-stop
+                       [:log/level 800])
+                (l)
+                nil))))
 
 (.addShutdownHook
  (java.lang.Runtime/getRuntime)
