@@ -201,7 +201,9 @@
    {:keys [site.fabricate/settings]}]
   (-> page-data
       (assoc :site.fabricate.page/parsed-content
-             (read/parse unparsed-content {:filename filename}))
+             (u/trace ::parse-template
+               {:pairs []}
+               (read/parse unparsed-content {:filename filename})))
       (populate-page-meta settings)))
 
 (def evaluated-state
@@ -277,7 +279,9 @@
            site.fabricate.page/namespace] :as page-data}
    site-opts]
   (let [nmspc (create-ns namespace)
-        evaluated (read/eval-all parsed-content true nmspc)
+        evaluated (u/trace ::eval-template
+                    {:pairs [:site.fabricate.page/namespace (str namespace)]}
+                    (read/eval-all parsed-content true nmspc))
         page-meta (let [m (ns-resolve nmspc 'metadata)]
                     (if (nil? m) {} (var-get m)))
         metadata
@@ -309,26 +313,31 @@
                     [{:keys [site.fabricate.page/evaluated-content]
                       :as page-data} _]
                     (assoc page-data :site.fabricate.page/rendered-content
-                           (reduce str evaluated-content)))
+                           (u/trace ::evaluated->markdown
+                             {:pairs []}
+                             (reduce str evaluated-content))))
    html-state (fn render-hiccup
-                [page-data state]
-                (let [final-hiccup (evaluated->hiccup page-data state)]
+                [{:keys [site.fabricate.file/input-file]
+                  :as page-data} state]
+                (let [final-hiccup
+                      (u/trace ::evaulated->hiccup {:pairs []}
+                               (evaluated->hiccup page-data state))]
                   (assoc page-data
                          :site.fabricate.page/evaluated-content final-hiccup
                          :site.fabricate.page/rendered-content
-                         (str (hiccup/html
-                               {:escape-strings? false}
-                               final-hiccup)))))
+                         (str (u/trace
+                                  ::hiccup->html {:pairs []}
+                                  (hiccup/html
+                                   {:escape-strings? false}
+                                   final-hiccup))))))
    rendered-state
    (fn write-file
      [{:keys [site.fabricate.page/rendered-content
               site.fabricate.file/output-file] :as page-data}
       settings]
      (do
-       (u/trace ::render-output
-         {:pairs [:site.fabricate.file/filename output-file
-                  :log/level 800]}
-         (spit output-file rendered-content))
+       (u/trace ::write-output-file {:pairs []}
+                (spit output-file rendered-content))
        page-data))})
 
 (def default-site-settings
@@ -348,7 +357,9 @@
     :transform
     (fn [events]
       (->> events
-           (filter #(or (<= 800 (:log/level % 0))))
+           (filter #(or (<= 800 (:log/level % 0))
+                        (= (str *ns*) (:mulog/namespace %))
+                        (= (str *ns*) (namespace (:mulog/event-name %)))))
            (map #(dissoc % :state/value :fsm/value))
            distinct))}})
 
@@ -425,12 +436,14 @@
                 site.fabricate.file/operations]}
         settings]
     (let [local-file (read/->dir-local-path file)]
-      (u/trace ::rerender
-        {:pairs [:log/level 800
-                 :site.fabricate.file/filename local-file]}
-        (fsm/complete operations
-                      local-file
-                      application-state-map)))))
+      (u/with-context
+          {:log/level 800
+           :site.fabricate.file/filename local-file}
+        (u/trace ::rerender
+          {:pairs []}
+          (fsm/complete operations
+                        local-file
+                        application-state-map))))))
 
 
 (comment
@@ -578,6 +591,8 @@
 
   (keys @state)
 
+  (keys (get-in @state [:site.fabricate/pages]))
+
   (type (:site.fabricate.app/server @state))
 
   (restart-agent state initial-state)
@@ -670,5 +685,6 @@
   )
 
 (comment
-  ()
+  (namespace ::something)
+
   )
