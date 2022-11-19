@@ -28,7 +28,10 @@
         (u/trace ::test-trace {:capture (fn [r] {:output/value r})}
                  (do (println "test event") :done)))
 
+      (Thread/sleep 600)
+
       (let [log-data (edn/read-string
+                      {:readers *data-readers*}
                       (str "[" (slurp test-file) "]"))]
 
         (t/is (not-empty log-data))
