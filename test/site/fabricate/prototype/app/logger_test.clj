@@ -41,7 +41,3 @@
 
       (file-pub)
       (io/delete-file test-file))))
-
-(comment
-
-  (with-out-str (u/log ::test-event :some/data 3)))

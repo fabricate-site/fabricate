@@ -68,8 +68,3 @@
     (t/is (= 3 (complete example-error-fsm 1)))
     (t/is (= 3 (complete example-error-fsm 2)))
     (t/is (= 3 (complete example-error-fsm 3)))))
-
-(comment
-  (complete example-fsm 2)
-
-  (u/trace))

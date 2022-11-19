@@ -117,10 +117,3 @@
                   (reduced current-state)
                   next-state))
               fsm-states))))
-
-(comment
-
-  (def test-pub (u/start-publisher! {:type :console}))
-
-  (u/trace
-      ::test-advance))

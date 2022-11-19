@@ -685,8 +685,3 @@
 
 
   )
-
-(comment
-  (namespace ::something)
-
-  )
