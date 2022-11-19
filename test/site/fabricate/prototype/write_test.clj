@@ -345,7 +345,8 @@ Some more text")
     (t/testing "ability to manage server state using send and draft!"
       (u/update-global-context!
        merge (tu/gather-test-meta))
-      (let [url "http://localhost:9223"]
+      (let [url "http://localhost:9223"
+            test-file-path "./test-resources/fab/inputs/test-file.html.fab"]
 
         (add-watch test-state
                    :test-validity
@@ -375,7 +376,7 @@ Some more text")
         (t/is (some? (type (get @test-state :site.fabricate.app/logger)))
               "App should launch logger")
         (println "2. initial write")
-        (spit "./test-resources/fab/inputs/test-file.html.fab"
+        (spit test-file-path
               test-fabricate-str)
         (await test-state)
         (await (:site.fabricate.app/watcher @test-state))
@@ -392,7 +393,7 @@ Some more text")
               "File should be visible on server")
         (Thread/sleep 250)
         (println "3. file update")
-        (spit "./test-resources/fab/inputs/test-file.html.fab"
+        (spit test-file-path
               extra-content-str
               :append true)
         (await test-state)
@@ -401,7 +402,14 @@ Some more text")
               "File should have contents updated by filewatcher")
 
         (Thread/sleep 250)
-        (println "4. shutdown")
+
+        (println "4. Delete")
+        (io/delete-file test-file-path)
+        (Thread/sleep 400)
+        (await test-state)
+        (t/is (not (.exists (io/file "./test-resources/fab/outputs/test-file.html"))))
+
+        (println "5. shutdown")
         (send-off test-state stop!)
 
         (await test-state)

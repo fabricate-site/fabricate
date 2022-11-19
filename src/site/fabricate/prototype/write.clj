@@ -205,6 +205,7 @@
     [:site.fabricate.file/filename :string]]))
 
 (defn read-input-file
+  {:malli/schema [:=> [:cat :map :any] :map]}
   [{:keys [site.fabricate.file/input-file] :as page-data} _]
   (assoc page-data :site.fabricate.page/unparsed-content
          (slurp input-file)))
