@@ -2,7 +2,9 @@
   (:require [site.fabricate.prototype.write :as write :refer :all]
             [site.fabricate.prototype.read :as read]
             [site.fabricate.prototype.fsm :as fsm]
-            [site.fabricate.prototype.test-utils :refer [with-instrumentation]]
+            [site.fabricate.prototype.test-utils
+             :as tu
+             :refer [with-instrumentation]]
             [site.fabricate.sketch :as sketch]
             [clojure.java.io :as io]
             [clojure.set :as set]
@@ -13,58 +15,36 @@
             [http.server :as server]
             [clojure.test :as t]
             [clojure.pprint :as pprint]
-            [babashka.curl :as curl])
+            [babashka.curl :as curl]
+            [com.brunobonacci.mulog :as u])
   (:import  [java.util.concurrent Executors]))
 
 (declare test-state)
 
+(u/set-global-context!
+ {:clojure.test/namespace (str *ns*)})
+
+(def test-logger
+  (u/start-publisher!
+   (-> default-site-settings
+       (get :site.fabricate.app.logger/config))))
+
 (def test-operations
   (dissoc default-operations rendered-state))
 
-(t/use-fixtures :once
-  (fn [f]
-    (let [prior-exec clojure.lang.Agent/soloExecutor
-          test-exec (Executors/newWorkStealingPool 20)]
-      (set-agent-send-executor! test-exec)
-      (set-agent-send-off-executor! test-exec)
-      (def test-state
-        (agent initial-state
-               :meta {:context :site.fabricate/app-test
-                      :malli/schema state-schema}
-               :validator
-               #(do (t/is (valid-schema? state-schema %)
-                          "App state should conform after modification")
-                    (valid-state? %))
-               #_ #_ :error-handler (fn [a err]
-                                      (t/is (valid-state? @a)
-                                            "State should be valid")
-                                      (pprint (me/humanize
-                                               (explain-state @a))))
-               :error-mode :continue))
-      (with-instrumentation f)
-      (println "stopping")
-      (send test-state stop!)
-      (set-agent-send-executor! prior-exec)
-      (set-agent-send-off-executor! prior-exec))))
+(t/use-fixtures :once with-instrumentation
+  (fn reset-log-context [f] (f) (u/set-global-context! {})))
 
 (t/deftest file-utils
   (t/testing "output path fn"
+                                        ;  (u/with-context {:clojure.test/contexts t/*testing-contexts*}
+                                        ;    (u/trace ::output-fn [:log/level 900]
     (t/is (= "./docs/test-file.txt"
              (get-output-filename "./pages/test-file.txt"
                                   "./pages"
-                                  "./docs")
-             (get-output-filename "./pages/test-file.txt"
-                                  "./pages/"
-                                  "./docs")
-             (get-output-filename "./pages/test-file.txt"
-                                  "./pages/"
-                                  "./docs/"))))
-
-  #_(t/testing "file deletion"
-      (let [test-path "test-resources/test.txt.fab"]
-        (spit test-path "some test text"))
-      (t/is (map? delete-file! {:file (io/file test-path)})))
-  )
+                                  "./docs")))
+                                        ;             ))
+    ))
 
 (t/deftest page-fsm
   (t/testing "page metadata"
@@ -96,14 +76,16 @@
   (doseq [e (:examples (m/properties input-state))]
     (t/testing (str "example file: " e)
       (let [final (fsm/complete test-operations e initial-state)
-            final-debug (fsm/complete test-operations {:fsm/value e} initial-state)]
+            final-debug (fsm/complete
+                         test-operations
+                         {:state/value e} initial-state)]
         (t/is
          (contains?
           final
           :site.fabricate.page/rendered-content)
          "Example FSMs should complete successfully")
-        (t/is (contains? (:fsm/value final-debug)
-               :site.fabricate.page/rendered-content)
+        (t/is (contains? (:state/value final-debug)
+                         :site.fabricate.page/rendered-content)
               "Example FSMs should complete in debug mode"))))
 
   (t/testing "readme"
@@ -167,8 +149,6 @@
            initial-state)
           out-keys  (->> output keys (into #{}))
           out-file (:site.fabricate.file/output-file output)]
-      (println out-keys)
-      (println out-file)
       (t/is (set/subset?
              #{:site.fabricate.page/parsed-content
                :site.fabricate.page/namespace}
@@ -249,13 +229,8 @@
                    (t/is (any? rendered-content))
                    page-data))))]
       (doseq [page-path (get-template-files "./pages" ".fab")]
-        (println "testing" page-path)
-        (let [{:keys [fsm/error fsm/value] :as completed}
-              (fsm/complete test-page-operations
-                            {:fsm/value page-path}
-                            initial-state)]
-          (t/is (nil? error)
-                "Rerendering pages should not result in error states"))))))
+        (t/testing (str ": " page-path)
+          (fsm/complete default-operations page-path initial-state))))))
 
 (comment
   (:status (curl/get "https://respatialized.github.io/" {:throw false}))
@@ -301,126 +276,166 @@ Some more text")
                  :port 9223})))
 
 (t/deftest application-state
+  (let [prior-exec clojure.lang.Agent/soloExecutor
+        test-exec (Executors/newWorkStealingPool 20)]
+    (set-agent-send-executor! test-exec)
+    (set-agent-send-off-executor! test-exec)
+    (def test-state
+      (agent initial-state
+             :meta {:context :site.fabricate/app-test
+                    :malli/schema state-schema}
+             :validator
+             #(do
+                (t/is (valid-schema?
+                       state-schema
+                       %
+                       "App state should conform after modification"))
+                (valid-state? %))
+             #_#_:error-handler (fn [a err]
+                                  (t/is (valid-state? @a)
+                                        "State should be valid")
+                                  (pprint (me/humanize
+                                           (explain-state @a))))
+             :error-mode :continue))
+    (println "creating test dir")
 
-  (t/is (valid-schema? state-schema test-config))
+    (u/update-global-context!
+     merge (tu/gather-test-meta))
+    (io/make-parents "./test-resources/fab/outputs/.nothing")
+    (io/make-parents "./test-resources/fab/inputs/.nothing")
 
-  #_(set-validator! test-state (constantly true))
-  (println "creating test dir")
-  (io/make-parents "./test-resources/fab/outputs/.nothing")
-  (io/make-parents "./test-resources/fab/inputs/.nothing")
+    (t/testing "rerender fn"
+      (u/update-global-context!
+       merge (tu/gather-test-meta))
+      (let [f (do (spit "./test-resources/fab/inputs/test-file.html.fab"
+                        test-fabricate-str)
+                  "./test-resources/fab/inputs/test-file.html.fab")
+            res (rerender test-config
+                          {:file (io/file f) :count 1 :action :create})
+            rendered-str (get res :site.fabricate.page/rendered-content)]
+        (t/is (valid-schema? page-metadata-schema res)
+              "Rerender fn should return valid page maps")
+        (t/is
+         (re-find #"example" rendered-str))
 
-  (t/testing "rerender fn"
-    (let [f (do (spit "./test-resources/fab/inputs/test-file.html.fab"
-                      test-fabricate-str)
-                "./test-resources/fab/inputs/test-file.html.fab")
-          res (rerender test-config
-                        {:file (io/file f) :count 1 :action :create})
-          rendered-str (get res :site.fabricate.page/rendered-content)]
-      (t/is (valid-schema? page-metadata-schema res)
-            "Rerender fn should return valid page maps")
-      (t/is
-       (re-find #"example" rendered-str))
+        (t/is (= rendered-str (slurp "./test-resources/fab/outputs/test-file.html")))
 
-      (t/is (= rendered-str (slurp "./test-resources/fab/outputs/test-file.html")))
+        (io/delete-file (io/file "./test-resources/fab/inputs/test-file.html.fab"))
+        (io/delete-file (io/file "./test-resources/fab/outputs/test-file.html"))
 
-      (io/delete-file (io/file "./test-resources/fab/inputs/test-file.html.fab"))
-      (io/delete-file (io/file "./test-resources/fab/outputs/test-file.html"))
+        (t/testing "in the context of an agent"
+          (let [rerender-agent (agent initial-state)
+                agent-valid?
+                (-> rerender-agent
+                    (send-off
+                     (fn [s]
+                       (let [p (rerender s {:file (io/file f) :count 1 :action :create})
+                             fname (:site.fabricate.file/filename p)]
+                         (assoc-in s [:site.fabricate/pages fname] p))))
+                    (#(do (await %) %))
+                    deref
+                    (valid-state?))]
+            (when-not agent-valid?
+              (println (me/humanize (explain-state @rerender-agent))))
+            (t/is agent-valid? "rerender should work with send-off")))))
 
-      (t/testing " in the context of an agent"
-        (let [rerender-agent (agent initial-state)
-              agent-valid?
-              (-> rerender-agent
-                  (send rerender {:file (io/file f) :count 1 :action :create})
-                  deref
-                  (valid-state?))]
-          (t/is agent-valid? "rerender should work with send-off")))))
+    ;; the rerender fn works when tested in isolation (with send and with regular calls)
+    ;; but not when used via send in the application context
 
-  ;; the rerender fn works when tested in isolation (with send and with regular calls)
-  ;; but not when used via send in the application context
+    (t/testing "ability to manage server state using send and draft!"
+      (u/update-global-context!
+       merge (tu/gather-test-meta))
+      (let [url "http://localhost:9223"]
 
-  (t/testing "ability to manage server state using send and draft!"
-    (let [url "http://localhost:9223"
-          example-file "./test-resources/fab/inputs/test-file.html.fab"]
+        (add-watch test-state
+                   :test-validity
+                   (fn [k reff old-state new-state]
+                     (t/is (valid-schema? state-schema old-state) "Old state should be valid")
+                     (t/is (valid-schema? state-schema new-state) "New state should be valid")))
+        (println "0. overriding default state")
+        (send test-state (constantly test-config))
+        (await test-state)
+        (t/is (= "./test-resources/fab/inputs/"
+                 (get-in @test-state
+                         [:site.fabricate/settings
+                          :site.fabricate.file/input-dir]))
+              "Default configuration should be overridden")
 
-      (add-watch test-state
-                 :test-validity
-                 (fn [k reff old-state new-state]
-                   (t/is (valid-schema? state-schema old-state) "Old state should be valid")
-                   (t/is (valid-schema? state-schema new-state) "New state should be valid")))
-      (println "0. overriding default state")
-      (send test-state (constantly test-config))
-      (await test-state)
-      (t/is (= "./test-resources/fab/inputs/"
-               (get-in @test-state
-                       [:site.fabricate/settings
-                        :site.fabricate.file/input-dir]))
-            "Default configuration should be overridden")
+        (println "1. starting application")
+        (send-off test-state draft!)
+        (await test-state)
+        (t/is (#{200 304} (:status (curl/get url {:throw false})))
+              "Server should start via agent")
+        (t/is (some? (type (get @test-state :site.fabricate.app/server)))
+              "Server should be found in state agent")
 
-      (println "1. starting application")
-      (send-off test-state draft!)
-      (await test-state)
-      (t/is (#{200 304} (:status (curl/get url {:throw false})))
-            "Server should start via agent")
-      (t/is (some? (type (get @test-state :site.fabricate.app/server)))
-            "Server should be found in state agent")
+        (t/is (some? (type (get @test-state :site.fabricate.app/watcher)))
+              "File watcher should be found in state agent")
 
-      (t/is (some? (type (get @test-state :site.fabricate.app/watcher)))
-            "File watcher should be found in state agent")
+        (t/is (some? (type (get @test-state :site.fabricate.app/logger)))
+              "App should launch logger")
+        (println "2. initial write")
+        (spit "./test-resources/fab/inputs/test-file.html.fab"
+              test-fabricate-str)
+        (await test-state)
+        (await (:site.fabricate.app/watcher @test-state))
+        (t/is (not (agent-error state))
+              "File writing should not cause errors in state agent")
+        (t/is (not (agent-error (:site.fabricate.app/watcher @test-state)))
+              "File writing should not cause errors in watcher agent")
 
-      (println "2. initial write")
-      (spit example-file test-fabricate-str)
-      (await (:site.fabricate.app/watcher @test-state))
-      (await test-state)
-      (Thread/sleep 500)
-      (t/is (map?
-             (get-in
-              @test-state
-              [:site.fabricate/pages "test-resources/fab/inputs/test-file"]))
-            "Page info should be present in state map after write")
-      (t/is (not (agent-error test-state))
-            "File writing should not cause errors in state agent")
-      (t/is (not (agent-error (:site.fabricate.app/watcher @test-state)))
-            "File writing should not cause errors in watcher agent")
+        (Thread/sleep 250)
+        (let [response (curl/get url {:throw false})]
+          (t/is (re-find #"test\-file\.html" (:body response))
+                "File should display in list of files after rendering"))
+        (t/is (#{200 304} (:status (curl/get (str url "/test-file.html") {:throw false})))
+              "File should be visible on server")
+        (Thread/sleep 250)
+        (println "3. file update")
+        (spit "./test-resources/fab/inputs/test-file.html.fab"
+              extra-content-str
+              :append true)
+        (await test-state)
+        (Thread/sleep 500)
+        (t/is (re-find #"four" (:body (curl/get (str url "/test-file.html") {:throw false})))
+              "File should have contents updated by filewatcher")
 
-      (Thread/sleep 250)
-      (let [response (curl/get url {:throw false})]
-        (t/is (re-find #"test\-file\.html" (:body response))
-              "File should display in list of files after rendering"))
-      (t/is (#{200 304} (:status (curl/get (str url "/test-file.html") {:throw false})))
-            "File should be visible on server")
-      (Thread/sleep 250)
+        (Thread/sleep 250)
+        (println "4. shutdown")
+        (send-off test-state stop!)
 
-      (t/is (map? (get-in @test-state [:site.fabricate/pages example-file]))
-            "Page info should be present in state map after write, before update")
-      (println "3. file update")
-      (spit example-file
-            extra-content-str
-            :append true)
-      (await test-state)
-      (Thread/sleep 500)
-      (t/is (re-find #"four" (:body (curl/get (str url "/test-file.html") {:throw false})))
-            "File should have contents updated by filewatcher")
+        (await test-state)
 
-      (Thread/sleep 250)
+        (t/is (nil? (:status (curl/get url {:throw false})))
+              "Server should shutdown via agent")
+        (t/is (= :stopped (:site.fabricate.app/server @test-state))
+              "Server shutdown should be indicated in state map")
+        (t/is (= :stopped (:site.fabricate.app/watcher @test-state))
+              "Watcher shutdown should be indicated in state map")))
 
-      (println "4. file deletion")
-      (io/delete-file example-file)
-      (await test-state)
-      (clojure.pprint/pprint @test-state)
-      (t/is (not (.exists (io/file example-file)))
-            "File watcher should remove output files corresponding to deleted input files.")
+    (println "deleting test dir")
+    (delete-directory-recursive (io/file "test-resources/fab"))
 
-      (println "5. shutdown")
-      (send-off test-state stop!)
+    (println "stopping")
+    (set-agent-send-executor! prior-exec)
+    (set-agent-send-off-executor! prior-exec)))
 
-      (await test-state)
+(comment
+  ;; another method that doesn't work because all
+  ;; clojure.test/*testing-contexts* assignments are
+  ;; thread-local with (binding ...)
 
-      (t/is (nil? (:status (curl/get url {:throw false})))
-            "Server should shutdown via agent")
-      (t/is (= :stopped (:site.fabricate.app/server @test-state))
-            "Server shutdown should be indicated in state map")
-      (t/is (= :stopped (:site.fabricate.app/watcher @test-state))
-            "Watcher shutdown should be indicated in state map")))
 
-  (println "deleting test dir")
-  (delete-directory-recursive (io/file "test-resources/fab")))
+  (add-watch #'t/*testing-vars*
+             :var-update
+             (fn [k reff old new]
+               (println new)
+               (u/update-global-context!
+                merge (tu/gather-test-meta))))
+
+  (add-watch #'t/*testing-contexts*
+             :context-update
+             (fn [k reff old new]
+               (println new)
+               (u/update-global-context!
+                merge (tu/gather-test-meta)))))

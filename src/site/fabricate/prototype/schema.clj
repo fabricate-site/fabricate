@@ -58,3 +58,19 @@
                             [:fn malli?]])}
   [schemas]
   (m/into-schema :orn {} (map-indexed vector schemas)))
+
+(def throwable-map-schema
+  "Malli schema for the results of Throwable->map"
+  (m/schema
+   [:map
+    [:cause :any]
+    [:phase {:optional true} :any]
+    [:via [:* [:map [:type :symbol]
+               [:message :string]
+               [:at [:vector :any]]
+               [:data {:optional true} :any]]]]
+    [:trace [:vector :any]]]))
+
+(def
+  ^{:malli/schema [:=> [:cat :any] :boolean]}
+  throwable-map? (m/validator throwable-map-schema))

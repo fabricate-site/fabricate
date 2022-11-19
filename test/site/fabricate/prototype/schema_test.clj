@@ -6,6 +6,7 @@
             [site.fabricate.prototype.read]
             [site.fabricate.prototype.read.grammar]
             [site.fabricate.prototype.write]
+            [site.fabricate.prototype.test-utils :as test-utils]
             [malli.core :as m]
             [clojure.test :as t]))
 
@@ -51,7 +52,18 @@
 
     (t/is (malli? (unify [:int :string])))
     (t/is (= [0 23] (m/parse (unify [:int :string]) 23)))
-    (t/is (= [1 "this"] (m/parse (unify [:int :string]) "this")))))
+    (t/is (= [1 "this"] (m/parse (unify [:int :string]) "this"))))
+
+
+  (t/testing "general purpose schemas + validators"
+
+    (let [exception-map
+          (try
+            (#(throw (Exception. "error")))
+            (catch Exception e (Throwable->map e)))]
+      (t/is (valid-schema? throwable-map-schema exception-map))
+
+      (t/is (throwable-map? exception-map)))))
 
 (defn has-schema? [v]
   (let [var-schema (:malli/schema (meta v))
