@@ -321,10 +321,16 @@ Some more text")
           (let [rerender-agent (agent initial-state)
                 agent-valid?
                 (-> rerender-agent
-                    (send-off rerender {:file (io/file f) :count 1 :action :create})
+                    (send-off
+                     (fn [s]
+                       (let [p (rerender s {:file (io/file f) :count 1 :action :create})
+                             fname (:site.fabricate.file/filename p)]
+                         (assoc-in s [:site.fabricate/pages fname] p))))
                     (#(do (await %) %))
                     deref
                     (valid-state?))]
+            (when-not agent-valid?
+              (println (me/humanize (explain-state @rerender-agent))))
             (t/is agent-valid? "rerender should work with send-off")))))
 
     ;; the rerender fn works when tested in isolation (with send and with regular calls)

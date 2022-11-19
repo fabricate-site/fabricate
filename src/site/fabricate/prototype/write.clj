@@ -391,6 +391,8 @@
 (def ^{:malli/schema [:=> [:cat :any] :map]}
   explain-state (m/explainer state-schema))
 
+(assert (valid-state? initial-state))
+
 (def state
   "This agent holds the current state of all the pages created by Fabricate, the application settings, and the state of the application itself"
   (agent initial-state :meta {:context :site.fabricate/app
