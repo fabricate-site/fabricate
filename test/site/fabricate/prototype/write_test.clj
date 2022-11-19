@@ -321,7 +321,8 @@ Some more text")
           (let [rerender-agent (agent initial-state)
                 agent-valid?
                 (-> rerender-agent
-                    (send rerender {:file (io/file f) :count 1 :action :create})
+                    (send-off rerender {:file (io/file f) :count 1 :action :create})
+                    (#(do (await %) %))
                     deref
                     (valid-state?))]
             (t/is agent-valid? "rerender should work with send-off")))))
@@ -411,6 +412,7 @@ Some more text")
   ;; another method that doesn't work because all
   ;; clojure.test/*testing-contexts* assignments are
   ;; thread-local with (binding ...)
+
 
   (add-watch #'t/*testing-vars*
              :var-update
