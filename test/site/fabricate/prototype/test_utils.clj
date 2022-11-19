@@ -28,3 +28,17 @@
                   (me/humanize (m/explain schema# data#))
                   result#)})
      result#))
+
+(defn gather-test-meta
+  "Obtain information about the current test as a map"
+  []
+  (let [t-ctx t/*testing-contexts*
+        t-vars t/*testing-vars*]
+    (into {} [(when (seq t-ctx) [:clojure.test/contexts t-ctx])
+              (when (seq t-vars) [:clojure.test/vars t-vars])])))
+
+(t/deftest meta-util
+  (t/testing "metadata"
+    (let [ctx (gather-test-meta)] ; meta, indeed
+      (t/is (= (list "metadata") (:clojure.test/contexts ctx)))
+      (t/is (= (list #'meta-util) (:clojure.test/vars ctx))))))

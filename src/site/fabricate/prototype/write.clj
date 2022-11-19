@@ -26,7 +26,8 @@
    [site.fabricate.prototype.fsm :as fsm]
    [site.fabricate.prototype.schema :as schema]
    [juxt.dirwatch :refer [watch-dir close-watcher]]
-   [http.server :as server]))
+   [http.server :as server]
+   [com.brunobonacci.mulog :as u]))
 
 (def page-metadata-schema
   "Schema describing the keys and values used by Fabricate to store metadata about pages."
@@ -42,10 +43,9 @@
     [:site.fabricate.page/namespace {:optional true} :symbol]
     [:site.fabricate.page/stylesheet {:optional true} :string]
     [:site.fabricate.file/output-file {:optional true}
-     [:orn [:undefined nil?]
+     [:orn [:undefined :nil]
       [:path :string]
       [:file [:fn sketch/file?]]]]]))
-
 
 (def state-schema
   "Schema for the agent containing the state of fabricate."
@@ -69,6 +69,9 @@
      [:orn
       [:stopped [:= :stopped]]
       [:error/shutdown [:= :error/shutdown]]
+      [:running any?]]]
+    [:site.fabricate.app/logger {:optional true}
+     [:orn [:stopped :nil]
       [:running any?]]]]))
 
 (defn get-output-filename
@@ -198,7 +201,9 @@
    {:keys [site.fabricate/settings]}]
   (-> page-data
       (assoc :site.fabricate.page/parsed-content
-             (read/parse unparsed-content {:filename filename}))
+             (u/trace ::parse-template
+               {:pairs []}
+               (read/parse unparsed-content {:filename filename})))
       (populate-page-meta settings)))
 
 (def evaluated-state
@@ -274,7 +279,9 @@
            site.fabricate.page/namespace] :as page-data}
    site-opts]
   (let [nmspc (create-ns namespace)
-        evaluated (read/eval-all parsed-content true nmspc)
+        evaluated (u/trace ::eval-template
+                    {:pairs [:site.fabricate.page/namespace (str namespace)]}
+                    (read/eval-all parsed-content true nmspc))
         page-meta (let [m (ns-resolve nmspc 'metadata)]
                     (if (nil? m) {} (var-get m)))
         metadata
@@ -306,24 +313,31 @@
                     [{:keys [site.fabricate.page/evaluated-content]
                       :as page-data} _]
                     (assoc page-data :site.fabricate.page/rendered-content
-                           (reduce str evaluated-content)))
+                           (u/trace ::evaluated->markdown
+                             {:pairs []}
+                             (reduce str evaluated-content))))
    html-state (fn render-hiccup
-                [page-data state]
-                (let [final-hiccup (evaluated->hiccup page-data state)]
+                [{:keys [site.fabricate.file/input-file]
+                  :as page-data} state]
+                (let [final-hiccup
+                      (u/trace ::evaulated->hiccup {:pairs []}
+                               (evaluated->hiccup page-data state))]
                   (assoc page-data
                          :site.fabricate.page/evaluated-content final-hiccup
                          :site.fabricate.page/rendered-content
-                         (str (hiccup/html
-                               {:escape-strings? false}
-                               final-hiccup)))))
+                         (str (u/trace
+                                  ::hiccup->html {:pairs []}
+                                  (hiccup/html
+                                   {:escape-strings? false}
+                                   final-hiccup))))))
    rendered-state
    (fn write-file
      [{:keys [site.fabricate.page/rendered-content
               site.fabricate.file/output-file] :as page-data}
       settings]
      (do
-       (println "writing page content to" output-file)
-       (spit output-file rendered-content)
+       (u/trace ::write-output-file {:pairs []}
+                (spit output-file rendered-content))
        page-data))})
 
 (def default-site-settings
@@ -337,54 +351,74 @@
    {:cors-allow-headers nil
     :dir (str (System/getProperty "user.dir") "/docs")
     :port 8002
-    :no-cache true}})
+    :no-cache true}
+   :site.fabricate.app.logger/config
+   {:type :console :pretty? true
+    :transform
+    (fn [events]
+      (->> events
+           (filter #(or (<= 800 (:log/level % 0))
+                        (= (str *ns*) (:mulog/namespace %))
+                        (= (str *ns*) (namespace (:mulog/event-name %)))))
+           (map #(dissoc % :state/value :fsm/value))
+           distinct))}})
 
 (def initial-state
   "Starting state for Fabricate's application components."
   {:site.fabricate/settings default-site-settings
    :site.fabricate/pages {}})
 
+(comment
+
+  (get-in initial-state
+          [:site.fabricate/settings
+           :site.fabricate.app.logger/config])
+
+  )
+
 (defn- report-error [a err]
-  (println "Agent context:" (:context (meta a)))
-  (let [err-map (Throwable->map err)
-        agent-schema (:malli/schema (meta a))]
-    (println "Agent error:")
-    (pprint err-map)
+  (u/log ::agent-error :agent/context (:context (meta a))
+         :agent/error (Throwable->map err) :agent/type (type @a)
+         :log/level 900)
+  (let [agent-schema (:malli/schema (meta a))]
+
     #_(when agent-schema
-        (do
-          (println "Agent schema:")
-          (println "Valid?" (m/validate agent-schema @a))
-          (println (m/explain agent-schema @a))))))
+        (u/log ::agent-schema :malli/schema agent-schema
+               :malli/error (m/explain agent-schema @a)))))
 
 (def ^{:malli/schema [:=> [:cat :any] :boolean]}
   valid-state? (m/validator state-schema))
 (def ^{:malli/schema [:=> [:cat :any] :map]}
   explain-state (m/explainer state-schema))
 
+(assert (valid-state? initial-state))
+
 (def state
   "This agent holds the current state of all the pages created by Fabricate, the application settings, and the state of the application itself"
   (agent initial-state :meta {:context :site.fabricate/app
                               :malli/schema state-schema}
          :error-handler report-error
-         :validator (fn [v]
-                      (let [m? (map? v)]
-                        (if (not m?)
-                          (do
-                            (println "Agent type" (type v))
-                            (throw (java.lang.RuntimeException. "App state not map")))
-                          true)))
+         :validator
+         (fn [v]
+           (let [m? (map? v)]
+             (if (not m?)
+               (do
+                 (throw (java.lang.RuntimeException. "App state not map")))
+               true)))
          #_(fn [s] (let [v? (valid-state? s)]
                      (when-not v? (pprint (malli.error/humanize (explain-state s))))
                      v?))
          #_ #_:error-mode :continue))
 
 (comment
-  (add-watch state
-             :monitor-state
-             (fn [k reff old-state new-state]
-               (println "Context:" (:context (meta reff)))
-               (println "Previous state valid?" (valid-state? old-state))
-               (println "Current state valid?" (valid-state? new-state))))
+  (add-watch
+   state
+   :monitor-state
+   (fn [k reff old-state new-state]
+     (u/log ::state-agent
+            :agent/context (:context (meta reff))
+            :agent/previous-state-valid? (valid-state? old-state)
+            :agent/current-state-valid? (valid-state? new-state))))
 
                                         ; doesn't seem to work.
   (remove-watch state :monitor-state)
@@ -403,15 +437,15 @@
                 site.fabricate.file/output-dir
                 site.fabricate.file/operations]}
         settings]
-    (let [local-file
-          (-> file
-              read/->dir-local-path
-              (#(do (println "re-rendering" %) %)))
-          updated-page
+    (let [local-file (read/->dir-local-path file)]
+      (u/with-context
+          {:log/level 800
+           :site.fabricate.file/filename local-file}
+        (u/trace ::rerender
+          {:pairs []}
           (fsm/complete operations
                         local-file
-                        application-state-map)]
-      (do (println "rendered") updated-page))))
+                        application-state-map))))))
 
 
 (comment
@@ -431,50 +465,59 @@
   )
 
 (defn draft!
-  "Render all the Fabricate templates once, then launches a file watcher to rerender the templates on save. Also launches a web server to view the rendered pages locally."
+  "Render all the Fabricate templates once, then launches a file watcher to rerender the templates on save. Also launches a web server to view the rendered pages locally, and creates a logger that prints page rerender operations in the REPL."
   {:malli/schema [:=> [:cat state-schema] state-schema]}
   [{:keys [site.fabricate/settings site.fabricate/pages]
     :as application-state-map}]
   (let [{:keys [site.fabricate.file/input-dir
                 site.fabricate.file/template-suffix
                 site.fabricate.file/operations]} settings
-        srv (future (do
-                      (println "launching server")
-                      (server/start (:site.fabricate.server/config settings))))
+        console-logger
+        (u/start-publisher!
+         (get settings :site.fabricate.app.logger/config))
+        srv (future
+              (do
+                (u/trace ::server-start
+                         [:log/level 800]
+                         (server/start (:site.fabricate.server/config settings)))))
         written-pages
         (future
-          (->> (get-template-files input-dir template-suffix)
-               (pmap (fn [fp] [fp (fsm/complete operations fp application-state-map)]))
-               (into {})))
+          (u/trace ::initial-page-render
+                   [:log/level 800]
+                   (->> (get-template-files input-dir template-suffix)
+                        (pmap (fn [fp] [fp (fsm/complete operations fp application-state-map)]))
+                        (into {}))))
         fw
         (future
-          (do
-            (println "establishing file watch")
-            (let [state-agent *agent*
-                  fw (watch-dir
-                      (fn [{:keys [file action] :as f}]
-                        (if (and (#{:create :modify} action)
-                                 (not (re-find #"#" (.toString file)))
-                                 (.endsWith (.toString file) template-suffix))
-                          (do (send-off
-                               state-agent
-                               (fn [s]
-                                 (let [p (rerender s f)
-                                       fname (:site.fabricate.file/filename p)]
-                                   (assoc-in s [:site.fabricate/pages fname] p))))
-                              nil)))
-                      (io/file input-dir))]
-              (alter-meta! fw assoc :context :site.fabricate.app/watcher)
-              (set-error-mode! fw :continue)
-              (set-error-handler! fw report-error)
-              fw)))]
+          (u/trace
+           ::file-watcher-start
+           [:log/level 800]
+           (let [state-agent *agent*
+                 fw (watch-dir
+                     (fn [{:keys [file action] :as f}]
+                       (if (and (#{:create :modify} action)
+                                (not (re-find #"#" (.toString file)))
+                                (.endsWith (.toString file) template-suffix))
+                         (do (send-off
+                              state-agent
+                              (fn [s]
+                                (let [p (rerender s f)
+                                      fname (:site.fabricate.file/filename p)]
+                                  (assoc-in s [:site.fabricate/pages fname] p))))
+                             nil)))
+                     (io/file input-dir))]
+             (alter-meta! fw assoc :context :site.fabricate.app/watcher)
+             (set-error-mode! fw :continue)
+             (set-error-handler! fw report-error)
+             fw)))]
 
 
     (assoc
      application-state-map
      :site.fabricate/pages @written-pages
      :site.fabricate.app/watcher @fw
-     :site.fabricate.app/server @srv)))
+     :site.fabricate.app/server @srv
+     :site.fabricate.app/logger console-logger)))
 
 (defn publish!
   "Render all the fabricate templates."
@@ -507,28 +550,34 @@
   [application-state-map]
   (-> application-state-map
       (update :site.fabricate.app/watcher
-              #(do
-                 (println "closing file watcher")
-                 (try (do (when (instance? clojure.lang.Agent %)
-                            (close-watcher %)) :stopped)
-                      (catch Exception e :error/shutdown))))
+              (fn [w]
+                (u/trace ::file-watcher-stop
+                  [:log/level 800]
+                  (try (do (when (instance? clojure.lang.Agent w)
+                             (close-watcher w)) :stopped)
+                       (catch Exception e :error/shutdown)))))
       (update :site.fabricate.app/server
               (fn [s]
-                (if (and s (not (#{:stopped :error/shutdown} s)))
-                  (do
-                    (println "stopping file server")
-                    (server/stop s) :stopped)
-                  (do (println "server not found")
-                      (println "server:" s)
-                      s)))
+                (u/trace ::server-stop
+                  [:log/level 800]
+                  (if (and s (not (#{:stopped :error/shutdown} s)))
+                    (do (server/stop s) :stopped)
+                    s)))
               #_(try (do (server/stop %) nil)
-                     (catch Exception e nil)))))
+                     (catch Exception e nil)))
+      (update :site.fabricate.app/logger
+              (fn [l]
+                (u/log ::logger-stop
+                       [:log/level 800])
+                (l)
+                nil))))
 
-(.addShutdownHook (java.lang.Runtime/getRuntime)
-                  (Thread. (fn []
-                             (do (println "shutting down")
-                                 #_(send state stop!)
-                                 (shutdown-agents)))))
+(.addShutdownHook
+ (java.lang.Runtime/getRuntime)
+ (Thread. (fn []
+            (u/trace ::app-shutdown
+              [:log/level 800]
+              (shutdown-agents)))))
 
 (comment
   (publish {:dirs ["./pages"]})
@@ -536,14 +585,15 @@
 
   (-> state
       (send (constantly initial-state))
-      (send-off draft!)
-      )
+      (send-off draft!))
 
   (do
     (send-off state stop!)
     nil)
 
   (keys @state)
+
+  (keys (get-in @state [:site.fabricate/pages]))
 
   (type (:site.fabricate.app/server @state))
 
@@ -613,20 +663,25 @@
       (send-off
        (fn [{:keys [site.fabricate/settings]
              :as application-state-map}]
-         (println "watching output dir for changes")
          (let [output-dir (:site.fabricate.file/output-dir settings)
                out-dir-trailing (if (not (.endsWith output-dir "/"))
                                   (str output-dir "/") output-dir)]
-           (assoc application-state-map
-                  :site.fabricate.file.output/watcher
-                  (watch-dir
-                   (fn [{:keys [file count action]}]
-                     (if (#{:create :modify} action)
-                       (do
-                         (println "syncing")
-                         (let [r (clojure.java.shell/sh "sync-fabricate.sh")]
-                           (println (or (:out r) (:err r)))))))
-                   (io/file output-dir)))))) )
+           (u/trace ::watch-output-dir
+             [:log/level 800
+              :site.fabricate.file/output-dir out-dir-trailing]
+             (assoc application-state-map
+                    :site.fabricate.file.output/watcher
+                    (watch-dir
+                     (fn [{:keys [file count action]}]
+                       (if (#{:create :modify} action)
+                         (u/trace ::sync-netlify
+                           [:log/level 800
+                            :site.fabricate.file/output-dir
+                            out-dir-trailing]
+                           (do
+                             (let [r (clojure.java.shell/sh "sync-fabricate.sh")]
+                               #_(println (or (:out r) (:err r))))))))
+                     (io/file output-dir))))))) )
 
 
   )

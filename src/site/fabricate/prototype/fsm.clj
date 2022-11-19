@@ -11,6 +11,7 @@
             [malli.util :as mu]
             [malli.error :as me]
             [malli.generator :as mg]
+            [com.brunobonacci.mulog :as u]
             [site.fabricate.prototype.schema :as schema]))
 
 (def state-action-map
@@ -25,18 +26,18 @@
   (m/schema [:map-of [:fn schema/malli?] [:fn ifn?]]))
 
 (def fsm-value-map
-  "Malli schema for maps defining finite schema machines."
+  "Malli schema for maps defining values with state metadata for finite schema machines."
   (m/schema
    [:map
-    [:fsm/value :any]
-    [:fsm/previous-state {:optional true} [:or :keyword :string [:fn schema/malli?]]]
-    [:fsm/matched-state {:optional true} [:fn schema/malli?]]
-    [:fsm/error {:optional true} :map]]))
+    [:state/value :any]
+    [:state.name/previous {:optional true} [:or :keyword :string [:fn schema/malli?]]]
+    [:state.name/matched {:optional true} [:fn schema/malli?]]
+    [:state/error {:optional true} :map]]))
 
 (def
   ^{:malli/schema [:=> [:cat :any] :boolean]}
   fsm-value-map?
-   "Predicate indicating whether the given value defines a finite schema machine."
+  "Predicate indicating whether the given value defines a state map for a finite schema machine."
   (m/validator fsm-value-map))
 
 (defn advance
@@ -50,60 +51,69 @@
   Errors in function execution will be printed and the input value will be returned."
   {:malli/schema [:=> [:cat state-action-map
                        [:or fsm-value-map :any]
-                       [:* :any]] :any]}
+                       [:* :any]] [:or fsm-value-map :any]]}
   [fsm-map value & args]
   (let [union-schema (schema/unify (keys fsm-map))
         fsm-v-map? (fsm-value-map? value)
+        v (if fsm-v-map? (:state/value value) value)
         ;; value (if debug? (:fsm/value value) value)
-        parsed (m/parse union-schema
-                        (if fsm-v-map?
-                          (:fsm/value value) value))]
-    (if (= :malli.core/invalid parsed)
-      (do
-        (println "unmatched value"
-                 (me/humanize
-                  (m/explain
-                   union-schema
-                   (if fsm-v-map? (:fsm/value value) value))))
-        value)
-      (let [matched-schema (-> union-schema
-                               m/children
-                               (nth (first parsed))
-                               last)
-            op (get fsm-map matched-schema
-                    (get fsm-map (m/form matched-schema)
-                         (fn [v] (println "unmatched value") v)))]
+        parsed (m/parse union-schema v)]
+    (u/with-context
+        (merge {:state/value v :log/level 300}
+               (when fsm-v-map? (select-keys value [:state/name :state/description]))
+               (select-keys (meta fsm-map) [:fsm/name :fsm/description]))
+      (if (= :malli.core/invalid parsed)
         (do
-          (println "advancing fsm:" (get (m/properties matched-schema)
-                                         :fsm/description))
-          (if fsm-v-map?
-            (let [rm
-                  (try {:fsm/value (apply op (:fsm/value value) args)
-                        :fsm/matched-state matched-schema}
-                       (catch Exception e
-                         (let [em (Throwable->map e)]
-                           (println em)
-                           {:fsm/value (:fsm/value value)
-                            :fsm/error em
-                            :fsm/matched-state matched-schema})))]
-              (if (:fsm/matched-state value)
-                (assoc rm :fsm/previous-state
-                       (:fsm/matched-state value))
-                rm))
-            (try (apply op value args)
-                 (catch Exception e
-                   (println (Throwable->map e))
-                   value))))))))
+          (u/log ::unmatched-value
+                 :malli/error (me/humanize (m/explain union-schema v)))
+          value)
+        (let [matched-state (-> union-schema
+                                m/children
+                                (nth (first parsed))
+                                last)
+              op (get fsm-map matched-state
+                      (get fsm-map (m/form matched-state)
+                           (fn [vv]
+                             (u/log ::unmatched-value
+                                    :malli/error
+                                    (me/humanize (m/explain union-schema vv)))
+                             vv)))
+              result (try (u/trace
+                              ::advance
+                            (->> (select-keys
+                                  (m/properties matched-state)
+                                  [:state/name :state/description])
+                                 (apply concat)
+                                 (into []))
+                            (apply op v args))
+                          (catch Exception e (Throwable->map e)))
+              error-result? (schema/throwable-map? result)]
+          (cond
+            (and fsm-v-map? (not error-result?))
+            (assoc
+             {:state/value result
+              :fsm/matched-state matched-state}
+             :fsm/previous-state
+             (or (:fsm/matched-state value) :fsm/initial))
+            (and fsm-v-map? error-result?)
+            (assoc
+             {:state/error result
+              :fsm/matched-state matched-state}
+             :fsm/previous-state
+             (or (:fsm/matched-state value) :fsm/initial))
+            error-result? value
+            (not (or error-result? fsm-v-map?)) result))))))
 
 (defn complete
   "Completes the fsm by advancing through states until the same value is produced twice."
   {:malli/schema [:=> [:cat state-action-map :any [:* :any]] :any]}
   [fsm-map value & args]
-  (let [fsm-states (iterate  ;; #(apply advance fsm-map % args)
-                    (fn [s] (apply advance fsm-map s args))
-                    value)]
-    (reduce (fn [current-state next-state]
-              (if (= current-state next-state)
-                (reduced current-state)
-                next-state))
-            fsm-states)))
+  (let [fsm-states
+        (iterate (fn [s] (apply advance fsm-map s args)) value)]
+    (u/trace ::complete
+      (apply concat (select-keys (meta fsm-map) [:fsm/name]))
+      (reduce (fn [current-state next-state]
+                (if (= current-state next-state)
+                  (reduced current-state)
+                  next-state))
+              fsm-states))))

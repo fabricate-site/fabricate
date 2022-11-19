@@ -11,7 +11,8 @@
         garden/garden {:mvn/version "1.3.10"}
         nasus/nasus
         {:git/url "https://github.com/kachayev/nasus/"
-         :sha "8923283db09f88f3503d0246bad31eea15341138"}}
+         :sha "8923283db09f88f3503d0246bad31eea15341138"}
+        com.brunobonacci/mulog {:mvn/version "0.9.0"}}
  :aliases
  {:dev {:extra-paths ["test"]
         :extra-deps {criterium/criterium {:mvn/version "0.4.6"}
