@@ -389,7 +389,9 @@
      (do
        (u/trace ::write-output-file {:pairs []}
                 (spit output-file rendered-content))
-       page-data))})
+       page-data))
+
+   fw-delete-state delete-file!})
 
 (def default-site-settings
   "Default configuration for Fabricate projects."
@@ -545,9 +547,10 @@
             [:log/level 800]
             (let [state-agent *agent*
                   fw (watch-dir
+                      ;; this needs to be overhauled to be compatible with
+                      ;; the dirwatch state definitions
                       (fn [{:keys [file action] :as f}]
-                        (if (and (#{:create :modify} action)
-                                 (not (re-find #"#" (.toString file)))
+                        (if (and (not (re-find #"#" (.toString file)))
                                  (.endsWith (.toString file) template-suffix))
                           (do (send-off
                                state-agent
