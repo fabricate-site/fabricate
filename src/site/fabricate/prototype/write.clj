@@ -204,12 +204,14 @@
             (get-output-filename
              (.getParent file)
              (:site.fabricate.file/output-dir settings))
-            (clojure.string/replace "\\.fab$" ""))]
-    (io/delete-file output-filename)
+            (clojure.string/replace #"[.]fab$" ""))]
+    (u/trace ::delete-output-file {:pairs [:log/level 800]}
+             (io/delete-file output-filename))
     {:site.fabricate.file/input-file file
      :site.fabricate.file/input-filename input-filename
      :site.fabricate.file/output-file output-filename
      :site.fabricate.file/state :deleted}))
+
 
 (def file-state
   "Fabricate input represented as java.io.File entry in page map"
@@ -272,7 +274,7 @@
                (read/parse unparsed-content {:filename input-filename})))
       (populate-page-meta settings)))
 
-(def evaluated-state
+  (def evaluated-state
   "Fabricate contents evaluated after parsing"
   (mu/closed-schema
    (mu/merge
@@ -307,7 +309,7 @@
 
 (defn evaluated->hiccup
   "Takes the evaluated contents and turns them into a well-formed
-   hiccup data structure."
+                              hiccup data structure."
   {:malli/schema [:=> [:cat evaluated-state state-schema]
                   html/html]}
   [{:keys [site.fabricate.page/namespace
@@ -360,11 +362,11 @@
              (second (second namespace)))
            :site.fabricate.page/metadata metadata)))
 
-;; to make the state runtime reconfigurable, rewrite all these functions
-;; to accept both a page map and a settings map - or just the entire state
-;;
-;; and also include these operations in the state map
-(def default-operations
+  ;; to make the state runtime reconfigurable, rewrite all these functions
+  ;; to accept both a page map and a settings map - or just the entire state
+  ;;
+  ;; and also include these operations in the state map
+  (def default-operations
   "Default render loop for Fabricate projects. Defined as a mapping of malli schemas describing states to the functions that process data in that state. See the fsm namespace for additional information."
   {input-state (fn input-file
                  [f _] {:site.fabricate.file/input-file (io/as-file f)
@@ -406,7 +408,7 @@
 
    fw-delete-state delete-file!})
 
-(def default-site-settings
+  (def default-site-settings
   "Default configuration for Fabricate projects."
   {:site.fabricate.file/template-suffix ".fab"
    :site.fabricate.file/input-dir "./pages"
@@ -434,7 +436,7 @@
   {:site.fabricate/settings default-site-settings
    :site.fabricate/pages {}})
 
-(comment
+  (comment
 
   (get-in initial-state
           [:site.fabricate/settings
@@ -442,7 +444,7 @@
 
   )
 
-(defn- report-error [a err]
+  (defn- report-error [a err]
   (u/log ::agent-error :agent/context (:context (meta a))
          :agent/error (Throwable->map err) :agent/type (type @a)
          :log/level 900)
@@ -452,14 +454,14 @@
         (u/log ::agent-schema :malli/schema agent-schema
                :malli/error (m/explain agent-schema @a)))))
 
-(def ^{:malli/schema [:=> [:cat :any] :boolean]}
+  (def ^{:malli/schema [:=> [:cat :any] :boolean]}
   valid-state? (m/validator state-schema))
-(def ^{:malli/schema [:=> [:cat :any] :map]}
+  (def ^{:malli/schema [:=> [:cat :any] :map]}
   explain-state (m/explainer state-schema))
 
-(assert (valid-state? initial-state))
+  (assert (valid-state? initial-state))
 
-(def state
+  (def state
   "This agent holds the current state of all the pages created by Fabricate, the application settings, and the state of the application itself"
   (agent initial-state :meta {:context :site.fabricate/app
                               :malli/schema state-schema}
@@ -515,7 +517,7 @@
                         application-state-map))))))
 
 
-(comment
+  (comment
   (fsm/complete
    default-operations
    (first
@@ -531,7 +533,7 @@
 
   )
 
-(defn draft!
+  (defn draft!
   "Render all the Fabricate templates once, then launches a file watcher to rerender the templates on save. Also launches a web server to view the rendered pages locally, and creates a logger that prints page rerender operations in the REPL."
   {:malli/schema [:=> [:cat state-schema] state-schema]}
   [{:keys [site.fabricate/settings site.fabricate/pages]
@@ -615,7 +617,7 @@
        fp
        current-state))))
 
-(defn stop!
+  (defn stop!
   "Shuts down fabricate's stateful components."
   {:malli/schema [:=> [:cat state-schema] state-schema]}
   [application-state-map]
@@ -643,14 +645,14 @@
                 (l)
                 nil))))
 
-(.addShutdownHook
- (java.lang.Runtime/getRuntime)
- (Thread. (fn []
+  (.addShutdownHook
+  (java.lang.Runtime/getRuntime)
+  (Thread. (fn []
             (u/trace ::app-shutdown
               [:log/level 800]
               (shutdown-agents)))))
 
-(comment
+  (comment
   (publish {:dirs ["./pages"]})
 
 
