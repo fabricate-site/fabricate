@@ -35,6 +35,7 @@
    [:map
     [:site.fabricate.file/input-file [:orn [:path :string]
                                       [:file [:fn sketch/file?]]]]
+    [:site.fabricate.file/input-filename {:optional true} :string]
     [:site.fabricate.file/template-suffix {:optional true} :string]
     [:site.fabricate.page/parsed-content {:optional true} [:fn vector?]]
     [:site.fabricate.page/title {:optional true} :string]
@@ -108,7 +109,7 @@
   [{:keys [site.fabricate.page/namespace
            site.fabricate.page/parsed-content
            site.fabricate.file/output-file
-           site.fabricate.file/filename
+           site.fabricate.file/input-filename
            site.fabricate.file/input-file]
     :as page-data}
    {:keys [site.fabricate.file/input-dir
@@ -133,7 +134,7 @@
                (or (:site.fabricate.file/output-file %)
                    output-file
                    (get-output-filename
-                    (str "./" (% :site.fabricate.file/filename)
+                    (str "./" (% :site.fabricate.file/input-filename)
                          "." (% :site.fabricate.file/output-extension))
                     input-dir
                     output-dir))))))
@@ -167,7 +168,13 @@
     [:count :int]
     [:action [:enum :create :modify]]]))
 
-; file delete state could be mapped to an action to delete the corresponding output file
+(defn fw-file
+  {:malli/schema [:=> [:cat fw-create-modify-state] :map]}
+  [{:keys [file]} _]
+  {:site.fabricate.file/input-file file
+   :site.fabricate.file/input-filename (.toString file)})
+
+;; file delete state could be mapped to an action to delete the corresponding output file
 (def fw-delete-state
   (m/schema
    [:map {:closed true
@@ -179,8 +186,16 @@
     [:count :int]
     [:action [:= :delete]]]))
 
+(def deleted-state
+  (m/schema
+   [:map
+    [:site.fabricate.file/input-file [:fn sketch/file?]]
+    [:site.fabricate.file/input-filename :string]
+    [:site.fabricate.file/output-file [:or :string [:fn sketch/file?]]]
+    [:site.fabricate.file/state [:= :deleted]]]))
+
 (defn delete-file!
-  {:malli/schema [:=> [:cat :map :map] page-metadata-schema]}
+  {:malli/schema [:=> [:cat :map :map] deleted-state]}
   [{:keys [file] :as f}
    {:keys [site.fabricate/settings]}]
   (let [input-filename (.toString file)
@@ -191,8 +206,9 @@
              (:site.fabricate.file/output-dir settings))
             (clojure.string/replace "\\.fab$" ""))]
     (io/delete-file output-filename)
-    {:site.fabricate.file/input-file input-filename
-     :site.fabricate.file/filename output-filename
+    {:site.fabricate.file/input-file file
+     :site.fabricate.file/input-filename input-filename
+     :site.fabricate.file/output-file output-filename
      :site.fabricate.file/state :deleted}))
 
 (def file-state
@@ -202,7 +218,7 @@
           :fsm/name "File"
           :fsm/description "Fabricate input represented as java.io.File entry in page map"}
     [:site.fabricate.file/input-file [:fn sketch/file?]]
-    [:site.fabricate.file/filename :string]]))
+    [:site.fabricate.file/input-filename :string]]))
 
 (defn read-input-file
   {:malli/schema [:=> [:cat :map :any] :map]}
@@ -217,7 +233,7 @@
           :fsm/name "Read"
           :fsm/description "Fabricate input read in as string"}
     [:site.fabricate.file/input-file [:fn sketch/file?]]
-    [:site.fabricate.file/filename :string]
+    [:site.fabricate.file/input-filename :string]
     [:site.fabricate.page/unparsed-content :string]]))
 
 
@@ -227,11 +243,11 @@
    [:map {:closed true
           :fsm/name "Parsed"
           :fsm/description "Fabricate input parsed and metadata associated with page map"}
-    [:site.fabricate.file/input-file [:fn sketch/file?]]
+    [:site.fabricate.file/input-file [:or [:fn sketch/file?] :string]]
     [:site.fabricate.file/template-suffix
      [:orn [:default [:= ".fab"]]
       [:custom :string]]]
-    [:site.fabricate.file/filename :string]
+    [:site.fabricate.file/input-filename :string]
     [:site.fabricate.file/output-extension :string]
     [:site.fabricate.page/unparsed-content :string]
     [:site.fabricate.page/parsed-content [:fn vector?]]
@@ -246,14 +262,14 @@
   "Parses the contents of the given template map."
   {:malli/schema [:=> [:cat read-state :map] parsed-state]}
   [{:keys [site.fabricate.page/unparsed-content
-           site.fabricate.file/filename]
+           site.fabricate.file/input-filename]
     :as page-data}
    {:keys [site.fabricate/settings]}]
   (-> page-data
       (assoc :site.fabricate.page/parsed-content
              (u/trace ::parse-template
                {:pairs []}
-               (read/parse unparsed-content {:filename filename})))
+               (read/parse unparsed-content {:filename input-filename})))
       (populate-page-meta settings)))
 
 (def evaluated-state
@@ -352,11 +368,8 @@
   "Default render loop for Fabricate projects. Defined as a mapping of malli schemas describing states to the functions that process data in that state. See the fsm namespace for additional information."
   {input-state (fn input-file
                  [f _] {:site.fabricate.file/input-file (io/as-file f)
-                        :site.fabricate.file/filename f})
-   fw-create-modify-state
-   (fn fw-file [{:keys [file]} _]
-     {:site.fabricate.file/input-file file
-      :site.fabricate.file/filename (.toString file)})
+                        :site.fabricate.file/input-filename f})
+   fw-create-modify-state fw-file
    file-state read-input-file
    read-state parse-contents
    parsed-state eval-parsed-page
@@ -371,13 +384,13 @@
                 [{:keys [site.fabricate.file/input-file]
                   :as page-data} state]
                 (let [final-hiccup
-                      (u/trace ::evaulated->hiccup {:pairs []}
+                      (u/trace ::evaulated->hiccup {:pairs [:log/level 800]}
                                (evaluated->hiccup page-data state))]
                   (assoc page-data
                          :site.fabricate.page/evaluated-content final-hiccup
                          :site.fabricate.page/rendered-content
                          (str (u/trace
-                                  ::hiccup->html {:pairs []}
+                                  ::hiccup->html {:pairs [:log/level 800]}
                                   (hiccup/html
                                    {:escape-strings? false}
                                    final-hiccup))))))
@@ -485,19 +498,20 @@
          [:map [:file :any] [:count :int] [:action :keyword]]] :map]}
   [{:keys [site.fabricate/settings site.fabricate/pages]
     :as application-state-map}
-   {:keys [file count action] :as s}]
+   file-map]
   (let [{:keys [site.fabricate.file/template-suffix
                 site.fabricate.file/output-dir
                 site.fabricate.file/operations]}
         settings]
-    (let [local-file (read/->dir-local-path file)]
+    (let [local-file-map
+          (update file-map :file read/->dir-local-file)]
       (u/with-context
           {:log/level 800
-           :site.fabricate.file/filename local-file}
+           :site.fabricate.file/input-filename (:file local-file-map)}
         (u/trace ::rerender
           {:pairs []}
           (fsm/complete operations
-                        local-file
+                        local-file-map
                         application-state-map))))))
 
 
@@ -552,13 +566,17 @@
                       (fn [{:keys [file action] :as f}]
                         (if (and (not (re-find #"#" (.toString file)))
                                  (.endsWith (.toString file) template-suffix))
-                          (do (send-off
-                               state-agent
-                               (fn [s]
-                                 (let [p (rerender s f)
-                                       fname (:site.fabricate.file/filename p)]
-                                   (assoc-in s [:site.fabricate/pages fname] p))))
-                              nil)))
+                          (do
+                            (u/log ::file-watch-detect :dirwatch/state f
+                                   :log/level 800
+                                   :dirwatch/delete? (m/validate fw-delete-state f))
+                            (send-off
+                             state-agent
+                             (fn [s]
+                               (let [p (rerender s f)
+                                     fname (:site.fabricate.file/input-filename p)]
+                                 (assoc-in s [:site.fabricate/pages fname] p))))
+                            nil)))
                       (io/file input-dir))]
               (alter-meta! fw assoc :context :site.fabricate.app/watcher)
               (set-error-mode! fw :continue)

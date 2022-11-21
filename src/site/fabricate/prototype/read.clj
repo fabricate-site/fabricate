@@ -354,7 +354,7 @@
   "Schema describing a map of file metadata used by fabricate"
   (m/schema
    [:map {:description "File metadata used by fabricate"}
-    [:site.fabricate.file/filename {:description "The title of the template file, absent any prefixes"} :string]
+    [:site.fabricate.file/input-filename {:description "The title of the template file, absent any prefixes"} :string]
     [:site.fabricate.file/output-extension {:description "The extension of the output format of the file"} :string]
     [:site.fabricate.file/template-suffix {:description "The suffix following the output file extension"} :string]
     [:site.fabricate.file/created {:optional true :description "When the file was created"} :string]
@@ -379,16 +379,16 @@
         [_ fname output-extension suffix]
         (re-matches #"(^.*?)[.]([^.]+)[.]([^.]+)$"
                     (.toString (.getFileName local-f)))]
-    {:site.fabricate.file/filename (if (= "" local-subdir) fname (str local-subdir "/" fname))
+    {:site.fabricate.file/input-filename (if (= "" local-subdir) fname (str local-subdir "/" fname))
      :site.fabricate.file/output-extension output-extension
      :site.fabricate.file/template-suffix (str "." suffix)}))
 
-(defn ->dir-local-path
-  "Convert the given path to a path relative to the current working directory (project root by default)."
+(defn ->dir-local-file
+  "Return the given file with a path relative to the current working directory (project root by default)."
   {:malli/schema [:=> [:cat [:fn #(.isInstance java.io.File %)]]
                   :any]}
   [file]
-  (.toString
+  (.toFile
    (.relativize
     (-> (System/getProperty "user.dir")
         io/file
