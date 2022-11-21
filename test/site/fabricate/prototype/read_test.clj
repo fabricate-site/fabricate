@@ -20,35 +20,35 @@
 
 (t/deftest file-utils
   (t/testing "Filename utilities"
-    (t/is (= {:site.fabricate.file/filename "README"
+    (t/is (= {:site.fabricate.file/input-filename "README"
               :site.fabricate.file/output-extension "md"
               :site.fabricate.file/template-suffix ".fab"}
              (get-file-metadata "./README.md.fab")))
 
-    (t/is (= {:site.fabricate.file/filename "pages/reference/namespaces/site.fabricate.prototype.write"
+    (t/is (= {:site.fabricate.file/input-filename "pages/reference/namespaces/site.fabricate.prototype.write"
               :site.fabricate.file/output-extension "html"
               :site.fabricate.file/template-suffix ".fab"}
              (get-file-metadata
               "./pages/reference/namespaces/site.fabricate.prototype.write.html.fab")))
 
-    (t/is (= {:site.fabricate.file/filename "some.dir/docs/README"
+    (t/is (= {:site.fabricate.file/input-filename "some.dir/docs/README"
               :site.fabricate.file/output-extension "md"
               :site.fabricate.file/template-suffix ".fab"}
              (get-file-metadata "./some.dir/docs/README.md.fab")))
 
-    (t/is (= {:site.fabricate.file/filename "content/test"
+    (t/is (= {:site.fabricate.file/input-filename "content/test"
               :site.fabricate.file/output-extension "md"
               :site.fabricate.file/template-suffix ".fab"}
              (get-file-metadata "./content/test.md.fab")))
 
-    (t/is (= {:site.fabricate.file/filename "content/test"
+    (t/is (= {:site.fabricate.file/input-filename "content/test"
               :site.fabricate.file/output-extension "md"
               :site.fabricate.file/template-suffix ".fab"}
              (get-file-metadata "content/test.md.fab")))
 
     (let [fsm-f (io/file "pages/finite-schema-machines.html.fab")]
-      (t/is (= "pages/finite-schema-machines.html.fab"
-               (->dir-local-path fsm-f))))))
+      (t/is (= (io/file "pages/finite-schema-machines.html.fab")
+               (->dir-local-file fsm-f))))))
 
 (t/deftest text-parser
   (t/testing "parsed element schema"

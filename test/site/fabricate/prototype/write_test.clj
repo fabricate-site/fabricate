@@ -29,6 +29,7 @@
    (-> default-site-settings
        (get :site.fabricate.app.logger/config))))
 
+
 (def test-operations
   (dissoc default-operations rendered-state))
 
@@ -46,14 +47,46 @@
                                         ;             ))
     ))
 
+(comment
+
+  (m/validate fw-create-modify-state
+              {:file "./test-resources/input.html.fab"
+               :count 0
+               :action :create})
+
+  )
+
+
+(def test-config
+  (-> initial-state
+      (assoc-in [:site.fabricate/settings
+                 :site.fabricate.file/input-dir]
+                "./test-resources/fab/inputs/")
+      (assoc-in [:site.fabricate/settings
+                 :site.fabricate.file/output-dir]
+                "./test-resources/fab/outputs/")
+      (assoc-in [:site.fabricate/settings
+                 :site.fabricate.server/config]
+                {:dir "./test-resources/fab/outputs/"
+                 :port 9223})))
+
 (t/deftest page-fsm
+
+  (t/testing "filewatch compatibility"
+    (let [example-file-map {:file (io/file "./test-resources/input.html.fab")
+                            :count 0
+                            :action :create}
+          advanced (fsm/advance test-operations example-file-map test-config)]
+      (t/is (not= example-file-map advanced))
+      (t/is (m/validate file-state advanced))))
+
   (t/testing "page metadata"
     (let [ex-file (io/file "./content/test-file.txt.fab")]
       (t/is (= {:site.fabricate.page/namespace (symbol 'test-ns)
                 :site.fabricate.page/parsed-content
                 [{:exec '(ns test-ns)
                   :expr-src "(ns test-ns)"}]
-                :site.fabricate.file/filename "content/test-file"
+                :site.fabricate.file/input-filename "content/test-file"
                 :site.fabricate.file/output-extension "txt"
                 :site.fabricate.file/template-suffix ".fab"
                 :site.fabricate.file/output-file "./pages/test-file.txt"
@@ -63,7 +96,15 @@
                                                        :expr-src "(ns test-ns)"}]
                  :site.fabricate.file/input-file ex-file}
                 {:site.fabricate.file/output-dir "./pages"
-                 :site.fabricate.file/input-dir "./content"}))))
+                 :site.fabricate.file/input-dir "./content"})))
+
+      (populate-page-meta
+       {:site.fabricate.page/parsed-content [{:exec '(ns test-ns)
+                                              :expr-src "(ns test-ns)"}]
+        :site.fabricate.file/input-file ex-file}
+       {:site.fabricate.file/output-dir "./pages"
+        :site.fabricate.file/input-dir "./content"})
+      )
 
     (t/is (m/validate (-> populate-page-meta
                           var
@@ -169,7 +210,7 @@
                    html-state
                    markdown-state)
            {:site.fabricate.file/input-file (io/file "content/test/some-file.txt.fab")
-            :site.fabricate.file/filename "content/test/some-file.txt.fab"
+            :site.fabricate.file/input-filename "content/test/some-file.txt.fab"
             :site.fabricate.page/unparsed-content "✳=(with-meta [:div \"text\"] {:page/title \"text\"})🔚"}
            initial-state)]
       (t/is
@@ -178,7 +219,7 @@
 
     (let [sample-error
           (->> {:site.fabricate.file/input-file (io/file "content/test/some-file.txt.fab")
-                :site.fabricate.file/filename "content/test/some-file.txt.fab"
+                :site.fabricate.file/input-filename "content/test/some-file.txt.fab"
                 :site.fabricate.page/unparsed-content "✳=(unbound-fn nil)🔚"}
                (#(fsm/complete (dissoc default-operations
                                        rendered-state
@@ -213,15 +254,21 @@
 
 (t/deftest existing-pages
   (t/testing "existing pages"
-    (let [default-operations
-          (assoc default-operations
-                 rendered-state
-                 (fn [{:keys [site.fabricate.page/rendered-content]
-                       :as page-data}
-                      settings]
-                   (do
-                     (t/is (any? rendered-content))
-                     page-data)))]
+    (let [test-page-operations
+          (-> default-operations
+              (dissoc rendered-state)
+              (assoc
+               (mu/update-properties
+                rendered-state
+                assoc :fsm/name "Rendered + tested"
+                :fsm/description "Fabricate output rendered + tested"
+                :fsm/side-effect? false)
+               (fn [{:keys [site.fabricate.page/rendered-content]
+                     :as page-data}
+                    settings]
+                 (do
+                   (t/is (any? rendered-content))
+                   page-data))))]
       (doseq [page-path (get-template-files "./pages" ".fab")]
         (t/testing (str ": " page-path)
           (fsm/complete default-operations page-path initial-state))))))
@@ -256,18 +303,6 @@ Some more text")
 
 (def extra-content-str "\n\n Three plus four is: ✳=[:strong (+ 3 4)]🔚")
 
-(def test-config
-  (-> initial-state
-      (assoc-in [:site.fabricate/settings
-                 :site.fabricate.file/input-dir]
-                "./test-resources/fab/inputs/")
-      (assoc-in [:site.fabricate/settings
-                 :site.fabricate.file/output-dir]
-                "./test-resources/fab/outputs/")
-      (assoc-in [:site.fabricate/settings
-                 :site.fabricate.server/config]
-                {:dir "./test-resources/fab/outputs/"
-                 :port 9223})))
 
 (t/deftest application-state
   (let [prior-exec clojure.lang.Agent/soloExecutor
@@ -324,7 +359,7 @@ Some more text")
                     (send-off
                      (fn [s]
                        (let [p (rerender s {:file (io/file f) :count 1 :action :create})
-                             fname (:site.fabricate.file/filename p)]
+                             fname (:site.fabricate.file/input-filename p)]
                          (assoc-in s [:site.fabricate/pages fname] p))))
                     (#(do (await %) %))
                     deref
@@ -339,7 +374,8 @@ Some more text")
     (t/testing "ability to manage server state using send and draft!"
       (u/update-global-context!
        merge (tu/gather-test-meta))
-      (let [url "http://localhost:9223"]
+      (let [url "http://localhost:9223"
+            test-file-path "./test-resources/fab/inputs/test-file.html.fab"]
 
         (add-watch test-state
                    :test-validity
@@ -369,7 +405,7 @@ Some more text")
         (t/is (some? (type (get @test-state :site.fabricate.app/logger)))
               "App should launch logger")
         (println "2. initial write")
-        (spit "./test-resources/fab/inputs/test-file.html.fab"
+        (spit test-file-path
               test-fabricate-str)
         (await test-state)
         (await (:site.fabricate.app/watcher @test-state))
@@ -386,7 +422,7 @@ Some more text")
               "File should be visible on server")
         (Thread/sleep 250)
         (println "3. file update")
-        (spit "./test-resources/fab/inputs/test-file.html.fab"
+        (spit test-file-path
               extra-content-str
               :append true)
         (await test-state)
@@ -395,7 +431,15 @@ Some more text")
               "File should have contents updated by filewatcher")
 
         (Thread/sleep 250)
-        (println "4. shutdown")
+
+        (println "4. Delete")
+        (io/delete-file test-file-path)
+        (Thread/sleep 400)
+        (await test-state)
+        (t/is (not (.exists (io/file "./test-resources/fab/outputs/test-file.html")))
+              "Output file corresponding to deleted input should also be deleted")
+
+        (println "5. shutdown")
         (send-off test-state stop!)
 
         (await test-state)
