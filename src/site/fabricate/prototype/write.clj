@@ -139,7 +139,6 @@
                     input-dir
                     output-dir))))))
 
-
 ;; fsm based implementation here
 ;;
 ;; write the succession of states, then fill in the schemas
@@ -212,7 +211,6 @@
      :site.fabricate.file/output-file output-filename
      :site.fabricate.file/state :deleted}))
 
-
 (def file-state
   "Fabricate input represented as java.io.File entry in page map"
   (m/schema
@@ -237,7 +235,6 @@
     [:site.fabricate.file/input-file [:fn sketch/file?]]
     [:site.fabricate.file/input-filename :string]
     [:site.fabricate.page/unparsed-content :string]]))
-
 
 (def parsed-state
   "Fabricate input parsed and metadata associated with page map"
@@ -274,7 +271,7 @@
                (read/parse unparsed-content {:filename input-filename})))
       (populate-page-meta settings)))
 
-  (def evaluated-state
+(def evaluated-state
   "Fabricate contents evaluated after parsing"
   (mu/closed-schema
    (mu/merge
@@ -362,11 +359,11 @@
              (second (second namespace)))
            :site.fabricate.page/metadata metadata)))
 
-  ;; to make the state runtime reconfigurable, rewrite all these functions
-  ;; to accept both a page map and a settings map - or just the entire state
-  ;;
-  ;; and also include these operations in the state map
-  (def default-operations
+;; to make the state runtime reconfigurable, rewrite all these functions
+;; to accept both a page map and a settings map - or just the entire state
+;;
+;; and also include these operations in the state map
+(def default-operations
   "Default render loop for Fabricate projects. Defined as a mapping of malli schemas describing states to the functions that process data in that state. See the fsm namespace for additional information."
   {input-state (fn input-file
                  [f _] {:site.fabricate.file/input-file (io/as-file f)
@@ -386,13 +383,13 @@
                 [{:keys [site.fabricate.file/input-file]
                   :as page-data} state]
                 (let [final-hiccup
-                      (u/trace ::evaulated->hiccup {:pairs [:log/level 800]}
+                      (u/trace ::evaulated->hiccup {:pairs [:log/level 500]}
                                (evaluated->hiccup page-data state))]
                   (assoc page-data
                          :site.fabricate.page/evaluated-content final-hiccup
                          :site.fabricate.page/rendered-content
                          (str (u/trace
-                                  ::hiccup->html {:pairs [:log/level 800]}
+                                  ::hiccup->html {:pairs [:log/level 500]}
                                   (hiccup/html
                                    {:escape-strings? false}
                                    final-hiccup))))))
@@ -408,7 +405,7 @@
 
    fw-delete-state delete-file!})
 
-  (def default-site-settings
+(def default-site-settings
   "Default configuration for Fabricate projects."
   {:site.fabricate.file/template-suffix ".fab"
    :site.fabricate.file/input-dir "./pages"
@@ -436,15 +433,13 @@
   {:site.fabricate/settings default-site-settings
    :site.fabricate/pages {}})
 
-  (comment
+(comment
 
   (get-in initial-state
           [:site.fabricate/settings
-           :site.fabricate.app.logger/config])
+           :site.fabricate.app.logger/config]))
 
-  )
-
-  (defn- report-error [a err]
+(defn- report-error [a err]
   (u/log ::agent-error :agent/context (:context (meta a))
          :agent/error (Throwable->map err) :agent/type (type @a)
          :log/level 900)
@@ -454,14 +449,14 @@
         (u/log ::agent-schema :malli/schema agent-schema
                :malli/error (m/explain agent-schema @a)))))
 
-  (def ^{:malli/schema [:=> [:cat :any] :boolean]}
+(def ^{:malli/schema [:=> [:cat :any] :boolean]}
   valid-state? (m/validator state-schema))
-  (def ^{:malli/schema [:=> [:cat :any] :map]}
+(def ^{:malli/schema [:=> [:cat :any] :map]}
   explain-state (m/explainer state-schema))
 
-  (assert (valid-state? initial-state))
+(assert (valid-state? initial-state))
 
-  (def state
+(def state
   "This agent holds the current state of all the pages created by Fabricate, the application settings, and the state of the application itself"
   (agent initial-state :meta {:context :site.fabricate/app
                               :malli/schema state-schema}
@@ -476,7 +471,7 @@
          #_(fn [s] (let [v? (valid-state? s)]
                      (when-not v? (pprint (malli.error/humanize (explain-state s))))
                      v?))
-         #_ #_:error-mode :continue))
+         #_#_:error-mode :continue))
 
 (comment
   (add-watch
@@ -489,9 +484,7 @@
             :agent/current-state-valid? (valid-state? new-state))))
 
                                         ; doesn't seem to work.
-  (remove-watch state :monitor-state)
-
-  )
+  (remove-watch state :monitor-state))
 
 (defn rerender
   "Render the given page on file change. Returns the completed page map."
@@ -516,8 +509,7 @@
                         local-file-map
                         application-state-map))))))
 
-
-  (comment
+(comment
   (fsm/complete
    default-operations
    (first
@@ -529,11 +521,9 @@
 
   (clojure.repl/doc server/start)
 
-  (server/stop example-srv)
+  (server/stop example-srv))
 
-  )
-
-  (defn draft!
+(defn draft!
   "Render all the Fabricate templates once, then launches a file watcher to rerender the templates on save. Also launches a web server to view the rendered pages locally, and creates a logger that prints page rerender operations in the REPL."
   {:malli/schema [:=> [:cat state-schema] state-schema]}
   [{:keys [site.fabricate/settings site.fabricate/pages]
@@ -569,9 +559,6 @@
                         (if (and (not (re-find #"#" (.toString file)))
                                  (.endsWith (.toString file) template-suffix))
                           (do
-                            (u/log ::file-watch-detect :dirwatch/state f
-                                   :log/level 800
-                                   :dirwatch/delete? (m/validate fw-delete-state f))
                             (send-off
                              state-agent
                              (fn [s]
@@ -617,7 +604,7 @@
        fp
        current-state))))
 
-  (defn stop!
+(defn stop!
   "Shuts down fabricate's stateful components."
   {:malli/schema [:=> [:cat state-schema] state-schema]}
   [application-state-map]
@@ -645,16 +632,15 @@
                 (l)
                 nil))))
 
-  (.addShutdownHook
-  (java.lang.Runtime/getRuntime)
-  (Thread. (fn []
+(.addShutdownHook
+ (java.lang.Runtime/getRuntime)
+ (Thread. (fn []
             (u/trace ::app-shutdown
               [:log/level 800]
               (shutdown-agents)))))
 
-  (comment
+(comment
   (publish {:dirs ["./pages"]})
-
 
   (-> state
       (send (constantly initial-state))
@@ -672,10 +658,7 @@
 
   (restart-agent state initial-state)
 
-
-  @state
-
-  )
+  @state)
 
 (comment
   ;; to update pages manually, do this:
@@ -683,8 +666,7 @@
   (fsm/complete
    default-operations
    "./README.md.fab"
-   initial-state )
-
+   initial-state)
 
   (fsm/complete default-operations
                 "./pages/reference/namespaces/site.fabricate.prototype.write.html.fab"
@@ -703,7 +685,6 @@
 
   (site.fabricate.prototype.read.grammar/template
    (slurp "./pages/extended-forms.html.fab"))
-
 
   (do (fsm/complete default-operations "./pages/reference/fabricate-fsm.html.fab"
                     @state)
@@ -724,8 +705,6 @@
 
   (:evaluated-content fsm-post-data)
   (hp/html5 (list [:head [:title "something"] [:body "something else"]])))
-
-
 
 (comment
 
@@ -754,7 +733,4 @@
                            (do
                              (let [r (clojure.java.shell/sh "sync-fabricate.sh")]
                                #_(println (or (:out r) (:err r))))))))
-                     (io/file output-dir))))))) )
-
-
-  )
+                     (io/file output-dir)))))))))
