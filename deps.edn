@@ -10,6 +10,10 @@
         nu.validator/validator {:mvn/version "20.7.2"}
         garden/garden {:mvn/version "1.3.10"}
         http-kit/http-kit {:mvn/version "2.6.0"}
+        tatut/ripley {:sha "bca327a81c0ee81a979a6bdeec533ea72483515e"
+                      :git/url "https://github.com/tatut/ripley"}
+        compojure/compojure {:mvn/version "1.7.0"}
+        babashka/fs {:mvn/version "0.2.14"}
         com.brunobonacci/mulog {:mvn/version "0.9.0"}}
  :aliases
  {:dev {:extra-paths ["test"]
