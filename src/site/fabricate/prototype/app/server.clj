@@ -1,59 +1,27 @@
 (ns site.fabricate.prototype.app.server
-  (:require [org.httpkit.server :as server]
-            [compojure.core :as cmp :refer [routes GET]]
-            [compojure.route :as route]
-            [ripley.html :as h]
-            [ripley.live.context :as context]
-            [ripley.live.source :as source]
-            [ripley.live.protocols :as p]
-            [ripley.js :as js]
-            [clojure.string :as str]
-            [ring.middleware.file :refer [wrap-file]]
-            [hiccup.core :as hiccup]
-            [clojure.java.io :as io]
-            [babashka.fs :as fs])
+  (:require
+   [org.httpkit.server :as server]
+   [reitit.core :as r]
+   [reitit.ring :as ring]
+   #_[compojure.core :as cmp :refer [routes GET]]
+   #_[compojure.route :as route]
+   [ripley.html :as h]
+   [ripley.live.context :as context]
+   [ripley.live.source :as source]
+   [ripley.live.protocols :as p]
+   [ripley.js :as js]
+   [clojure.string :as str]
+   [hiccup.core :as hiccup]
+   [clojure.java.io :as io]
+   [babashka.fs :as fs])
   (:import [java.io File]))
 
-(comment
-  (fs/relativize  "docs" "docs/index.html")
-
-  (route/files)
-  )
 
 ;; target 1: replicate the nasus view
 
 ;; target 2: surface metadata about pages (e.g. render time)
 
 ;; target 3: make it fashion
-
-;; (defn get-files [dir]
-;;   (let [files (fs/glob dir "*.html")]
-;;     [:table
-;;      [:thead "Page info"]
-;;      [:tbody
-;;       [:tr [:th "Filename"]]
-;;       (apply
-;;        list
-;;        (map (fn [f] [:tr [:td [:a {:href (str f)} (str f)]]])
-;;             files))]]))
-
-;; (defn app [req]
-;;   {:status 200
-;;    :headers {"Content-Type" "text/html"}
-;;    :body
-;;    (hiccup/html
-;;     (list [:h1 "Fabricate"]
-;;           (get-files "./docs/")))})
-
-;; (defonce state (atom nil))
-
-;; (defn stop-server []
-;;   (when-not (nil? @state)
-;;     (@state :timeout 100)
-;;     (reset! state nil)))
-
-;; (defn -main [& args]
-;;   (reset! state (server/run-server #'app {:port 8000})))
 
 (comment
   (-main)
@@ -124,9 +92,7 @@
            [:button {:on-click (partial toggle-expanded! id)}
             [::h/if expanded? "-" "+"]]
            [:span name]]
-
-          (when expanded?
-            (files ctx path))]))])))
+          (files ctx path)]))])))
 
 (defn search! [set-name-filter! set-expanded! path new-name-filter]
   ;; Expand all paths and parents that contain matching files
@@ -162,17 +128,34 @@
   (h/html
    [:html
     [:head
-     [:title "Ripley filetree"]]
+     [:title "Fabricate: Pages"]]
     [:body
      (h/live-client-script "/__ripley-live")
      (filetree-app path)]]))
 
+(comment
+  (defn filetree-routes [path]
+    (routes
+     (GET "/" _req
+          (h/render-response (partial filetree-page path)))
+     (route/files "/" {:root "docs/"})
+     (context/connection-handler "/__ripley-live"))))
+
 (defn filetree-routes [path]
-  (routes
-   (GET "/" _req
-        (h/render-response (partial filetree-page path)))
-   (route/files "/" {:root "docs/"})
-   (context/connection-handler "/__ripley-live")))
+  (ring/ring-handler
+   (ring/router
+    [["/ping" (constantly {:status 200 :body "pong"})]])
+   (ring/routes
+    (ring/create-file-handler
+     {:path "/" :root "docs"
+      :index-files ["fabricate.html"]
+      :not-found-handler
+      (constantly {:status 404
+                   :body "This is not a space"})})
+    (ring/create-default-handler
+     {:not-found (constantly {:status 404
+                              :body "This is not a space"})}))))
+
 
 (defn- restart
   ([] (restart 3000 "docs"))
@@ -189,5 +172,6 @@
 
 (comment
   (-main)
+
 
   )

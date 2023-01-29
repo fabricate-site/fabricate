@@ -3,7 +3,7 @@
         rewrite-clj/rewrite-clj {:mvn/version "1.0.699-alpha"}
         instaparse/instaparse {:mvn/version "1.4.10"}
         hiccup/hiccup {:mvn/version "2.0.0-alpha2"}
-        metosin/malli {:mvn/version "0.8.8"}
+        metosin/malli {:mvn/version "0.10.1"}
         org.clojure/data.finger-tree {:mvn/version "0.0.3"}
         juxt/dirwatch {:mvn/version "0.2.5"}
         com.gfredericks/test.chuck {:mvn/version "0.2.10"}
@@ -12,7 +12,9 @@
         http-kit/http-kit {:mvn/version "2.6.0"}
         tatut/ripley {:sha "bca327a81c0ee81a979a6bdeec533ea72483515e"
                       :git/url "https://github.com/tatut/ripley"}
-        compojure/compojure {:mvn/version "1.7.0"}
+        metosin/reitit-core {:mvn/version "0.5.18"}
+        metosin/reitit-ring {:mvn/version "0.5.18"}
+        metosin/reitit-malli {:mvn/version "0.5.18"}
         babashka/fs {:mvn/version "0.2.14"}
         com.brunobonacci/mulog {:mvn/version "0.9.0"}}
  :aliases
