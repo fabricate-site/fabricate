@@ -111,10 +111,11 @@
       [:h2 "Fabricate"]
       [:h3 "Rendered pages"]
       [:label "Page filter"]
-      [:input#name-filter {:type "text"
-                           :on-input (js/js-debounced 500
-                                                      #(search! set-name-filter! set-expanded! path %)
-                                                      (js/input-value :name-filter))}]
+      [:input#name-filter
+       {:type "text"
+        :on-input (js/js-debounced 500
+                                   #(search! set-name-filter! set-expanded! path %)
+                                   (js/input-value :name-filter))}]
       (folder {:name-filter name-filter
                :expanded expanded
                :toggle-expanded! (fn [path]
@@ -133,25 +134,18 @@
      (h/live-client-script "/__ripley-live")
      (filetree-app path)]]))
 
-(comment
-  (defn filetree-routes [path]
-    (routes
-     (GET "/" _req
-          (h/render-response (partial filetree-page path)))
-     (route/files "/" {:root "docs/"})
-     (context/connection-handler "/__ripley-live"))))
 
 (defn filetree-routes [path]
   (ring/ring-handler
    (ring/router
-    [["/ping" (constantly {:status 200 :body "pong"})]])
+    [["/ping" (constantly {:status 200 :body "pong"})]
+     ["/preview" {:get (constantly
+                        (h/render-response (partial filetree-page path)))}]])
    (ring/routes
     (ring/create-file-handler
      {:path "/" :root "docs"
-      :index-files ["fabricate.html"]
-      :not-found-handler
-      (constantly {:status 404
-                   :body "This is not a space"})})
+      :index-files ["fabricate.html"]})
+    (context/connection-handler "/__ripley_live")
     (ring/create-default-handler
      {:not-found (constantly {:status 404
                               :body "This is not a space"})}))))
@@ -160,12 +154,13 @@
 (defn- restart
   ([] (restart 3000 "docs"))
   ([port path]
-   (swap! server
-          (fn [old-server]
-            (when old-server
-              (old-server))
-            (println "Starting counter server")
-            (server/run-server (filetree-routes (File. path)) {:port port})))))
+   (swap!
+    server
+    (fn [old-server]
+      (when old-server
+        (old-server))
+      (println "Starting server")
+      (server/run-server (filetree-routes (File. path)) {:port port})))))
 
 (defn -main [& _args]
   (restart))
