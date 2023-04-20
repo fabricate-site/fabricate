@@ -170,7 +170,8 @@
 (def error-form-schema
   "Malli schema describing Hiccup forms that contain error messages"
   (m/schema
-   [:tuple [:= :div] [:= [:h6 "Error"]]
+   [:tuple [:= :div] [:maybe [:map [:class [:= "fabricate-error"]]]]
+    [:= [:h6 "Error"]]
     [:schema [:cat [:= :dl] [:* :any]]]
     [:schema [:cat [:= :details] [:* :any]]]]))
 
@@ -181,18 +182,28 @@
   [{:keys [expr-src exec expr error result display]
     :as parsed-expr}]
   (cond
-    error [:div [:h6 "Error"]
-           [:dl
-            [:dt "Error type"]
-            [:dd [:code (str (:type error))]]
-            [:dt "Error message"]
-            [:dd [:code (str (:cause error))]]
-            [:dt "Error phase"]
-            [:dd [:code (str (:phase error))]]
-            [:dt "Location"]
-            [:dd (lines->msg (meta parsed-expr))]]
-           [:details [:summary "Source expression"]
-            [:pre [:code {:class "language-clojure"} expr-src]]]]
+    error
+    [:div {:class "fabricate-error"}
+     [:h6 "Error"]
+     [:dl
+      [:dt "Error type"]
+      [:dd {:class "fabricate-error-type"}
+       [:code (str (:type error))]]
+      [:dt  "Error message"]
+      [:dd
+       {:class "fabricate-error-msg"}
+       [:code (str (:cause error))]]
+      [:dt  "Error phase"]
+      [:dd
+       {:class "fabricate-error-phase"}
+       [:code (str (:phase error))]]
+      [:dt  "Location"]
+      [:dd
+       {:class "fabricate-error-location"}
+       (lines->msg (meta parsed-expr))]]
+     [:details [:summary "Source expression"]
+      [:pre [:code {:class "language-clojure fabricate-error-src"}
+             expr-src]]]]
     display (list [:pre [:code {:class "language-clojure"}
                          (render-src (or exec expr))]] result)
     :else result))
@@ -446,5 +457,21 @@
          (mt/transformer {:name :get})))
 
   (m/validate [:tuple :keyword [:* :int]] [:k [2]])
+
+  (m/validate [:tuple [:= :div] [:maybe [:map [:class [:= "fabricate-error"]]]]]
+              [:div {:class "fabricate-error"}])
+
+  (malli.error/humanize
+   (m/explain
+    error-form-schema
+    [:div
+     {:class "fabricate-error"}
+     [:h6 "Error"]
+     [:dl [:dt "Error type"] [:dd [:code "clojure.lang.ExceptionInfo"]] [:dt "Error message"] [:dd [:code "Unexpected EOF while reading item 1 of list."]]
+      [:dt "Error phase"] [:dd [:code ""]]
+      [:dt "Location"]
+      [:dd
+       '("Line " [:strong 1] ", " "Columns " [:strong 1 "-" 12])]]
+     [:details [:summary "Source expression"] [:pre [:code "((+ 2 3)"]]]]))
 
   (meta (identity (with-meta [:start {:a 2}] {:meta true}))))
