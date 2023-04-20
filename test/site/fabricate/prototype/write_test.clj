@@ -231,8 +231,8 @@
                first)]
       (t/is
        (and (= :div (first sample-error))
-            (= [:h6 "Error"] (second sample-error))
-            (some? (second (nth (nth sample-error 2) 8))))
+            (= [:h6 "Error"] (nth sample-error 2))
+            (some? (second (nth (nth sample-error 3) 8))))
        "Errors should be correctly surfaced in output"))
 
     (t/is (contains?

@@ -186,7 +186,9 @@
 
       (t/is (m/validate
              error-form-schema
-             [:div [:h6 "Error"]
+             [:div
+              {:class "fabricate-error"}
+              [:h6 "Error"]
               [:dl [:dt "Error type"] [:dd [:code "clojure.lang.ExceptionInfo"]] [:dt "Error message"] [:dd [:code "Unexpected EOF while reading item 1 of list."]]
                [:dt "Error phase"] [:dd [:code ""]]
                [:dt "Location"]
@@ -196,20 +198,29 @@
 
       (t/is
        (=
-        [:div
+        [:div {:class "fabricate-error"}
          [:h6 "Error"]
          [:dl
           [:dt "Error type"]
-          [:dd [:code "clojure.lang.ExceptionInfo"]]
+          [:dd
+           {:class "fabricate-error-type"}
+           [:code "clojure.lang.ExceptionInfo"]]
           [:dt "Error message"]
-          [:dd [:code "Unexpected EOF. [at line 1, column 9]"]]
+          [:dd
+           {:class "fabricate-error-msg"}
+           [:code "Unexpected EOF. [at line 1, column 9]"]]
           [:dt "Error phase"]
-          [:dd [:code ""]]
+          [:dd
+           {:class "fabricate-error-phase"}
+           [:code ""]]
           [:dt "Location"]
-          [:dd '("Line " [:strong 1] ", " "Columns " [:strong 1 "-" 12])]]
+          [:dd
+           {:class "fabricate-error-location"}
+           '("Line " [:strong 1] ", " "Columns " [:strong 1 "-" 12])]]
          [:details
           [:summary "Source expression"]
-          [:pre [:code {:class "language-clojure"} "((+ 2 3)"]]]]
+          [:pre [:code {:class "language-clojure fabricate-error-src"}
+                 "((+ 2 3)"]]]]
         (eval-parsed-expr (first (parse "✳((+ 2 3)🔚")) true))
        "Expression parsing errors should be surfaced in the output")
 
