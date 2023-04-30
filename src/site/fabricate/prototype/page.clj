@@ -224,8 +224,8 @@
    (let [sequence-type (type form)
          res
          (cond
-           ; don't detect in specific elements
-           (#{:svg :dl :figure :pre} (first form)) form
+           ;; don't detect in specific elements
+           (#{:svg :dl :figure :pre :img} (first form)) form
            ;; (non-hiccup-seq? form)
            ;; recurse?
            ;; (parse-paragraphs (apply conj default-form form) opts)
