@@ -27,34 +27,55 @@
 
   (t/testing "source code display"
     (t/is (= [:span {:class "language-clojure list"}
-              "#(" [:span {:class "language-clojure symbol"}
-                    "+"] " "
-              [:span {:class "language-clojure number"} "3"] " "
-              [:span {:class "language-clojure symbol"} "%"] ")"]
+              [:span {:class "language-clojure dispatch"}
+               "#" [:span {:class "language-clojure open-paren"} "("]]
+              [:span {:class "language-clojure symbol"}
+               "+"] [:span {:class "language-clojure whitespace"} " "]
+              [:span {:class "language-clojure number"} "3"]
+              [:span {:class "language-clojure whitespace"} " "]
+              [:span {:class "language-clojure symbol"} "%"]
+              [:span {:class "language-clojure close-paren"} ")"]]
              (#'site.fabricate.prototype.page/fn-node->hiccup
               (node/coerce '#(+ 3 %)))
              (#'site.fabricate.prototype.page/expr->hiccup '#(+ 3 %))))
-    (t/is (= [:span {:class "language-clojure list"} "#("
-              [:span {:class "language-clojure symbol"} "+"] " "
-              [:span {:class "language-clojure number"} "3"] " "
-              [:span {:class "language-clojure symbol"} "%1"] " "
-              [:span {:class "language-clojure symbol"} "%2"] ")"]
+    (t/is (= [:span {:class "language-clojure list"}
+              [:span {:class "language-clojure dispatch"}
+               "#" [:span {:class "language-clojure open-paren"} "("]]
+              [:span {:class "language-clojure symbol"} "+"]
+              [:span {:class "language-clojure whitespace"} " "]
+              [:span {:class "language-clojure number"} "3"]
+              [:span {:class "language-clojure whitespace"} " "]
+              [:span {:class "language-clojure symbol"} "%1"]
+              [:span {:class "language-clojure whitespace"} " "]
+              [:span {:class "language-clojure symbol"} "%2"]
+              [:span {:class "language-clojure close-paren"} ")"]]
              (#'site.fabricate.prototype.page/fn-node->hiccup
               (node/coerce '#(+ 3 %1 %2)))
              (#'site.fabricate.prototype.page/expr->hiccup '#(+ 3 %1 %2))))
-    (t/is (= [:span {:class "language-clojure list"} "#("
-              [:span {:class "language-clojure symbol"} "apply"] " "
-              [:span {:class "language-clojure symbol"} "+"] " "
-              [:span {:class "language-clojure number"} "3"] " "
-              [:span {:class "language-clojure symbol"} "%&amp;"] ")"]
+    (t/is (= [:span {:class "language-clojure list"}
+              [:span {:class "language-clojure dispatch"}
+               "#" [:span {:class "language-clojure open-paren"} "("]]
+              [:span {:class "language-clojure symbol"} "apply"]
+              [:span {:class "language-clojure whitespace"} " "]
+              [:span {:class "language-clojure symbol"} "+"]
+              [:span {:class "language-clojure whitespace"} " "]
+              [:span {:class "language-clojure number"} "3"]
+              [:span {:class "language-clojure whitespace"} " "]
+              [:span {:class "language-clojure symbol"} "%&amp;"]
+              [:span {:class "language-clojure close-paren"} ")"]]
              (#'site.fabricate.prototype.page/fn-node->hiccup
               (node/coerce '#(apply + 3 %&)))))
     (t/is (= [:span {:class "language-clojure comment"} ";" " a comment" [:br]]
              (str->hiccup "; a comment\n(+ 3 4)")))
 
-    (t/is (any?
-           (str->hiccup "(defn myfunc [a] \n; commentary\n (inc a))")
-           ))))
+    (t/is (some?
+           (str->hiccup "(defn myfunc [a] \n; commentary\n (inc a))")))
+
+    (t/is (some? (re-find #"quote"
+                          (get-in
+                           (str->hiccup "'(+ something something)")
+                           [1 :class])))
+          "Quoted expressions should be correctly identified")))
 
 (t/deftest metadata-transforms
   (t/testing "Metadata transformation"

@@ -191,26 +191,6 @@
          (.find m)
          (= (.end m) (count s)))))
 
-(comment
-
-  (re-seq #"\n\n" "abc\n\ndef")
-
-  (final-match? #"\n\n" "abc\n\n")
-
-  (final-match? #"\n\n" "abc")
-
-  (iterator-seq (.iterator (.results (re-matcher #"\n\n" "abc\n\ndef\n\nghi"))))
-
-  (loop [ct 0 m (re-matcher #"\n\n" "abc\n\ndef\n\nghi")]
-    (let [f? (.find m)]
-      (if (not f?) ct
-          (recur (inc ct) m))))
-
-  (loop [ct 0 m (re-matcher #"\n\n" "abc\n\ndef\n\nghi")]
-    (let [f? (.find m)]
-      (if (not f?) ct
-          (recur (inc ct) m)))))
-
 (defn parse-paragraphs
   "Detects the paragraphs within the form"
   {:malli/schema [:=> [:cat [:vector :any] :map] [:vector :any]]}
@@ -224,7 +204,7 @@
    (let [sequence-type (type form)
          res
          (cond
-           ; don't detect in specific elements
+                                        ; don't detect in specific elements
            (#{:svg :dl :figure :pre} (first form)) form
            ;; (non-hiccup-seq? form)
            ;; recurse?
@@ -312,23 +292,6 @@
      (reconstruct res sequence-type)))
   ([form] (parse-paragraphs form {})))
 
-(comment
-  (non-hiccup-seq? [:p "some text\n\nwith newlines"])
-
-  (parse-paragraphs [:section "some text\n\nwith newlines"])
-
-  (parse-paragraphs [:p "some text\n\nwith newlines"])
-
-  (split-paragraphs "some text\n\nwith linebreak")
-
-  (parse-paragraphs
-   [:b [:dfn [:del "some\n\n"] "text"]])
-
-  (parse-paragraphs
-   [:b [:dfn "some\n\n"]])
-
-  (html/element? (parse-paragraphs [:del "some\n\n"])))
-
 (defn ->meta
   {:malli/schema
    [:=> [:cat [:schema [:cat :any :any]]]
@@ -400,15 +363,6 @@
    :site-name "og:site_name"
    "site-name" "og:site_name"})
 
-(comment
-  (map ->meta default-metadata)
-
-  (opengraph-enhance {"description" "og:description"}
-                     [[:meta {:name "description" :content "demo desc"}]
-                      [:meta {:name "title" :content "demo"}]])
-
-  (opengraph-enhance {"description" "og:description"}
-                     (map ->meta default-metadata)))
 
 (def ogp-properties
   {:title "og:title"
@@ -492,14 +446,16 @@
   (span (atom-class node) (hu/escape-html (str node))))
 
 (defmethod node->hiccup :whitespace [node]
-  (:whitespace node))
+  (span "whitespace" (:whitespace node)))
 
 (defmethod node->hiccup :multi-line [node]
-  (apply span "string" "\"" (concat (interpose [:br] (:lines node))
-                                    ["\""])))
+  (apply span "string" (span "double-quote" "\"") (concat (interpose [:br] (:lines node))
+                                                          [(span "double-quote""\"")])))
 
 (defmethod node->hiccup :map [node]
-  (apply span "map" "{" (conj (mapv node->hiccup (:children node)) "}")))
+  (apply span "map" (span "open-brace" "{")
+         (conj (mapv node->hiccup (:children node))
+               (span "close-brace" "}"))))
 
 (defn- fn-list? [node]
   (and (= (:tag node) :list) (= 'fn* (:value (first (:children node))))))
@@ -522,7 +478,10 @@
                             (fn select [zloc] (symbol? (z/sexpr zloc)))
                             (fn visit [zloc] (z/edit zloc  #(get r % %)))))]
     (apply span (name (tag node))
-           "#(" (conj (mapv node->hiccup (:children edited-node)) ")"))))
+           (span "dispatch" "#"
+                 (span "open-paren" "("))
+           (conj (mapv node->hiccup (:children edited-node))
+                 (span "close-paren" ")")))))
 
 (defmethod node->hiccup :fn [node]
   ;; this is a really tricky one, as it involves
@@ -531,23 +490,29 @@
 
 (defmethod node->hiccup :list [node]
   (if (fn-list? node) (fn-node->hiccup node)
-      (apply span "list" "(" (conj (mapv node->hiccup (:children node)) ")"))))
+      (apply span "list" (span "open-paren" "(")
+             (conj (mapv node->hiccup (:children node))
+                   (span "close-paren" ")")))))
 
 (defmethod node->hiccup :forms [node]
   (apply span (name (tag node)) (map node->hiccup (:children node))))
 
 (defmethod node->hiccup :quote [node]
-  (apply span (name (tag node)) "'"
+  (apply span (name (tag node)) (span "quote" "'")
+         (map node->hiccup (:children node))))
+
+(defmethod node->hiccup :syntax-quote [node]
+  (apply span (name (tag node)) (span "syntax-quote" "`")
          (map node->hiccup (:children node))))
 
 (defmethod node->hiccup :uneval [node]
-  (apply span (name (tag node)) "#_"
+  (apply span (name (tag node)) (span "dispatch" "#"  (span "underscore" "_"))
          (map node->hiccup (:children node))))
 
 (defmethod node->hiccup :regex [node]
-  (span (name (tag node)) "#"
-         (map node->hiccup
-              (:children node))))
+  (span (name (tag node)) (span "dispatch" "#")
+        (map node->hiccup
+             (:children node))))
 
 (defmethod node->hiccup :deref [node]
   (apply span (name (tag node)) "@"
@@ -555,19 +520,22 @@
 
 (defmethod node->hiccup :set [node]
   (apply span (name (tag node))
-         "#{" (conj (mapv node->hiccup (:children node)) "}")))
+         (span "dispatch" "#" (span "open-brace" "{"))
+         (conj (mapv node->hiccup (:children node)) (span "close-brace" "}"))))
 
 (defmethod node->hiccup :newline [node]
   (repeat (count (:newlines node)) [:br]))
 
 (defmethod node->hiccup :vector [node]
-  (apply span "vector" "[" (conj (mapv node->hiccup (:children node)) "]")))
+  (apply span "vector" (span "open-brace" "[")
+         (conj (mapv node->hiccup (:children node))
+               (span "close-brace" "]"))))
 
 (defmethod node->hiccup :meta [node]
-  (apply span (name (tag node)) "^" (mapv node->hiccup (:children node))))
+  (apply span (name (tag node)) (span "caret" "^") (mapv node->hiccup (:children node))))
 
 (defmethod node->hiccup :comma [node]
-  (span (name (tag node)) ","))
+  (span (name (tag node)) (span "comma" ",")))
 
 (defmethod node->hiccup :comment [node]
   (span (name (tag node)) (:prefix node)
@@ -599,61 +567,3 @@
   {:malli/schema [:=> [:cat :string] [:vector :any]]}
   [expr-str]
   (node->hiccup (p/parse-string expr-str)))
-
-(comment
-
-  (clojure.repl/doc p/parse)
-
-  (clojure.repl/doc p/parse-string-all)
-  (clojure.repl/doc p/parse-string)
-
-  (node->hiccup (rewrite-clj.node/coerce 'sym))
-
-  (expr->hiccup '(def myvar 183))
-
-  (expr->hiccup '(38 29 "a" :kw sym))
-  (expr->hiccup '[38 29 "a" :kw sym])
-  (expr->hiccup #{38 29 "a" :kw})
-  (expr->hiccup '#(+ 3 %))
-
-  (=
-   (rewrite-clj.node/coerce [:em{:class"tiny"}"text"])
-   (rewrite-clj.node/coerce [:em {:class "tiny"} "text"])
-
-   )
-  (:children
-   (rewrite-clj.node/coerce [:em{:class"tiny"}"text"]))
-
-  (:whitespace (second (:children
-                        (rewrite-clj.node/coerce [:em {:class "tiny"} "text"]))))
-
-  (expr->hiccup [:em {:class "tiny"} "text"])
-
-  (=
-   (rewrite-clj.node/coerce [:em{:class "tiny"}"text"])
-
-   (rewrite-clj.node/coerce [:em {:class "tiny"} "text"]))
-
-  (= (rewrite-clj.node/coerce :a)
-     (rewrite-clj.node/coerce :a)
-     )
-
-
-
-  (rewrite-clj.node/coerce 'sym)
-
-  (fn-node->hiccup (rewrite-clj.node/coerce '#(+ 3 %)))
-
-  (fn-list? (rewrite-clj.node/coerce '#(+ 3 %)))
-
-
-  (:tag (rewrite-clj.node/coerce '#(+ 3 %)))
-
-
-  (= 'fn* (:value (first (:children (rewrite-clj.node/coerce `#(+ 3 %))))))
-
-
-  (let [n (rewrite-clj.node/coerce '#(+ 3 %))]
-    (into {} (map (fn [k v] [k v]) (keys n) (vals n))))
-
-  (node->hiccup (rewrite-clj.node/coerce {:a 3})))
