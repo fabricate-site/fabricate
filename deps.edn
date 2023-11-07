@@ -1,45 +1,46 @@
-{:paths ["src"]
- :deps {org.clojure/clojure {:mvn/version "1.10.3"}
-        rewrite-clj/rewrite-clj {:mvn/version "1.0.699-alpha"}
-        instaparse/instaparse {:mvn/version "1.4.10"}
-        hiccup/hiccup {:mvn/version "2.0.0-alpha2"}
-        metosin/malli {:mvn/version "0.8.8"}
-        org.clojure/data.finger-tree {:mvn/version "0.0.3"}
-        juxt/dirwatch {:mvn/version "0.2.5"}
-        com.gfredericks/test.chuck {:mvn/version "0.2.10"}
-        nu.validator/validator {:mvn/version "20.7.2"}
-        garden/garden {:mvn/version "1.3.10"}
-        nasus/nasus
-        {:git/url "https://github.com/kachayev/nasus/"
-         :sha "8923283db09f88f3503d0246bad31eea15341138"}
-        com.brunobonacci/mulog {:mvn/version "0.9.0"}}
- :aliases
- {:dev {:extra-paths ["test"]
-        :extra-deps {criterium/criterium {:mvn/version "0.4.6"}
-                     com.clojure-goes-fast/clj-async-profiler {:mvn/version "0.5.1"}
-                     com.clojure-goes-fast/clj-memory-meter {:mvn/version "0.1.3"}
-                     com.taoensso/tufte {:mvn/version "2.2.0"}
-                     babashka/babashka.curl {:mvn/version "0.1.1"}}
-        :jvm-opts ["-Djdk.attach.allowAttachSelf"
-                   "-XX:+UnlockDiagnosticVMOptions"
-                   "-XX:+DebugNonSafepoints"]}
-  :test {:extra-paths ["test"]
-         :extra-deps {org.clojure/test.check {:mvn/version "1.1.0"}
-                      babashka/babashka.curl {:mvn/version "0.1.1"}}}
-  :runner
-  {:extra-deps {io.github.cognitect-labs/test-runner
-                {:git/url "https://github.com/cognitect-labs/test-runner"
-                 :sha "cc75980b43011773162b485f46f939dc5fba91e4" }}
-   :main-opts ["-m" "cognitect.test-runner"]
-   :exec-fn cognitect.test-runner.api/test
-   :exec-args {:excludes [:performance]
-               :patterns ["^(?!.*performance).*$"]}}
-  :publish {:extra-deps {daveray/dorothy
-                         {:git/url "https://github.com/daveray/dorothy"
-                          :sha "207570804dfda2162a15b9ee55b5e76ec6e1ecfa"}}
-            :exec-fn site.fabricate.prototype.write/publish!
-            :exec-args {:files ["README.md.fab"]
-                        :dirs ["pages/"]}}
-  :validate {:exec-fn site.fabricate.prototype.check/html
-             :exec-args {:dirs ["docs/"]}}
-  :serve {:main-opts ["-m" "http.server" "--dir" "docs"]}}}
+{:aliases
+   {:dev {:extra-deps
+            {babashka/babashka.curl {:mvn/version "0.1.1"},
+             com.clojure-goes-fast/clj-async-profiler {:mvn/version "0.5.1"},
+             com.clojure-goes-fast/clj-memory-meter {:mvn/version "0.1.3"},
+             com.taoensso/tufte {:mvn/version "2.2.0"},
+             criterium/criterium {:mvn/version "0.4.6"}},
+          :extra-paths ["test"],
+          :jvm-opts ["-Djdk.attach.allowAttachSelf"
+                     "-XX:+UnlockDiagnosticVMOptions"
+                     "-XX:+DebugNonSafepoints"]},
+    :publish {:exec-args {:dirs ["pages/"], :files ["README.md.fab"]},
+              :exec-fn site.fabricate.prototype.write/publish!,
+              :extra-deps {daveray/dorothy
+                             {:git/url "https://github.com/daveray/dorothy",
+                              :sha
+                                "207570804dfda2162a15b9ee55b5e76ec6e1ecfa"}}},
+    :runner {:exec-args {:excludes [:performance],
+                         :patterns ["^(?!.*performance).*$"]},
+             :exec-fn cognitect.test-runner.api/test,
+             :extra-deps {io.github.cognitect-labs/test-runner
+                            {:git/url
+                               "https://github.com/cognitect-labs/test-runner",
+                             :sha "cc75980b43011773162b485f46f939dc5fba91e4"}},
+             :main-opts ["-m" "cognitect.test-runner"]},
+    :serve {:main-opts ["-m" "http.server" "--dir" "docs"]},
+    :test {:extra-deps {babashka/babashka.curl {:mvn/version "0.1.1"},
+                        org.clojure/test.check {:mvn/version "1.1.0"}},
+           :extra-paths ["test"]},
+    :validate {:exec-args {:dirs ["docs/"]},
+               :exec-fn site.fabricate.prototype.check/html}},
+ :deps {babashka/fs {:mvn/version "0.2.12"},
+        com.brunobonacci/mulog {:mvn/version "0.9.0"},
+        com.gfredericks/test.chuck {:mvn/version "0.2.10"},
+        garden/garden {:mvn/version "1.3.10"},
+        hiccup/hiccup {:mvn/version "2.0.0-alpha2"},
+        instaparse/instaparse {:mvn/version "1.4.10"},
+        juxt/dirwatch {:mvn/version "0.2.5"},
+        metosin/malli {:mvn/version "0.8.8"},
+        nasus/nasus {:git/url "https://github.com/kachayev/nasus/",
+                     :sha "8923283db09f88f3503d0246bad31eea15341138"},
+        nu.validator/validator {:mvn/version "20.7.2"},
+        org.clojure/clojure {:mvn/version "1.10.3"},
+        org.clojure/data.finger-tree {:mvn/version "0.0.3"},
+        rewrite-clj/rewrite-clj {:mvn/version "1.0.699-alpha"}},
+ :paths ["src"]}
