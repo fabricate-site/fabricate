@@ -4,26 +4,24 @@
             [babashka.fs :as fs]))
 
 (t/deftest entries
-  (let [entry-data (api/plan {:patterns api/patterns, :input-dir "pages"})]
+  (let [tmp-dir (fs/create-temp-dir {:prefix "fabricate-test-"})
+        entry-data (api/plan {:site.fabricate.page/publish-dir tmp-dir})]
     (t/testing "planning"
-      (t/is (every? #(instance? java.io.File
-                                (:site.fabricate.page/input-file %))
-                    entry-data)))
+      (t/is (every? #(contains? % :site.fabricate.source/location) entry-data)))
     (t/testing "assembly"
       (doseq [e entry-data]
         (let [assembled (api/assemble e)]
-          (t/is (some? (:site.fabricate.page/data assembled))))))
+          (t/is (some? (:site.fabricate.document/data assembled))))))
     (t/testing "production"
-      (let [tmp-dir (fs/create-temp-dir {:prefix "fabricate-test-"})]
-        (doseq [e entry-data]
-          (let [assembled (assoc-in (api/assemble e)
-                                    [:site.fabricate.page/output
-                                     :site.fabricate.page/output-dir]
-                                    tmp-dir)
-                {:keys [site.fabricate.page/output-file], :as produced}
-                (api/produce! assembled)]
-            (t/is (instance? java.io.File output-file))
-            (t/is (fs/exists? output-file))))))))
+      (doseq [e entry-data]
+        (let [assembled (api/assemble e)
+              {:keys [site.fabricate.page/output], :as produced} (api/produce!
+                                                                  assembled)]
+          (t/is (some? (:site.fabricate.page/title produced))
+                (format "Page produced from %s should have a title"
+                        (str (:site.fabricate.source/location assembled))))
+          (t/is (instance? java.io.File output))
+          (t/is (fs/exists? output)))))))
 
 (comment
   (fs/create-temp-dir {:prefix "something-"})
