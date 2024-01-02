@@ -20,11 +20,11 @@
 
 (def definitions
   [{:doc "A source file used by Fabricate. May be a file, or a URL.",
-    :term :site.fabricate.entry/source,
-    :type :string}
-   {:doc
-      "The source from which input entries are derived. collect dispatches on ::source/location.",
     :term :site.fabricate.source/location,
+    :type [:or :string [:fn fs/exists?]]}
+   {:doc
+      "The source from which input entries are derived. collect dispatches on ::source",
+    :term :site.fabricate.api/source,
     :type :string}
    {:doc
       "A map representing a component of a page before, during, and after the assemble and produce operations. One source may produce multiple entries.",
@@ -107,10 +107,29 @@
   (when-not (= :site.fabricate.api/entry term)
     (s/register! term (mu/update-properties (:type d) assoc :doc doc))))
 
+(def entry-schema
+  "Malli schema describing entries."
+  (mu/required-keys
+    (mu/optional-keys
+      (m/schema [:map :site.fabricate.entry/source
+                 :site.fabricate.source/location :site.fabricate.page/output
+                 :site.fabricate.document/data :site.fabricate.document/format
+                 :site.fabricate.source/format :site.fabricate.page/format
+                 :site.fabricate.page/uri :site.fabricate.page/title
+                 :site.fabricate.page/permalink :site.fabricate.page/description
+                 :site.fabricate.page/author :site.fabricate.page/language
+                 :site.fabricate.page/locale :site.fabricate.page/image
+                 :me.ogp/type :site.fabricate.page/published-time
+                 :site.fabricate.page/publish-dir :site.fabricate.source/created
+                 :site.fabricate.source/modified
+                 :site.fabricate.page/modified-time :site.fabricate.page/tags
+                 :site.fabricate.entry/id :site.fabricate.entry/namespace]))
+    ;; entries ultimately have to come from somewhere.
+    [:site.fabricate.api/source :site.fabricate.source/location]))
 
 (defmulti collect
   "Generate the input entries from a source."
-  (fn [pattern _settings] pattern))
+  (fn [src _settings] src))
 
 (defmethod collect "pages/**.fab"
   [src settings]
@@ -118,7 +137,7 @@
           {:site.fabricate.source/format :site.fabricate.read/v0,
            :site.fabricate.document/format :hiccup,
            :site.fabricate.source/location (fs/file p),
-           :site.fabricate.source/pattern src,
+           :site.fabricate.api/source src,
            :site.fabricate.source/created (time/file-created p),
            :site.fabricate.source/modified (time/file-modified p),
            :site.fabricate.page/outputs
@@ -134,7 +153,7 @@
 (defmethod collect "README.md.fab"
   [src settings]
   [{:site.fabricate.source/location (fs/file src),
-    :site.fabricate.source/pattern src,
+    :site.fabricate.api/source src,
     :site.fabricate.source/created (time/file-created src),
     :site.fabricate.source/modified (time/file-modified src),
     :site.fabricate.page/title "Fabricate: README",
@@ -149,7 +168,8 @@
 
 (comment
   (collect "pages/**.fab" {:site.fabricate.page/publish-dir "docs"})
-  (collect "README.md.fab")
+  (malli.error/humanize (m/explain entry-schema
+                                   (first (collect "README.md.fab" {}))))
   (map first (.getMethodTable collect)))
 
 (defn collect-entries
@@ -220,9 +240,9 @@
 (defmulti produce!
   "Produce the content of a file from the results of the `assemble` operation and write it to disk. Takes an entry and returns an entry."
   {:term/definition
-     {:source (URI. "https://www.merriam-webster.com/dictionary/produce"),
-      :definition
-        "to make available for public exhibition or dissemination; to cause to have existence or to happen; to give being, form, or shape to; to compose, create, or bring out by intellectual or physical effort; to bear, make, or yield something"}}
+   {:source (URI. "https://www.merriam-webster.com/dictionary/produce"),
+    :definition
+    "to make available for public exhibition or dissemination; to cause to have existence or to happen; to give being, form, or shape to; to compose, create, or bring out by intellectual or physical effort; to bear, make, or yield something"}}
   (fn [entry] [(:site.fabricate.document/format entry)
                (:site.fabricate.page/format entry)]))
 

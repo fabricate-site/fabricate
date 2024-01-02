@@ -1,13 +1,15 @@
 (ns site.fabricate.prototype.api-test
   (:require [clojure.test :as t]
             [site.fabricate.prototype.api :as api]
+            [malli.core :as m]
             [babashka.fs :as fs]))
+
 
 (t/deftest entries
   (let [tmp-dir (fs/create-temp-dir {:prefix "fabricate-test-"})
         entry-data (api/plan {:site.fabricate.page/publish-dir tmp-dir})]
     (t/testing "planning"
-      (t/is (every? #(contains? % :site.fabricate.source/location) entry-data)))
+      (t/is (every? (m/validator api/entry-schema) entry-data)))
     (t/testing "assembly"
       (doseq [e entry-data]
         (let [assembled (api/assemble e)]
