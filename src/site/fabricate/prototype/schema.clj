@@ -30,7 +30,12 @@
 
 (register! :file [:fn file?])
 
-(m/validate :file (fs/file "something"))
+(defn ns? [v] (or (instance? clojure.lang.Namespace v) (some? find-ns v)))
+
+(register! :namespace [:fn ns?])
+
+(comment
+  (m/validate :file (fs/file "something")))
 
 (defn malli?
   "Returns true if the given form is a valid malli schema"

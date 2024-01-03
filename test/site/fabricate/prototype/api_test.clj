@@ -14,6 +14,11 @@
       (doseq [e entry-data]
         (let [assembled (api/assemble e)]
           (t/is (some? (:site.fabricate.document/data assembled))))))
+    (t/testing "combine"
+      (let [assembled (mapv #(api/assemble %) entry-data)
+            combined (api/combine [#(mapv api/doc->page %)]
+                                  {:site.fabricate.api/entries assembled})]
+        (t/is (contains? (first combined) :site.fabricate.page/data))))
     (t/testing "production"
       (doseq [e entry-data]
         (let [assembled (api/assemble e)
@@ -26,6 +31,7 @@
           (t/is (fs/exists? output)))))))
 
 (comment
+  (api/build! {})
   (fs/create-temp-dir {:prefix "something-"})
   (def assembled-posts-test
     (mapv api/assemble (api/plan {:input-dir "pages", :patterns api/patterns})))

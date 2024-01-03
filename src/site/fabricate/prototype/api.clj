@@ -95,12 +95,13 @@
       "Tags and labels describing the content of a page. May be strings, Clojure keywords, or Clojure symbols.",
     :term :site.fabricate.page/tags,
     :type [:* [:or :string :keyword :symbol]]}
-   {:doc "The unique identifier for an entry. May be a string or a UUID.",
+   {:doc
+      "The unique identifier for a document. May be a string, UUID, symbol, or Clojure namespace.",
     :term :site.fabricate.entry/id,
-    :type [:or :string [:fn uuid?]]}
+    :type [:or :string [:fn uuid?] :symbol :namespace]}
    {:doc "The Clojure namespace of an entry.",
     :term :site.fabricate.entry/namespace,
-    :type [:fn #(some? (find-ns %))]}])
+    :type :namespace}])
 
 ;; register schema components
 (doseq [{:keys [term doc], :as d} definitions]
@@ -125,7 +126,8 @@
                  :site.fabricate.page/modified-time :site.fabricate.page/tags
                  :site.fabricate.entry/id :site.fabricate.entry/namespace]))
     ;; entries ultimately have to come from somewhere.
-    [:site.fabricate.api/source :site.fabricate.source/location]))
+    [:site.fabricate.api/source :site.fabricate.source/location
+     :site.fabricate.source/format]))
 
 (defmulti collect
   "Generate the input entries from a source."
@@ -166,11 +168,6 @@
                         "/README.md"))}]}])
 
 
-(comment
-  (collect "pages/**.fab" {:site.fabricate.page/publish-dir "docs"})
-  (malli.error/humanize (m/explain entry-schema
-                                   (first (collect "README.md.fab" {}))))
-  (map first (.getMethodTable collect)))
 
 (defn collect-entries
   "Get the entries from each source location defined by the dispatch values of `collect`."
@@ -205,17 +202,17 @@
         evaluated-page (read/eval-all parsed-page)
         page-metadata (page/lift-metadata evaluated-page
                                           (last (read/get-metadata
-                                                 parsed-page)))
+                                                  parsed-page)))
         hiccup-page [:html (page/doc-header page-metadata)
                      [:body
                       [:main
                        (apply conj
-                              [:article {:lang "en-us"}]
-                              (page/parse-paragraphs evaluated-page))]
+                         [:article {:lang "en-us"}]
+                         (page/parse-paragraphs evaluated-page))]
                       [:footer [:div [:a {:href "/"} "Home"]]]]]]
     (assoc entry
-           :site.fabricate.document/data hiccup-page
-           :site.fabricate.page/title (:title page-metadata))))
+      :site.fabricate.document/data hiccup-page
+      :site.fabricate.page/title (:title page-metadata))))
 
 (defmethod assemble [:site.fabricate.read/v0 :hiccup]
   [entry]
@@ -224,8 +221,8 @@
 (defmethod assemble [:site.fabricate.markdown/v0 :markdown]
   [entry]
   (assoc entry
-         :site.fabricate.document/data (slurp (:site.fabricate.source/location
-                                               entry))))
+    :site.fabricate.document/data (slurp (:site.fabricate.source/location
+                                           entry))))
 
 ;; (def assemble-index nil)
 
@@ -283,6 +280,27 @@
     (spit output-file (:site.fabricate.document/data entry))
     (assoc entry :site.fabricate.page/output output-file)))
 
+(def settings (atom {:site.fabricate.page/publish-dir "./"}))
+
+(defn doc->page
+  [{:keys [site.fabricate.document/title site.fabricate.document/data
+           site.fabricate.document/id],
+    :as entry}]
+  (assoc entry
+         :site.fabricate.page/data data
+         :site.fabricate.page/title title
+         :site.fabricate.page/id id))
+
+(defn combine
+  [tasks
+   {:keys [site.fabricate.api/entries site.fabricate.api/settings], :as site}]
+  (let [sorted-tasks tasks]
+    (reduce (fn [entries task] (task entries)) entries sorted-tasks)))
+
+(defn publish!
+  "Finalize the website after running the `produce!` operation on every page."
+  [options]
+  nil)
 
 (defn build!
   "`plan`, `assemble` and `produce!` all of the entries, writing their output to disk."
@@ -292,9 +310,4 @@
 (defn rebuild!
   "Idempotent version of `assemble` and `produce!`; called when a file change is detected."
   [entry]
-  nil)
-
-(defn publish!
-  "Finalize the website after running the `produce!` operation on every page."
-  [options]
   nil)
