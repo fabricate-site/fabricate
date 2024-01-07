@@ -6,7 +6,7 @@
          com.cnuernber/charred {:mvn/version "1.033"},
          com.taoensso/tufte {:mvn/version "2.6.3"},
          criterium/criterium {:mvn/version "0.4.6"}},
-        :extra-paths ["test"],
+        :extra-paths ["test" "dev"],
         :jvm-opts ["-Djdk.attach.allowAttachSelf"
                    "-XX:+UnlockDiagnosticVMOptions"
                    "-XX:+DebugNonSafepoints"]},
