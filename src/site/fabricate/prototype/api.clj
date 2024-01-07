@@ -131,10 +131,10 @@
 
 (defmulti collect
   "Generate the input entries from a source."
-  (fn [src _settings] src))
+  (fn [src _options] src))
 
 (defmethod collect "pages/**.fab"
-  [src settings]
+  [src options]
   (mapv (fn path->entry [p]
           {:site.fabricate.source/format :site.fabricate.read/v0,
            :site.fabricate.document/format :hiccup,
@@ -145,7 +145,7 @@
            :site.fabricate.page/outputs
              [{:site.fabricate.page/format :html,
                :site.fabricate.page/location
-                 (fs/file (:site.fabricate.page/publish-dir settings))}]})
+                 (fs/file (:site.fabricate.page/publish-dir options))}]})
     (fs/glob (System/getProperty "user.dir") src)))
 
 
@@ -153,7 +153,7 @@
 ;; separately if there's overlap.
 
 (defmethod collect "README.md.fab"
-  [src settings]
+  [src options]
   [{:site.fabricate.source/location (fs/file src),
     :site.fabricate.api/source src,
     :site.fabricate.source/created (time/file-created src),
@@ -164,26 +164,27 @@
     :site.fabricate.page/outputs
       [{:site.fabricate.page/format :markdown,
         :site.fabricate.page/location
-          (fs/file (str (:site.fabricate.page/publish-dir settings)
+          (fs/file (str (:site.fabricate.page/publish-dir options)
                         "/README.md"))}]}])
 
 
 
 (defn collect-entries
   "Get the entries from each source location defined by the dispatch values of `collect`."
-  [{:keys [site.fabricate.page/publish-dir], :as settings}]
+  [{:keys [site.fabricate.page/publish-dir], :as options}]
   (vec (for [[collect-pattern _] (.getMethodTable collect)
-             entry-data (collect collect-pattern settings)
+             entry-data (collect collect-pattern options)
              output (:site.fabricate.page/outputs entry-data)]
          (-> entry-data
              (dissoc :site.fabricate.page/outputs)
              (merge output)
              #_add-page-location))))
 
-(defn plan
-  "Generate the list of entries."
-  [settings]
-  (collect-entries settings))
+(defn plan!
+  "Execute all the given `setup-tasks`, then collect the list of entries."
+  [setup-tasks options]
+  (doseq [t setup-tasks] (t options))
+  (collect-entries options))
 
 ;; not enforcing a spec on a multimethod seems like the best way of keeping
 ;; it open for extension, and keeps the API simpler.
@@ -231,15 +232,15 @@
 (defn- output-path
   [input-file output-location]
   (cond (fs/directory? output-location)
-        (fs/file (str output-location "/" (fs/file-name input-file)))
+          (fs/file (str output-location "/" (fs/file-name input-file)))
         (instance? java.io.File output-location) output-location))
 
 (defmulti produce!
   "Produce the content of a file from the results of the `assemble` operation and write it to disk. Takes an entry and returns an entry."
   {:term/definition
-   {:source (URI. "https://www.merriam-webster.com/dictionary/produce"),
-    :definition
-    "to make available for public exhibition or dissemination; to cause to have existence or to happen; to give being, form, or shape to; to compose, create, or bring out by intellectual or physical effort; to bear, make, or yield something"}}
+     {:source (URI. "https://www.merriam-webster.com/dictionary/produce"),
+      :definition
+        "to make available for public exhibition or dissemination; to cause to have existence or to happen; to give being, form, or shape to; to compose, create, or bring out by intellectual or physical effort; to bear, make, or yield something"}}
   (fn [entry] [(:site.fabricate.document/format entry)
                (:site.fabricate.page/format entry)]))
 
@@ -263,8 +264,8 @@
 (defmethod produce! [:hiccup :html]
   [entry]
   (let [output-file (fs/file (str (output-path
-                                   (:site.fabricate.source/location entry)
-                                   (:site.fabricate.page/location entry))
+                                    (:site.fabricate.source/location entry)
+                                    (:site.fabricate.page/location entry))
                                   ".html"))]
     (write-hiccup-html! (:site.fabricate.document/data entry) output-file)
     (-> entry
@@ -280,8 +281,6 @@
     (spit output-file (:site.fabricate.document/data entry))
     (assoc entry :site.fabricate.page/output output-file)))
 
-(def settings (atom {:site.fabricate.page/publish-dir "./"}))
-
 (defn doc->page
   [{:keys [site.fabricate.document/title site.fabricate.document/data
            site.fabricate.document/id],
@@ -292,15 +291,19 @@
          :site.fabricate.page/id id))
 
 (defn combine
-  [tasks
-   {:keys [site.fabricate.api/entries site.fabricate.api/settings], :as site}]
-  (let [sorted-tasks tasks]
-    (reduce (fn [entries task] (task entries)) entries sorted-tasks)))
-
-(defn publish!
-  "Finalize the website after running the `produce!` operation on every page."
-  [options]
+  [{:keys [site.fabricate.api/entries site.fabricate.api/options], :as site}]
   nil)
+
+
+(defn construct!
+  "Run the tasks necessary to complete the website. Execute `produce` on every page, then run `tasks`."
+  [tasks
+   {:keys [site.fabricate.api/entries site.fabricate.api/options],
+    :as init-site}]
+  (let [sorted-tasks tasks
+        sorted-entries entries]
+    (run! produce! entries)
+    (reduce (fn [site task] (site entries)) init-site sorted-tasks)))
 
 (defn build!
   "`plan`, `assemble` and `produce!` all of the entries, writing their output to disk."
