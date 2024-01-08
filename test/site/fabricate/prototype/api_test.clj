@@ -1,13 +1,25 @@
 (ns site.fabricate.prototype.api-test
   (:require [clojure.test :as t]
             [site.fabricate.prototype.api :as api]
+            ;;  refer the dev ns to ensure multimethods have impls
+            [site.fabricate.dev.build]
             [malli.core :as m]
             [babashka.fs :as fs]))
+
+(defn doc->page
+  [{:keys [site.fabricate.document/title site.fabricate.document/data
+           site.fabricate.document/id],
+    :as entry}]
+  (assoc entry
+         :site.fabricate.page/data data
+         :site.fabricate.page/title title
+         :site.fabricate.page/id id))
 
 
 (t/deftest entries
   (let [tmp-dir (fs/create-temp-dir {:prefix "fabricate-test-"})
-        entry-data (api/plan {:site.fabricate.page/publish-dir tmp-dir})]
+        entry-data (api/plan! [(fn [_] (fs/create-dir (fs/path tmp-dir "css")))]
+                              {:site.fabricate.page/publish-dir tmp-dir})]
     (t/testing "planning"
       (t/is (every? (m/validator api/entry-schema) entry-data)))
     (t/testing "assembly"
@@ -16,7 +28,8 @@
           (t/is (some? (:site.fabricate.document/data assembled))))))
     (t/testing "combine"
       (let [assembled (mapv #(api/assemble %) entry-data)
-            combined (api/combine [#(mapv api/doc->page %)]
+            combined (api/combine [#(mapv doc->page
+                                          (:site.fabricate.api/entries %))]
                                   {:site.fabricate.api/entries assembled})]
         (t/is (contains? (first combined) :site.fabricate.page/data))))
     (t/testing "production"
