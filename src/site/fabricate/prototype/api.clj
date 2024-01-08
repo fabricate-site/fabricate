@@ -157,7 +157,8 @@
   "Prepare the entries for `produce!` by calling `assemble` on each entry, then running `tasks` on the results."
   [tasks
    {:keys [site.fabricate.api/entries site.fabricate.api/options], :as site}]
-  (let [assembled-entries (mapv assemble entries)]
+  (let [sort-fn (get options :site.fabricate.api/entry-sort-fn identity)
+        assembled-entries (mapv assemble (sort-fn entries))]
     (reduce (fn [site task] (task site))
             (assoc site :site.fabricate.api/entries assembled-entries)
             tasks)))
