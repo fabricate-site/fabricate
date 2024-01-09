@@ -285,25 +285,30 @@
 (defn eval-all
   "Walks the parsed template and evaluates all the embedded expressions within it. Returns a Hiccup form."
   {:malli/schema
-     (m/schema
-       [:function
-        [:=> [:cat #_[:schema parsed-schema] [:vector :any]] [:vector :any]]
-        [:=> [:cat #_[:schema parsed-schema] [:vector :any] :boolean]
-         [:vector :any]]
-        [:=> [:cat #_[:schema parsed-schema] [:vector :any] :boolean :symbol]
-         [:vector :any]]])}
+   (m/schema
+    [:function
+     [:=> [:cat #_[:schema parsed-schema] [:vector :any]] [:vector :any]]
+     [:=> [:cat #_[:schema parsed-schema] [:vector :any] :boolean]
+      [:vector :any]]
+     [:=> [:cat #_[:schema parsed-schema] [:vector :any] :boolean :symbol]
+      [:vector :any]]])}
   ([parsed-form simplify? nmspc]
-   (let [form-nmspc (yank-ns parsed-form)
+   (let [form-nmspc (or (yank-ns parsed-form) nmspc)
          nmspc (if form-nmspc (create-ns form-nmspc) *ns*)]
-     (u/trace ::eval-parsed-template
-              [:log/level 500 ::template-ns (str nmspc)]
-              (binding [*ns* nmspc]
-                (refer-clojure)
-                (clojure.walk/postwalk
-                  (fn [i]
-                    (if (fabricate-expr? i) (eval-parsed-expr i simplify?) i))
-                  parsed-form)))))
-  ([parsed-form simplify?] (eval-all parsed-form simplify? *ns*))
+     (u/trace
+         ::eval-parsed-template
+       [:log/level 500 ::template-ns (str nmspc)]
+       (binding [*ns* nmspc]
+         (refer-clojure)
+         (let [final-form
+               (clojure.walk/postwalk
+                (fn [i]
+                  (if (fabricate-expr? i) (eval-parsed-expr i simplify?) i))
+                parsed-form)]
+           (with-meta final-form
+             {:namespace nmspc,
+              :metadata (when-let [m (resolve 'metadata)] (var-get m))}))))))
+  ([parsed-form simplify?] (eval-all parsed-form simplify? nil))
   ([parsed-form] (eval-all parsed-form true)))
 
 (defn include-source

@@ -8,6 +8,7 @@
             [site.fabricate.prototype.read.grammar :refer [template]]
             [site.fabricate.prototype.read :refer :all]))
 
+;; TODO: replace this and refactor tests to avoid this
 (def parse-eval (comp eval-all parse))
 
 (defn setup [f] (mi/collect!) (mi/instrument!) (f) (mi/unstrument!))
@@ -164,22 +165,22 @@
                    first
                    (eval-parsed-expr false))))
       (t/is
-       (= '([:pre [:code {:class "language-clojure"} "(+ 4 5)\n"]] 9)
-          (-> "✳+=(+ 4 5)🔚"
-              parse
-              first
-              (eval-parsed-expr true)))
-       "Results of forms should display properly alongside source expressions")
+        (= '([:pre [:code {:class "language-clojure"} "(+ 4 5)\n"]] 9)
+           (-> "✳+=(+ 4 5)🔚"
+               parse
+               first
+               (eval-parsed-expr true)))
+        "Results of forms should display properly alongside source expressions")
       (t/is (m/validate
-             error-form-schema
-             [:div {:class "fabricate-error"} [:h6 "Error"]
-              [:dl [:dt "Error type"]
-               [:dd [:code "clojure.lang.ExceptionInfo"]] [:dt "Error message"]
-               [:dd [:code "Unexpected EOF while reading item 1 of list."]]
-               [:dt "Error phase"] [:dd [:code ""]] [:dt "Location"]
-               [:dd '("Line " [:strong 1] ", " "Columns " [:strong 1 "-" 12])]]
-              [:details [:summary "Source expression"]
-               [:pre [:code "((+ 2 3)"]]]]))
+              error-form-schema
+              [:div {:class "fabricate-error"} [:h6 "Error"]
+               [:dl [:dt "Error type"]
+                [:dd [:code "clojure.lang.ExceptionInfo"]] [:dt "Error message"]
+                [:dd [:code "Unexpected EOF while reading item 1 of list."]]
+                [:dt "Error phase"] [:dd [:code ""]] [:dt "Location"]
+                [:dd '("Line " [:strong 1] ", " "Columns " [:strong 1 "-" 12])]]
+               [:details [:summary "Source expression"]
+                [:pre [:code "((+ 2 3)"]]]]))
       (t/is (= [:div {:class "fabricate-error"} [:h6 "Error"]
                 [:dl [:dt "Error type"]
                  [:dd {:class "fabricate-error-type"}
@@ -206,9 +207,20 @@
       (t/is (= [[1 2 3]] (parse-eval "✳=[1 2 3]🔚")))
       (t/is (= [["a" "b"]] (parse-eval "✳=[\"a\" \"b\"]🔚"))
             "Escaped quotes in forms should be preserved.")
-      (t/is (= [nil " foo " 3]
-               (eval-all (parse "✳(def var 3)🔚 foo ✳=var🔚") 'var-test-ns))
+      (t/is (=
+              [nil " foo " 3]
+              (eval-all (parse "✳(def var 3)🔚 foo ✳=var🔚") true 'var-test-ns))
             "In-form defs should be evaluated successfully.")
+      (let [evaluated (eval-all (parse
+                                  "✳(def metadata {:a 3})🔚 foo ✳=metadata🔚")
+                                true
+                                'var-test-ns)
+            form-meta (meta evaluated)]
+        (tap> form-meta)
+        (t/is (some? (:namespace form-meta))
+              "Namespace information should be attached to evaluated form")
+        (t/is (= {:a 3} (:metadata form-meta))
+              "Metadata should be attached to evaluated form"))
       #_(t/is (= [[:em 3]]
                  (parse-eval "✳=(site.fabricate.prototype.page/em 3)🔚"))
               "Namespace scoping should be preserved")
@@ -224,23 +236,23 @@
             "Escaped quotes in forms should be preserved.")
       (t/is (= [nil " baz " nil " foo " 3]
                (let [parsed
-                     (parse
-                      "✳(ns test-form-ns)🔚 baz ✳(def var 3)🔚 foo ✳=var🔚")]
+                       (parse
+                         "✳(ns test-form-ns)🔚 baz ✳(def var 3)🔚 foo ✳=var🔚")]
                  (eval-all parsed)))
             "In-form defs should be evaluated successfully.")
       (t/is
-       (=
-        [[:figure
-          [:img
-           {:src
-            "https://upload.wikimedia.org/wikipedia/commons/9/90/Pterodroma_mollis_light_morph_-_SE_Tasmania_2019.jpg"}]
-          [:figcaption "soft-plumaged petrel"]]]
-        (->
-         "✳=[:figure [:img {:src \"https://upload.wikimedia.org/wikipedia/commons/9/90/Pterodroma_mollis_light_morph_-_SE_Tasmania_2019.jpg\"} ]
+        (=
+          [[:figure
+            [:img
+             {:src
+                "https://upload.wikimedia.org/wikipedia/commons/9/90/Pterodroma_mollis_light_morph_-_SE_Tasmania_2019.jpg"}]
+            [:figcaption "soft-plumaged petrel"]]]
+          (->
+            "✳=[:figure [:img {:src \"https://upload.wikimedia.org/wikipedia/commons/9/90/Pterodroma_mollis_light_morph_-_SE_Tasmania_2019.jpg\"} ]
                 [:figcaption \"soft-plumaged petrel\"]]🔚"
-         parse
-         eval-all))
-       "evaluation should not remove content from forms")
+            parse
+            eval-all))
+        "evaluation should not remove content from forms")
       (let [ex-file (-> "README.md.fab"
                         slurp
                         (parse {:filename "README.md.fab"})
@@ -262,9 +274,9 @@
       (t/is (= [[:em "text"] ", with a comma following"]
                (parse-eval "✳=[:em \"text\"]🔚, with a comma following")))
       (t/is (= (hiccup/html (apply conj
-                                   [:div]
-                                   (parse-eval
-                                    "✳=[:em \"text\"]🔚, with a comma following")))
+                              [:div]
+                              (parse-eval
+                                "✳=[:em \"text\"]🔚, with a comma following")))
                "<div><em>text</em>, with a comma following</div>")))
     (t/testing ": error messages"
       (t/is (= [:div 5]
@@ -279,24 +291,28 @@
     (t/is (= "(def something &quot;abc&quot;)\n"
              (render-src '(do (def something "abc")) true)))
     (t/is
-     (=
-      "(def ex-form &quot;a form evaluated but displayed without its output&quot;)\n"
-      (render-src
-       '(do
-          (def ex-form "a form evaluated but displayed without its output")
-          nil)
-       true)
-      (->
-       "✳+(def ex-form \"a form evaluated but displayed without its output\")🔚"
-       parse
-       first
-       :exec
-       (render-src true))))
-    (t/is
-     (= [[:pre
-          [:code {:class "language-clojure"}
-           "(println \"a form evaluated but displayed without its output\")"]]]
+      (=
+        "(def ex-form &quot;a form evaluated but displayed without its output&quot;)\n"
+        (render-src
+          '(do
+            (def ex-form "a form evaluated but displayed without its output")
+            nil)
+          true)
         (->
-         "✳+(println \"a form evaluated but displayed without its output\")🔚"
-         parse
-         eval-all)))))
+          "✳+(def ex-form \"a form evaluated but displayed without its output\")🔚"
+          parse
+          first
+          :exec
+          (render-src true))))
+    (t/is
+      (= [[:pre
+           [:code {:class "language-clojure"}
+            "(println \"a form evaluated but displayed without its output\")"]]]
+         (->
+           "✳+(println \"a form evaluated but displayed without its output\")🔚"
+           parse
+           eval-all)))))
+
+(comment
+  (require '[clojure.pprint])
+  (add-tap (bound-fn* clojure.pprint/pprint)))
