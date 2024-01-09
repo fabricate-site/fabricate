@@ -3,7 +3,7 @@
    [garden.core :as garden]
    [garden.selectors :refer [root]]
    [garden.stylesheet :as stylesheet]
-   [site.fabricate.styles :as styles]
+   [site.fabricate.dev.styles :as styles]
    [site.fabricate.prototype.check]
    [site.fabricate.prototype.read]
    [site.fabricate.prototype.schema]
@@ -11,10 +11,9 @@
    [site.fabricate.prototype.write]
    [site.fabricate.prototype.page])) 🔚
 
-✳ (def page-css (garden/css styles/docs)) 🔚
 
 ✳(def metadata {:title "Fabricate"
-                :page-style page-css} )🔚
+:page-style (garden/css styles/docs)} )🔚
 
 ✳= [:div [:h1 {:class "xl-text"} (:title metadata)] [:hr]
     [:h4 "Form by art and labor"]]🔚

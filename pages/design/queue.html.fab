@@ -4,7 +4,7 @@
    [site.fabricate.prototype.write :as write]  
    [garden.core  :as garden]
    [garden.stylesheet :as stylesheet]
-   [site.fabricate.styles :as styles]
+   [site.fabricate.dev.styles :as styles]
    [site.fabricate.prototype.page :as page])) 🔚
    
 ✳(def metadata {:title "Design Doc for Work Queue"

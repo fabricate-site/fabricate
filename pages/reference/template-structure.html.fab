@@ -6,7 +6,7 @@
    [site.fabricate.prototype.read.grammar :as grammar]
    [garden.core  :as garden]
    [garden.stylesheet :as stylesheet]
-   [site.fabricate.styles :as styles]
+   [site.fabricate.dev.styles :as styles]
    [site.fabricate.prototype.page :as page])) 🔚
    
 ✳(def metadata {:title "A Reference to Fabricate's Page Templates"

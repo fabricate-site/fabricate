@@ -2,7 +2,7 @@
 (:require
  [clojure.string :as str]
  [site.fabricate.prototype.read.grammar :as grammar]
- [site.fabricate.styles :as styles]
+ [site.fabricate.dev.styles :as styles]
  [garden.core :as garden]
  [garden.selectors :as select]
  [garden.stylesheet :as stylesheet]

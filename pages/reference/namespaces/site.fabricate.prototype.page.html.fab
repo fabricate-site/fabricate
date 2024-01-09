@@ -3,7 +3,7 @@
             [site.fabricate.prototype.page :as page]
                [malli.core :as m]
                [garden.core :as garden]
-               [site.fabricate.styles :as styles]))🔚
+               [site.fabricate.dev.styles :as styles]))🔚
 
 ✳(def metadata {:title "site.fabricate.prototype.page Namespace"
                :page-style  (garden/css styles/docs)})🔚

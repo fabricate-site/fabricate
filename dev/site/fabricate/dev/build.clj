@@ -6,16 +6,20 @@
             [site.fabricate.prototype.read :as read]
             [site.fabricate.prototype.page :as page]
             [site.fabricate.prototype.html :as html]
+            [garden.core :as garden]
+            [garden.stylesheet :refer [at-import]]
             [babashka.fs :as fs]
             [hiccup.page]
+            [hiccup.core :as hiccup]
             [clojure.string :as str]
             [clojure.java.io :as io]))
 
 
 (defn create-dir-recursive
   [target-dir]
-  (->> (str/split (str (fs/relativize (fs/cwd) (fs/path (fs/cwd) target-dir)))
-                  (re-pattern fs/file-separator))
+  (->> (fs/path (fs/cwd) target-dir)
+       (fs/relativize (fs/cwd))
+       fs/components
        (reduce (fn [paths path] (conj paths (fs/path (peek paths) path))) [])
        (filter #(not (fs/exists? %)))
        (run! fs/create-dir)))
@@ -93,9 +97,11 @@
   [entry]
   (let [parsed-page (read/parse (slurp (:site.fabricate.source/location entry)))
         evaluated-page (read/eval-all parsed-page)
-        page-metadata (page/lift-metadata evaluated-page
-                                          (last (read/get-metadata
-                                                 parsed-page)))
+        page-metadata (update (page/lift-metadata evaluated-page
+                                                  (last (read/get-metadata
+                                                         parsed-page)))
+                              :page-style
+                              eval)
         hiccup-page [:html (page/doc-header page-metadata)
                      [:body
                       [:main
@@ -122,22 +128,34 @@
 ;; (defmethod assemble "index.html" [entry] (assemble-index entry))
 
 
-
 (defn write-hiccup-html!
   "Generate HTML from Hiccup data and write it to the given file."
   [hiccup-page-data output-file]
-  (spit output-file (hiccup.page/html5 hiccup-page-data)))
+  (let [parent-dir (fs/parent output-file)]
+    (create-dir? parent-dir)
+    (spit output-file (hiccup/html hiccup-page-data))))
+
+(defn subpath
+  ([dir p] (apply fs/path (drop 1 (fs/components (fs/relativize dir p)))))
+  ([p] (subpath (fs/cwd) p)))
+
+(comment
+  (fs/parent "docs/README.md")
+  (subpath "docs/path/to/some/file"))
 
 (defn output-path
   [input-file output-location]
-  (cond (fs/directory? output-location)
-        (fs/file (str output-location "/" (fs/file-name input-file)))
+  (cond (fs/directory? output-location) (fs/file (fs/path output-location
+                                                          (subpath input-file)))
         (instance? java.io.File output-location) output-location))
 
 (defmethod api/produce! [:hiccup :html]
   [entry]
   (let [output-file (fs/file (str (output-path
-                                   (:site.fabricate.source/location entry)
+                                   (fs/strip-ext
+                                    (fs/strip-ext
+                                     (:site.fabricate.source/location
+                                      entry)))
                                    (:site.fabricate.page/location entry))
                                   ".html"))]
     (write-hiccup-html! (:site.fabricate.document/data entry) output-file)
@@ -147,23 +165,23 @@
 
 (defmethod api/produce! [:markdown :markdown]
   [entry]
-  (let [output-file (fs/file (str (output-path
-                                   (:site.fabricate.source/location entry)
-                                   (:site.fabricate.page/location entry))
-                                  ".md"))]
+  (let [output-file (fs/file (output-path
+                              (:site.fabricate.source/location entry)
+                              (:site.fabricate.page/location entry)))]
     (spit output-file (:site.fabricate.document/data entry))
     (assoc entry :site.fabricate.page/output output-file)))
 
-(defn doc->page
-  [{:keys [site.fabricate.document/title site.fabricate.document/data
-           site.fabricate.document/id],
-    :as entry}]
-  (assoc entry
-         :site.fabricate.page/data data
-         :site.fabricate.page/title title
-         :site.fabricate.page/id id))
-
-
-
 (comment
-  (api/plan! setup-tasks options))
+  (require '[http.server :as server])
+  (defonce srv
+    (server/start {:cors-allow-headers nil,
+                   :dir (str (fs/path (fs/cwd) "docs")),
+                   :port 8002,
+                   :no-cache true}))
+  (let [entries (api/plan! setup-tasks options)
+        assembled-entries (api/combine []
+                                       {:site.fabricate.api/options options,
+                                        :site.fabricate.api/entries entries})]
+    (api/construct! [] assembled-entries))
+  (garden/css styles/docs)
+  (run! fs/delete (fs/glob "docs" "**.html")))

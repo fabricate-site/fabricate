@@ -2,7 +2,7 @@
   (:require [site.fabricate.prototype.page :as page]
             [garden.core :as garden]
             [clojure.string :as str]
-            [site.fabricate.styles :as styles]
+            [site.fabricate.dev.styles :as styles]
             [site.fabricate.prototype.fsm :as fsm]
             [site.fabricate.prototype.schema :as schema]
             [site.fabricate.prototype.write :as write]
