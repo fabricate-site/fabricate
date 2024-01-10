@@ -18,34 +18,35 @@
 
 (t/deftest entries
   (let [tmp-dir (fs/create-temp-dir {:prefix "fabricate-test-"})
-        entry-data (api/plan! [(fn [_] (fs/create-dir (fs/path tmp-dir "css")))]
-                              {:site.fabricate.page/publish-dir tmp-dir})]
+        {:keys [site.fabricate.api/entries], :as plan-data}
+        (api/plan! [(fn [s] (fs/create-dir (fs/path tmp-dir "css")) s)]
+                   {:site.fabricate.api/options
+                    {:site.fabricate.page/publish-dir tmp-dir}})]
     (t/testing "planning"
-      (t/is (every? (m/validator api/entry-schema) entry-data)))
+      (t/is (every? (m/validator api/entry-schema) entries)))
+    (t/testing "building"
+      (doseq [e entries]
+        (let [built (api/build e)]
+          (t/is (some? (:site.fabricate.document/data built))))))
     (t/testing "assembly"
-      (doseq [e entry-data]
-        (let [assembled (api/assemble e)]
-          (t/is (some? (:site.fabricate.document/data assembled))))))
-    (t/testing "combine"
-      (let [assembled (mapv #(api/assemble %) entry-data)
-            combined (api/combine [#(mapv doc->page
-                                          (:site.fabricate.api/entries %))]
-                                  {:site.fabricate.api/entries assembled})]
-        (t/is (contains? (first combined) :site.fabricate.page/data))))
+      (let [assembled (api/assemble [#(mapv doc->page
+                                            (:site.fabricate.api/entries %))]
+                                    {:site.fabricate.api/entries entries})]
+        (t/is (contains? (first assembled) :site.fabricate.page/data))))
     (t/testing "production"
-      (doseq [e entry-data]
-        (let [assembled (api/assemble e)
+      (doseq [e entries]
+        (let [built (api/build e)
               {:keys [site.fabricate.page/output], :as produced} (api/produce!
-                                                                  assembled)]
+                                                                  built)]
           (t/is (some? (:site.fabricate.page/title produced))
                 (format "Page produced from %s should have a title"
-                        (str (:site.fabricate.source/location assembled))))
+                        (str (:site.fabricate.source/location built))))
           (t/is (instance? java.io.File output))
           (t/is (fs/exists? output)))))))
 
 (comment
   (api/build! {})
   (fs/create-temp-dir {:prefix "something-"})
-  (def assembled-posts-test
-    (mapv api/assemble (api/plan {:input-dir "pages", :patterns api/patterns})))
-  (first assembled-posts-test))
+  (def built-posts-test
+    (mapv api/build (api/plan {:input-dir "pages", :patterns api/patterns})))
+  (first built-posts-test))

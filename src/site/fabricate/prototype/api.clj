@@ -131,41 +131,79 @@
   (fn [src _options] src))
 
 
+
+(def site-fn-schema
+  "Function schema for functions that operate on a site"
+  (m/schema [:schema
+             {:registry {::task-list [:or [:* [:schema [:ref ::site-fn]]]
+                                      [:map-of [:schema [:ref ::site-fn]]
+                                       [:schema [:ref ::site-fn]]]],
+                         ::site-map
+                           [:map [:site.fabricate.api/entries [:* entry-schema]]
+                            [:site.fabricate.api/options :map]],
+                         ::site-fn [:=>
+                                    [:cat [:schema [:ref ::task-list]]
+                                     [:schema [:ref ::site-map]]]
+                                    [:schema [:ref ::site-map]]]}} ::site-fn]))
+
+
+;; question: should this actually be exactly the same signature /
+;; implementation as the other functions in the API? Making it different
+;; - by simply executing each setup task for its side effects rather than
+;; for returning an updated site - encourages keeping the initial setup
+;; simpler, and makes the API somewhat more orthogonal. I think this
+;; question is better answered through use while the API continues to
+;; stabilize.
+
 (defn plan!
-  "Execute all the given `setup-tasks`, then collect the list of entries."
-  [setup-tasks options]
-  (doseq [t setup-tasks] (t options))
-  (vec (for [[collect-pattern _] (.getMethodTable collect)
-             entry-data (collect collect-pattern options)
-             output (:site.fabricate.page/outputs entry-data)]
-         (-> entry-data
-             (dissoc :site.fabricate.page/outputs)
-             (merge output)))))
+  "Execute all the given `setup-tasks`, then `collect` the list of entries from each source.
+
+  This list of entries will be appended to any entries passed in as a component of the `site` argument."
+  [setup-tasks
+   {:keys [site.fabricate.api/entries :site.fabricate.api/options],
+    :or {entries []},
+    :as site}]
+  (let [post-setup-site (reduce (fn [site task] (task site)) site setup-tasks)
+        collected-entries
+          (vec (for [[collect-pattern _] (.getMethodTable collect)
+                     entry-data (collect collect-pattern options)
+                     output (:site.fabricate.page/outputs entry-data)]
+                 (-> entry-data
+                     (dissoc :site.fabricate.page/outputs)
+                     (merge output))))]
+    (update post-setup-site
+            :site.fabricate.api/entries
+            (fn [es] (reduce conj es collected-entries)))))
 
 ;; not enforcing a spec on a multimethod seems like the best way of keeping
 ;; it open for extension, and keeps the API simpler.
-(defmulti assemble
+(defmulti build
   "Generate structured (EDN) document content for an entry from a source format. Takes an entry and returns a document (entry)."
-  {:term/definition
-     {:source (URI. "https://www.merriam-webster.com/dictionary/assemble"),
-      :definition "to fit together the parts of"}}
   (fn [entry] [(:site.fabricate.source/format entry)
                (:site.fabricate.document/format entry)]))
 
+(comment
+  {:term/definition
+     {:source (URI. "https://www.merriam-webster.com/dictionary/assemble"),
+      :definition "to fit together the parts of"}})
 
-(defn combine
-  "Prepare the entries for `produce!` by calling `assemble` on each entry, then running `tasks` on the results."
+
+(defn assemble
+  "Prepare the entries for `produce!` by calling `build` on each entry, then running `tasks` on the results."
+  {:term/definition
+     {:source (URI. "https://www.merriam-webster.com/dictionary/assemble"),
+      :definition "to fit together the parts of"}}
   [tasks
    {:keys [site.fabricate.api/entries site.fabricate.api/options], :as site}]
   (let [sort-fn (get options :site.fabricate.api/entry-sort-fn identity)
-        assembled-entries (mapv assemble (sort-fn entries))]
+        doc-entries (mapv build (sort-fn entries))]
     (reduce (fn [site task] (task site))
-      (assoc site :site.fabricate.api/entries assembled-entries)
+      (assoc site :site.fabricate.api/entries doc-entries)
       tasks)))
 
 
 (defmulti produce!
-  "Produce the content of a file from the results of the `assemble` operation and write it to disk. Takes an entry and returns an entry."
+  "Produce the content of a file from the results of the `build` operation and write it to disk. Takes an entry and returns an entry."
   {:term/definition
      {:source (URI. "https://www.merriam-webster.com/dictionary/produce"),
       :definition
@@ -184,12 +222,13 @@
     (run! produce! entries)
     (reduce (fn [site task] (site entries)) init-site sorted-tasks)))
 
-(defn build!
-  "`plan`, `assemble` and `produce!` all of the entries, writing their output to disk."
-  [options]
-  nil)
 
-(defn rebuild!
-  "Idempotent version of `assemble` and `produce!`; called when a file change is detected."
-  [entry]
-  nil)
+(comment
+  (defn build!
+    "`plan`, `assemble` and `produce!` all of the entries, writing their output to disk."
+    [options]
+    nil)
+  (defn rebuild!
+    "Idempotent version of `assemble` and `produce!`; called when a file change is detected."
+    [entry]
+    nil))

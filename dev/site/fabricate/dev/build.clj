@@ -14,28 +14,39 @@
             [clojure.string :as str]
             [clojure.java.io :as io]))
 
-
 (defn create-dir-recursive
   [target-dir]
-  (->> (fs/path (fs/cwd) target-dir)
-       (fs/relativize (fs/cwd))
-       fs/components
-       (reduce (fn [paths path] (conj paths (fs/path (peek paths) path))) [])
-       (filter #(not (fs/exists? %)))
-       (run! fs/create-dir)))
+  (let [absolute-path? (fs/absolute? target-dir)
+        target-dir (if (fs/relative? target-dir)
+                     (fs/relativize (fs/cwd) (fs/path (fs/cwd) target-dir))
+                     target-dir)]
+    (->> target-dir
+         fs/components
+         (reduce (fn [paths path]
+                   (conj paths
+                         (let [next-path (fs/path (peek paths) path)]
+                           (if absolute-path?
+                             (fs/absolutize (str fs/file-separator next-path))
+                             next-path))))
+           [])
+         (filter #(not (fs/exists? %)))
+         (run! fs/create-dir))))
 
 (defn create-dir? [d] (when-not (fs/exists? d) (create-dir-recursive d)))
 
 (defn create-publish-dirs!
-  [{:keys [site.fabricate.page/publish-dir], :as options}]
-  (let [css-dir (fs/path publish-dir "css")
+  [{:keys [site.fabricate.api/options], :as site}]
+  (let [{:keys [site.fabricate.page/publish-dir]} options
+        css-dir (fs/path publish-dir "css")
         fonts-dir (fs/path publish-dir "fonts")]
-    (run! create-dir? [publish-dir css-dir fonts-dir])))
+    (run! create-dir? [publish-dir css-dir fonts-dir])
+    site))
 
 (defn get-css!
-  [{:keys [site.fabricate.page/publish-dir], :as options}]
+  [{:keys [site.fabricate.api/options :as site]}]
   (let
-    [remedy
+    [{:keys [site.fabricate.page/publish-dir]} options
+     remedy
        {:file (fs/file (fs/path publish-dir "css" "remedy.css")),
         :url
           "https://raw.githubusercontent.com/jensimmons/cssremedy/6590d9630bdd324469620636d85b7ea3753e9a7b/css/remedy.css"}
@@ -43,17 +54,21 @@
        {:file (fs/file (fs/path publish-dir "css" "normalize.css")),
         :url "https://unpkg.com/@csstools/normalize.css@12.1.1/normalize.css"}]
     (doseq [{:keys [file url]} [normalize remedy]]
-      (when-not (fs/exists? file) (io/copy url file)))))
+      (when-not (fs/exists? file) (io/copy url file))))
+  site)
 
 (defn copy-fonts!
-  [{:keys [site.fabricate.page/publish-dir], :as options}]
-  (let [font-dir (System/getProperty "user.font-dir")
+  [{:keys [site.fabricate.api/options], :as site}]
+  (let [{:keys [site.fabricate.page/publish-dir]} options
+        font-dir (System/getProperty "user.font-dir")
         fonts []]
     (doseq [{:keys [src file]} fonts]
-      (when-not (fs/exists? file) (fs/copy src file)))))
+      (when-not (fs/exists? file) (fs/copy src file))))
+  site)
 
-
-(def options {:site.fabricate.page/publish-dir "docs"})
+(def options
+  "Options for building Fabricate's own documentation."
+  {:site.fabricate.page/publish-dir "docs"})
 
 (def setup-tasks [create-publish-dirs! get-css! copy-fonts!])
 
@@ -97,27 +112,24 @@
   [entry]
   (let [parsed-page (read/parse (slurp (:site.fabricate.source/location entry)))
         evaluated-page (read/eval-all parsed-page)
-        page-metadata (update (page/lift-metadata evaluated-page
-                                                  (last (read/get-metadata
-                                                         parsed-page)))
-                              :page-style
-                              eval)
+        page-metadata (page/lift-metadata evaluated-page
+                                          (:metadata (meta evaluated-page)))
         hiccup-page [:html (page/doc-header page-metadata)
                      [:body
                       [:main
                        (apply conj
-                              [:article {:lang "en-us"}]
-                              (page/parse-paragraphs evaluated-page))]
+                         [:article {:lang "en-us"}]
+                         (page/parse-paragraphs evaluated-page))]
                       [:footer [:div [:a {:href "/"} "Home"]]]]]]
     (assoc entry
-           :site.fabricate.document/data hiccup-page
-           :site.fabricate.page/title (:title page-metadata))))
+      :site.fabricate.document/data hiccup-page
+      :site.fabricate.page/title (:title page-metadata))))
 
-(defmethod api/assemble [:site.fabricate.read/v0 :hiccup]
+(defmethod api/build [:site.fabricate.read/v0 :hiccup]
   [entry]
   (fabricate-v0->hiccup entry))
 
-(defmethod api/assemble [:site.fabricate.markdown/v0 :markdown]
+(defmethod api/build [:site.fabricate.markdown/v0 :markdown]
   [entry]
   (assoc entry
          :site.fabricate.document/data (slurp (:site.fabricate.source/location
@@ -178,10 +190,12 @@
                    :dir (str (fs/path (fs/cwd) "docs")),
                    :port 8002,
                    :no-cache true}))
-  (let [entries (api/plan! setup-tasks options)
-        assembled-entries (api/combine []
-                                       {:site.fabricate.api/options options,
-                                        :site.fabricate.api/entries entries})]
-    (api/construct! [] assembled-entries))
-  (garden/css styles/docs)
+  ;; it's hard to beat this simplicity. also, a point in favor of the
+  ;; "return a modified site with modified options" implementation:
+  ;; potentially storing a reference to a server or other stateful
+  ;; component
+  (->> {:site.fabricate.api/options options}
+       (api/plan! setup-tasks)
+       (api/assemble [])
+       (api/construct! []))
   (run! fs/delete (fs/glob "docs" "**.html")))
