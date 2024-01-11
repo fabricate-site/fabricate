@@ -17,31 +17,38 @@
                                                  (mr/mutable-registry
                                                   registry)))
 
-(defn register!
-  "Add the `schema` specified by the `type` keyword to the global registry.
-
-  Similar to `clojure.spec.alpha/def`."
-  [type schema]
-  (swap! registry assoc type schema))
-
-(defn file?
-  [v]
-  (or (instance? java.io.File v) (instance? java.nio.file.Path v)))
-
-(register! :file [:fn file?])
-
-(defn ns? [v] (or (instance? clojure.lang.Namespace v) (some? find-ns v)))
-
-(register! :namespace [:fn ns?])
-
-(comment
-  (m/validate :file (fs/file "something")))
 
 (defn malli?
   "Returns true if the given form is a valid malli schema"
   {:malli/schema (m/schema [:=> [:cat :any] :boolean])}
   [form]
   (try (do (m/schema form) true) (catch Exception e false)))
+
+(defn register!
+  "Add the `schema` specified by the `type` keyword to the global registry.
+
+  Similar to `clojure.spec.alpha/def`."
+  {:malli/schema [:=> [:cat :keyword [:fn malli?]] :any]}
+  [type schema]
+  (swap! registry assoc type schema))
+
+(defn file?
+  {:malli/schema [:=> [:cat :any] :boolean]}
+  [v]
+  (or (instance? java.io.File v) (instance? java.nio.file.Path v)))
+
+(register! :file [:fn file?])
+
+(defn ns?
+  {:malli/schema [:=> [:cat :any] :boolean]}
+  [v]
+  (or (instance? clojure.lang.Namespace v) (some? find-ns v)))
+
+(register! :namespace [:fn ns?])
+
+(comment
+  (m/validate :file (fs/file "something")))
+
 
 (register! :malli [:fn malli?])
 

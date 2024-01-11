@@ -63,12 +63,31 @@ One of the motivating concerns for this implementation was the ability to suppor
 
 ✳= [:pre
   [:code {:class "language-clojure"}
-   (node->hiccup
-    (read/include-form "./src/site/fabricate/prototype/write.clj"
-                       #(and (list? %)
-                             (= '(def markdown-state)
-                                (take 2 %)))))]] 🔚
-
+   (expr->hiccup
+    '(def markdown-state
+       "Fabricate markdown input evaluated as markdown string"
+       (let [s1 [:map {:closed true, :fsm/name "Evaluated", :fsm/description "Fabricate contents evaluated after parsing"}
+                 [:site.fabricate.file/input-file [:or [:fn site.fabricate.sketch/file?] :string]]
+                 [:site.fabricate.file/template-suffix [:orn [:default [:= ".fab"]] [:custom :string]]]
+                 [:site.fabricate.file/input-filename :string]
+                 [:site.fabricate.file/output-extension :string]
+                 [:site.fabricate.page/unparsed-content :string]
+                 [:site.fabricate.page/parsed-content [:fn vector?]]
+                 [:site.fabricate.page/title {:optional true} :string]
+                 [:site.fabricate.page/namespace {:optional true} :symbol]
+                 [:site.fabricate.file/output-file {:optional true}
+                  [:orn [:path :string] [:file [:fn site.fabricate.sketch/file?]]]]
+                 [:site.fabricate.page/evaluated-content
+                  [:fn  #(or (list? %) (vector? %)) ]]
+                 [:site.fabricate.page/metadata {:optional true} [:map {:closed false}]]]]
+         (mu/closed-schema
+          (mu/merge
+           s1
+           [:map {:closed true
+                  :fsm/name "Markdown"
+                  :fsm/description "Fabricate markdown input evaluated as markdown string"}
+            [:site.fabricate.file/output-extension [:enum  "md" "markdown"]]])))))]] 🔚
+          
 
 In the read step, data about the input file is appended to the map holding a page's state. This data allows us to dispatch functions on that map entry, running a function (after the evaluation step) that basically just renders the page as a markdown string for any pages that need to have Markdown as an ✳= [:em "output"] 🔚  format. This allows for special cases in the rendering pipeline to be handled merely by progressively refining the schema to pick out the parts of data that identify them, and writing functions that are compatible with the remaining states.
 

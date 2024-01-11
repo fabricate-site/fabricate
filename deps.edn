@@ -10,12 +10,6 @@
         :jvm-opts ["-Djdk.attach.allowAttachSelf"
                    "-XX:+UnlockDiagnosticVMOptions"
                    "-XX:+DebugNonSafepoints"]},
-  :publish {:exec-args {:dirs ["pages/"], :files ["README.md.fab"]},
-            :exec-fn site.fabricate.prototype.write/publish!,
-            :extra-deps {daveray/dorothy
-                         {:git/url "https://github.com/daveray/dorothy",
-                          :sha
-                          "207570804dfda2162a15b9ee55b5e76ec6e1ecfa"}}},
   :runner {:exec-args {:excludes [:performance],
                        :patterns ["^(?!.*performance).*$"]},
            :exec-fn cognitect.test-runner.api/test,
