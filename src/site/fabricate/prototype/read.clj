@@ -15,7 +15,6 @@
             [malli.transform :as mt]
             [site.fabricate.prototype.schema :as schema]
             [site.fabricate.prototype.read.grammar :refer [template]]
-            [com.brunobonacci.mulog :as u]
             [instaparse.core :as insta]
             [clojure.string :as string]
             [clojure.java.io :as io]))
@@ -205,19 +204,17 @@
   ([{:keys [expr-src expr exec error result display fabricate.read/parse-error],
      :as expr-map} simplify? post-validator]
    (let [form-meta (meta expr-map)
-         evaluated-expr-map
-           (try (assoc expr-map
-                  :result (u/trace ::eval-parsed-expr
-                                   (apply concat [:log/level 500] form-meta)
-                                   (eval (or exec expr)))
-                  :error (or nil error))
-                (catch Exception e
-                  (assoc expr-map
-                    :result nil
-                    :error (merge {:type (.getClass e),
-                                   :message (.getMessage e)}
-                                  (select-keys (Throwable->map e)
-                                               [:cause :phase])))))
+         evaluated-expr-map (try (assoc expr-map
+                                        :result (eval (or exec expr))
+                                        :error (or nil error))
+                                 (catch Exception e
+                                   (assoc expr-map
+                                          :result nil
+                                          :error (merge {:type (.getClass e),
+                                                         :message (.getMessage e)}
+                                                        (select-keys
+                                                         (Throwable->map e)
+                                                         [:cause :phase])))))
          res (with-meta evaluated-expr-map (meta expr-map))
          validated (post-validator (:result res))]
      (when (var? (:result res))
@@ -226,19 +223,19 @@
                       (-> var-meta
                           (merge form-meta)
                           (#(assoc %
-                              :column (% :instaparse.gll/start-column)
-                              :line (% :instaparse.gll/start-line)))))
+                                   :column (% :instaparse.gll/start-column)
+                                   :line (% :instaparse.gll/start-line)))))
                     (meta expr-map)))
      (cond (and (or error (:error res)) simplify?) (form->hiccup res)
            (or error (:error res)) (assoc res :result (form->hiccup res))
            (and simplify? display expr) (form->hiccup res)
            (and exec display simplify?)
-             [:pre [:code {:class "language-clojure"} expr-src]]
+           [:pre [:code {:class "language-clojure"} expr-src]]
            (and exec display)
-             (assoc (merge expr-map res)
-               :result [:pre [:code {:class "language-clojure"} expr-src]])
+           (assoc (merge expr-map res)
+                  :result [:pre [:code {:class "language-clojure"} expr-src]])
            (and expr simplify? (:result res)) ; nil is overloaded here
-             (:result res)
+           (:result res)
            (and exec simplify?) nil
            (and (nil? (:result res)) (nil? (:error res))) nil
            :else (merge expr-map res))))
@@ -295,19 +292,17 @@
   ([parsed-form simplify? nmspc]
    (let [form-nmspc (or (yank-ns parsed-form) nmspc)
          nmspc (if form-nmspc (create-ns form-nmspc) *ns*)]
-     (u/trace
-         ::eval-parsed-template
-       [:log/level 500 ::template-ns (str nmspc)]
-       (binding [*ns* nmspc]
-         (refer-clojure)
-         (let [final-form
-               (clojure.walk/postwalk
-                (fn [i]
-                  (if (fabricate-expr? i) (eval-parsed-expr i simplify?) i))
-                parsed-form)]
-           (with-meta final-form
-             {:namespace nmspc,
-              :metadata (when-let [m (resolve 'metadata)] (var-get m))}))))))
+     (binding [*ns* nmspc]
+       (refer-clojure)
+       (let [final-form
+             (clojure.walk/postwalk
+              (fn [i]
+                (if (fabricate-expr? i) (eval-parsed-expr i simplify?) i))
+              parsed-form)]
+         (with-meta final-form
+           {:namespace nmspc,
+            :metadata (when-let [m (ns-resolve *ns* 'metadata)]
+                        (var-get m))})))))
   ([parsed-form simplify?] (eval-all parsed-form simplify? nil))
   ([parsed-form] (eval-all parsed-form true)))
 
