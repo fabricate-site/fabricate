@@ -16,7 +16,7 @@
          :site.fabricate.page/id id))
 
 
-(t/deftest entries
+(t/deftest api-ops
   (let [tmp-dir (fs/create-temp-dir {:prefix "fabricate-test-"})
         {:keys [site.fabricate.api/entries], :as plan-data}
         (api/plan! [(fn [s] (fs/create-dir (fs/path tmp-dir "css")) s)]
@@ -26,7 +26,11 @@
       (t/is (every? (m/validator api/entry-schema) entries)))
     (t/testing "building"
       (doseq [e entries]
-        (let [built (api/build e)]
+        (let [built (try (api/build e {})
+                         (catch Exception exc
+                           (do (tap> (dissoc (Throwable->map exc) :trace))
+                               (tap> e)
+                               nil)))]
           (t/is (some? (:site.fabricate.document/data built))))))
     (t/testing "assembly"
       (let [assembled (api/assemble [#(mapv doc->page
@@ -35,9 +39,9 @@
         (t/is (contains? (first assembled) :site.fabricate.page/data))))
     (t/testing "production"
       (doseq [e entries]
-        (let [built (api/build e)
-              {:keys [site.fabricate.page/output], :as produced} (api/produce!
-                                                                  built)]
+        (let [built (api/build e {})
+              {:keys [site.fabricate.page/output], :as produced}
+              (api/produce! built {})]
           (t/is (some? (:site.fabricate.page/title produced))
                 (format "Page produced from %s should have a title"
                         (str (:site.fabricate.source/location built))))
@@ -47,6 +51,4 @@
 (comment
   (api/build! {})
   (fs/create-temp-dir {:prefix "something-"})
-  (def built-posts-test
-    (mapv api/build (api/plan {:input-dir "pages", :patterns api/patterns})))
   (first built-posts-test))

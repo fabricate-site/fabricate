@@ -14,6 +14,7 @@
             [clojure.string :as str]
             [clojure.java.io :as io]))
 
+
 (defn create-dir-recursive
   [target-dir]
   (let [absolute-path? (fs/absolute? target-dir)
@@ -113,27 +114,30 @@
   (let [parsed-page (read/parse (slurp (:site.fabricate.source/location entry)))
         evaluated-page (read/eval-all parsed-page)
         page-metadata (page/lift-metadata evaluated-page
-                                          (:metadata (meta evaluated-page)))
+                                          (let [m (:metadata (meta
+                                                              evaluated-page))]
+                                            ;; TODO: better handling of
+                                            ;; unbound metadata vars
+                                            (if (map? m) m {})))
         hiccup-page [:html (page/doc-header page-metadata)
                      [:body
                       [:main
                        (apply conj
-                         [:article {:lang "en-us"}]
-                         (page/parse-paragraphs evaluated-page))]
+                              [:article {:lang "en-us"}]
+                              (page/parse-paragraphs evaluated-page))]
                       [:footer [:div [:a {:href "/"} "Home"]]]]]]
     (assoc entry
-      :site.fabricate.document/data hiccup-page
-      :site.fabricate.page/title (:title page-metadata))))
+           :site.fabricate.document/data hiccup-page
+           :site.fabricate.page/title (:title page-metadata))))
 
 (defmethod api/build [:site.fabricate.read/v0 :hiccup]
-  [entry]
-  (fabricate-v0->hiccup entry))
+  ([entry _opts] (fabricate-v0->hiccup entry)))
 
 (defmethod api/build [:site.fabricate.markdown/v0 :markdown]
-  [entry]
-  (assoc entry
-         :site.fabricate.document/data (slurp (:site.fabricate.source/location
-                                               entry))))
+  ([entry _opts]
+   (assoc entry
+          :site.fabricate.document/data (slurp (:site.fabricate.source/location
+                                                entry)))))
 
 ;; (def assemble-index nil)
 
@@ -161,8 +165,9 @@
                                                           (subpath input-file)))
         (instance? java.io.File output-location) output-location))
 
+
 (defmethod api/produce! [:hiccup :html]
-  [entry]
+  [entry _opts]
   (let [output-file (fs/file (str (output-path
                                    (fs/strip-ext
                                     (fs/strip-ext
@@ -171,12 +176,13 @@
                                    (:site.fabricate.page/location entry))
                                   ".html"))]
     (write-hiccup-html! (:site.fabricate.document/data entry) output-file)
+    (assert (fs/exists? output-file))
     (-> entry
         (assoc :site.fabricate.page/output output-file
                :site.fabricate.page/format :html))))
 
 (defmethod api/produce! [:markdown :markdown]
-  [entry]
+  [entry _opts]
   (let [output-file (fs/file (output-path
                               (:site.fabricate.source/location entry)
                               (:site.fabricate.page/location entry)))]

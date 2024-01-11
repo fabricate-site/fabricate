@@ -128,7 +128,7 @@
 
 (defmulti collect
   "Generate the input entries from a source."
-  (fn [src _options] src))
+  (fn ([src options] src) ([src] (collect src {}))))
 
 
 
@@ -164,52 +164,59 @@
     :or {entries []},
     :as site}]
   (let [post-setup-site (reduce (fn [site task] (task site)) site setup-tasks)
-        collected-entries
-          (vec (for [[collect-pattern _] (.getMethodTable collect)
-                     entry-data (collect collect-pattern options)
-                     output (:site.fabricate.page/outputs entry-data)]
-                 (-> entry-data
-                     (dissoc :site.fabricate.page/outputs)
-                     (merge output))))]
+        collected-entries (vec (for [[source _] (.getMethodTable collect)
+                                     entry-data (collect source options)
+                                     output (:site.fabricate.page/outputs
+                                             entry-data)]
+                                 (-> entry-data
+                                     (dissoc :site.fabricate.page/outputs)
+                                     (merge output))))]
     (update post-setup-site
             :site.fabricate.api/entries
             (fn [es] (reduce conj es collected-entries)))))
+
 
 ;; not enforcing a spec on a multimethod seems like the best way of keeping
 ;; it open for extension, and keeps the API simpler.
 (defmulti build
   "Generate structured (EDN) document content for an entry from a source format. Takes an entry and returns a document (entry)."
-  (fn [entry] [(:site.fabricate.source/format entry)
-               (:site.fabricate.document/format entry)]))
+  (fn [entry options] [(:site.fabricate.source/format entry)
+                       (:site.fabricate.document/format entry)]))
+
+;; if no build method is implemented for this entry, just pass it through
+;; unaltered
+(defmethod build :default [entry _opts] entry)
 
 (comment
   {:term/definition
-     {:source (URI. "https://www.merriam-webster.com/dictionary/assemble"),
-      :definition "to fit together the parts of"}})
+   {:source (URI. "https://www.merriam-webster.com/dictionary/assemble"),
+    :definition "to fit together the parts of"}})
 
 
 (defn assemble
   "Prepare the entries for `produce!` by calling `build` on each entry, then running `tasks` on the results."
   {:term/definition
-     {:source (URI. "https://www.merriam-webster.com/dictionary/assemble"),
-      :definition "to fit together the parts of"}}
+   {:source (URI. "https://www.merriam-webster.com/dictionary/assemble"),
+    :definition "to fit together the parts of"}}
   [tasks
    {:keys [site.fabricate.api/entries site.fabricate.api/options], :as site}]
   (let [sort-fn (get options :site.fabricate.api/entry-sort-fn identity)
-        doc-entries (mapv build (sort-fn entries))]
+        doc-entries (mapv (fn [e] (build e options)) (sort-fn entries))]
     (reduce (fn [site task] (task site))
-      (assoc site :site.fabricate.api/entries doc-entries)
-      tasks)))
+            (assoc site :site.fabricate.api/entries doc-entries)
+            tasks)))
 
 
 (defmulti produce!
   "Produce the content of a file from the results of the `build` operation and write it to disk. Takes an entry and returns an entry."
   {:term/definition
-     {:source (URI. "https://www.merriam-webster.com/dictionary/produce"),
-      :definition
-        "to make available for public exhibition or dissemination; to cause to have existence or to happen; to give being, form, or shape to; to compose, create, or bring out by intellectual or physical effort; to bear, make, or yield something"}}
-  (fn [entry] [(:site.fabricate.document/format entry)
-               (:site.fabricate.page/format entry)]))
+   {:source (URI. "https://www.merriam-webster.com/dictionary/produce"),
+    :definition
+    "to make available for public exhibition or dissemination; to cause to have existence or to happen; to give being, form, or shape to; to compose, create, or bring out by intellectual or physical effort; to bear, make, or yield something"}}
+  (fn [entry options] [(:site.fabricate.document/format entry)
+                       (:site.fabricate.page/format entry)]))
+
+(defmethod produce! :default [entry _opts] entry)
 
 
 (defn construct!
@@ -219,7 +226,7 @@
     :as init-site}]
   (let [sorted-tasks tasks
         sorted-entries entries]
-    (run! produce! entries)
+    (doseq [e entries] (produce! e options))
     (reduce (fn [site task] (site entries)) init-site sorted-tasks)))
 
 
