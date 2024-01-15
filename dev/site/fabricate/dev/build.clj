@@ -12,7 +12,8 @@
             [hiccup.page]
             [hiccup.core :as hiccup]
             [clojure.string :as str]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [http.server :as server]))
 
 
 (defn create-dir-recursive
@@ -71,7 +72,6 @@
   "Options for building Fabricate's own documentation."
   {:site.fabricate.page/publish-dir "docs"})
 
-(def setup-tasks [create-publish-dirs! get-css! copy-fonts!])
 
 (defmethod api/collect "pages/**.fab"
   [src options]
@@ -83,10 +83,10 @@
            :site.fabricate.source/created (time/file-created p),
            :site.fabricate.source/modified (time/file-modified p),
            :site.fabricate.page/outputs
-             [{:site.fabricate.page/format :html,
-               :site.fabricate.page/location
-                 (fs/file (:site.fabricate.page/publish-dir options))}]})
-    (fs/glob (System/getProperty "user.dir") src)))
+           [{:site.fabricate.page/format :html,
+             :site.fabricate.page/location
+             (fs/file (:site.fabricate.page/publish-dir options))}]})
+        (fs/glob (System/getProperty "user.dir") src)))
 
 
 ;; example of single-file handling; conflict resolution can be handled
@@ -102,10 +102,10 @@
     :site.fabricate.source/format :site.fabricate.markdown/v0,
     :site.fabricate.document/format :markdown,
     :site.fabricate.page/outputs
-      [{:site.fabricate.page/format :markdown,
-        :site.fabricate.page/location
-          (fs/file (str (:site.fabricate.page/publish-dir options)
-                        "/README.md"))}]}])
+    [{:site.fabricate.page/format :markdown,
+      :site.fabricate.page/location
+      (fs/file (str (:site.fabricate.page/publish-dir options)
+                    "/README.md"))}]}])
 
 
 (defn fabricate-v0->hiccup
@@ -115,7 +115,7 @@
         evaluated-page (read/eval-all parsed-page)
         page-metadata (page/lift-metadata evaluated-page
                                           (let [m (:metadata (meta
-                                                              evaluated-page))]
+                                                               evaluated-page))]
                                             ;; TODO: better handling of
                                             ;; unbound metadata vars
                                             (if (map? m) m {})))
@@ -123,12 +123,12 @@
                      [:body
                       [:main
                        (apply conj
-                              [:article {:lang "en-us"}]
-                              (page/parse-paragraphs evaluated-page))]
+                         [:article {:lang "en-us"}]
+                         (page/parse-paragraphs evaluated-page))]
                       [:footer [:div [:a {:href "/"} "Home"]]]]]]
     (assoc entry
-           :site.fabricate.document/data hiccup-page
-           :site.fabricate.page/title (:title page-metadata))))
+      :site.fabricate.document/data hiccup-page
+      :site.fabricate.page/title (:title page-metadata))))
 
 (defmethod api/build [:site.fabricate.read/v0 :hiccup]
   ([entry _opts] (fabricate-v0->hiccup entry)))
@@ -189,13 +189,23 @@
     (spit output-file (:site.fabricate.document/data entry))
     (assoc entry :site.fabricate.page/output output-file)))
 
+(defonce file-server (atom nil))
+
+(defn launch-server!
+  [{:keys [site.fabricate.api/options], :as site}]
+  (let [server-options (::server options)]
+    (when (nil? @file-server)
+      (reset! file-server (server/start server-options)))
+    site))
+
+(defn shutdown-server!
+  [& _args]
+  (when-not (nil? @file-server) (swap! file-server #(do (server/stop %) nil))))
+
+
+(def setup-tasks [create-publish-dirs! get-css! copy-fonts! launch-server!])
+
 (comment
-  (require '[http.server :as server])
-  (defonce srv
-    (server/start {:cors-allow-headers nil,
-                   :dir (str (fs/path (fs/cwd) "docs")),
-                   :port 8002,
-                   :no-cache true}))
   ;; it's hard to beat this simplicity. also, a point in favor of the
   ;; "return a modified site with modified options" implementation:
   ;; potentially storing a reference to a server or other stateful
