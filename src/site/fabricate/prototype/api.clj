@@ -167,7 +167,7 @@
         collected-entries (vec (for [[source _] (.getMethodTable collect)
                                      entry-data (collect source options)
                                      output (:site.fabricate.page/outputs
-                                             entry-data)]
+                                              entry-data)]
                                  (-> entry-data
                                      (dissoc :site.fabricate.page/outputs)
                                      (merge output))))]
@@ -189,30 +189,30 @@
 
 (comment
   {:term/definition
-   {:source (URI. "https://www.merriam-webster.com/dictionary/assemble"),
-    :definition "to fit together the parts of"}})
+     {:source (URI. "https://www.merriam-webster.com/dictionary/assemble"),
+      :definition "to fit together the parts of"}})
 
 
 (defn assemble
   "Prepare the entries for `produce!` by calling `build` on each entry, then running `tasks` on the results."
   {:term/definition
-   {:source (URI. "https://www.merriam-webster.com/dictionary/assemble"),
-    :definition "to fit together the parts of"}}
+     {:source (URI. "https://www.merriam-webster.com/dictionary/assemble"),
+      :definition "to fit together the parts of"}}
   [tasks
    {:keys [site.fabricate.api/entries site.fabricate.api/options], :as site}]
   (let [sort-fn (get options :site.fabricate.api/entry-sort-fn identity)
         doc-entries (mapv (fn [e] (build e options)) (sort-fn entries))]
     (reduce (fn [site task] (task site))
-            (assoc site :site.fabricate.api/entries doc-entries)
-            tasks)))
+      (assoc site :site.fabricate.api/entries doc-entries)
+      tasks)))
 
 
 (defmulti produce!
   "Produce the content of a file from the results of the `build` operation and write it to disk. Takes an entry and returns an entry."
   {:term/definition
-   {:source (URI. "https://www.merriam-webster.com/dictionary/produce"),
-    :definition
-    "to make available for public exhibition or dissemination; to cause to have existence or to happen; to give being, form, or shape to; to compose, create, or bring out by intellectual or physical effort; to bear, make, or yield something"}}
+     {:source (URI. "https://www.merriam-webster.com/dictionary/produce"),
+      :definition
+        "to make available for public exhibition or dissemination; to cause to have existence or to happen; to give being, form, or shape to; to compose, create, or bring out by intellectual or physical effort; to bear, make, or yield something"}}
   (fn [entry options] [(:site.fabricate.document/format entry)
                        (:site.fabricate.page/format entry)]))
 
@@ -227,15 +227,4 @@
   (let [sorted-tasks tasks
         sorted-entries entries]
     (doseq [e entries] (produce! e options))
-    (reduce (fn [site task] (site entries)) init-site sorted-tasks)))
-
-
-(comment
-  (defn build!
-    "`plan`, `assemble` and `produce!` all of the entries, writing their output to disk."
-    [options]
-    nil)
-  (defn rebuild!
-    "Idempotent version of `assemble` and `produce!`; called when a file change is detected."
-    [entry]
-    nil))
+    (reduce (fn [site task] (task site)) init-site sorted-tasks)))
