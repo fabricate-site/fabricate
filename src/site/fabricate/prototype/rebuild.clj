@@ -146,10 +146,15 @@
 
 (def status (atom {:queue :waiting}))
 
+(defn drain-queue
+  [^LinkedBlockingQueue q]
+  (let [drain-list (java.util.ArrayList. [])]
+    (.drainTo q drain-list)
+    (vec drain-list)))
 
 (defn update-state
   [{:keys [queue], :as s}]
-  (let [new-state (case queue
+  (let [new-state (condp = queue
                     :running (let [action (.poll action-queue)]
                                (if action
                                  (do (println "executing")
@@ -161,19 +166,19 @@
                                  :running))
                     :waiting :waiting
                     :stopped
-                      (let [remaining-actions (.drainTo action-queue [])]
-                        ;; should this also short-circuit on the first
-                        ;; failure or attempt every remaining action?
-                        (loop [[action & others] remaining-actions]
-                          (let [result (try
-                                         (do (println "executing") (action) :ok)
-                                         (catch Exception e
-                                           (do (println "error")
-                                               (println (Throwable->map e))
-                                               :failed)))]
-                            (cond (= result :ok) (recur others)
-                                  (= result :failed) :failed)))
-                        :terminated)
+                    (let [remaining-actions (drain-queue action-queue)]
+                      ;; should this also short-circuit on the first
+                      ;; failure or attempt every remaining action?
+                      (loop [[action & others] remaining-actions]
+                        (let [result (try
+                                       (do (println "executing") (action) :ok)
+                                       (catch Exception e
+                                         (do (println "error")
+                                             (println (Throwable->map e))
+                                             :failed)))]
+                          (cond (= result :ok) (recur others)
+                                (= result :failed) :failed)))
+                      :terminated)
                     :terminated (do (.clear action-queue) :terminated))]
     (assoc s :queue new-state)))
 

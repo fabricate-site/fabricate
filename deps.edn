@@ -1,29 +1,29 @@
 {:aliases
- {:dev {:extra-deps
-        {babashka/babashka.curl {:mvn/version "0.1.2"},
-         com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.1.1"},
-         com.clojure-goes-fast/clj-memory-meter {:mvn/version "0.3.0"},
-         com.cnuernber/charred {:mvn/version "1.033"},
-         com.taoensso/tufte {:mvn/version "2.6.3"},
-         criterium/criterium {:mvn/version "0.4.6"}},
-        :extra-paths ["test" "dev"],
-        :jvm-opts ["-Djdk.attach.allowAttachSelf"
-                   "-XX:+UnlockDiagnosticVMOptions"
-                   "-XX:+DebugNonSafepoints"]},
-  :runner {:exec-args {:excludes [:performance],
-                       :patterns ["^(?!.*performance).*$"]},
-           :exec-fn cognitect.test-runner.api/test,
-           :extra-deps {io.github.cognitect-labs/test-runner
-                        {:git/url
-                         "https://github.com/cognitect-labs/test-runner",
-                         :sha "7284cda41fb9edc0f3bc6b6185cfb7138fc8a023"}},
-           :main-opts ["-m" "cognitect.test-runner"]},
-  :serve {:main-opts ["-m" "http.server" "--dir" "docs"]},
-  :test {:extra-deps {babashka/babashka.curl {:mvn/version "0.1.2"},
-                      org.clojure/test.check {:mvn/version "1.1.1"}},
-         :extra-paths ["test"]},
-  :validate {:exec-args {:dirs ["docs/"]},
-             :exec-fn site.fabricate.prototype.check/html}},
+   {:dev {:extra-deps
+            {babashka/babashka.curl {:mvn/version "0.1.2"},
+             com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.1.1"},
+             com.clojure-goes-fast/clj-memory-meter {:mvn/version "0.3.0"},
+             com.cnuernber/charred {:mvn/version "1.033"},
+             com.taoensso/tufte {:mvn/version "2.6.3"},
+             criterium/criterium {:mvn/version "0.4.6"}},
+          :extra-paths ["test" "dev"],
+          :jvm-opts ["-Djdk.attach.allowAttachSelf"
+                     "-XX:+UnlockDiagnosticVMOptions" "-XX:+DebugNonSafepoints"
+                     "-Dsite.fabricate.mode=dev"]},
+    :runner {:exec-args {:excludes [:performance],
+                         :patterns ["^(?!.*performance).*$"]},
+             :exec-fn cognitect.test-runner.api/test,
+             :extra-deps {io.github.cognitect-labs/test-runner
+                            {:git/url
+                               "https://github.com/cognitect-labs/test-runner",
+                             :sha "7284cda41fb9edc0f3bc6b6185cfb7138fc8a023"}},
+             :main-opts ["-m" "cognitect.test-runner"]},
+    :serve {:main-opts ["-m" "http.server" "--dir" "docs"]},
+    :test {:extra-deps {babashka/babashka.curl {:mvn/version "0.1.2"},
+                        org.clojure/test.check {:mvn/version "1.1.1"}},
+           :extra-paths ["test"]},
+    :validate {:exec-args {:dirs ["docs/"]},
+               :exec-fn site.fabricate.prototype.check/html}},
  :deps {babashka/fs {:mvn/version "0.2.12"},
         com.brunobonacci/mulog {:mvn/version "0.9.0"},
         com.gfredericks/test.chuck {:mvn/version "0.2.14"},

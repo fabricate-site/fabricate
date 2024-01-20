@@ -16,7 +16,8 @@
                                      (swap! test-status update-state)))]
     (f)
     (future-cancel *test-process*)
-    (swap! test-status assoc :queue :terminated)))
+    (swap! test-status assoc :queue :stopped)
+    (swap! test-status update-state)))
 
 (t/use-fixtures :once test-fixture)
 
@@ -59,3 +60,31 @@
            "Actions enqueued while waiting should be performed after events resume")
           (t/is (false? (future-done? *test-process*))
                 "Process should be running at the end of the tests"))))))
+
+(def valid-queue-state-updates
+  #{[:running :running] [:running :waiting] [:waiting :running]
+    [:running :stopped] [:waiting :waiting] [:stopped :terminated]
+    [:terminated :terminated] [:terminated :waiting] [:terminated :running]})
+
+(defn check-state-updates
+  [_k _ref {old-queue-state :queue} {new-queue-state :queue}]
+  (if (empty? t/*testing-vars*)
+    (assert (contains? valid-queue-state-updates
+                       [old-queue-state new-queue-state])
+            (format "state updates should be fully enumerated for [%s, %s]"
+                    old-queue-state
+                    new-queue-state))
+    (t/is (contains? valid-queue-state-updates
+                     [old-queue-state new-queue-state])
+          (format "state updates should be fully enumerated for [%s, %s]"
+                  old-queue-state
+                  new-queue-state))))
+
+(defn enable-dev-mode!
+  [state-atom]
+  (add-watch state-atom :queue-state check-state-updates))
+
+(comment
+  (println t/*testing-vars*)
+  (enable-dev-mode! test-status)
+  (remove-watch test-status :queue-state))
