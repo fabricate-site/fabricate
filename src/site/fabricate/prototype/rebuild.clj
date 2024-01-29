@@ -106,9 +106,9 @@
     :as initial-site}
    {:keys [plan-tasks assemble-tasks construct-tasks shutdown-tasks],
     :as tasks}]
-  (if (= :running (:state @state))
+  (if (= :running (:state @app))
     ;; shutdown may need to go into its own function
-    (do (send-off state
+    (do (send-off app
                   (fn [s]
                     (let [final-site (reduce (fn [site task] (site task))
                                              @site
@@ -125,13 +125,13 @@
       (reset! site built-site)
       ;; this doesn't feel like it's correctly implemented; needs more
       ;; design work
-      (let [proc (future (send state assoc :state :running)
-                         (await state)
-                         (loop [ag state]
+      (let [proc (future (send app assoc :state :running)
+                         (await app)
+                         (loop [ag app]
                            (when (= :running (:state @ag))
                              (do (println "running") (Thread/sleep 5000))
-                             (recur state))))]
-        (send state assoc :process proc))
+                             (recur app))))]
+        (send app assoc :process proc))
       :running)))
 
 
