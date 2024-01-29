@@ -1,8 +1,9 @@
 (ns site.fabricate.prototype.api-test
   (:require [clojure.test :as t]
             [site.fabricate.prototype.api :as api]
-            ;;  refer the dev ns to ensure multimethods have impls
-            [site.fabricate.dev.build]
+            [site.fabricate.dev.build] ; refer the dev ns to ensure
+                                        ; multimethods have impls
+            [site.fabricate.prototype.test-utils :refer [with-instrumentation]]
             [malli.core :as m]
             [babashka.fs :as fs]))
 
@@ -14,6 +15,8 @@
          :site.fabricate.page/data data
          :site.fabricate.page/title title
          :site.fabricate.page/id id))
+
+(t/use-fixtures :once with-instrumentation)
 
 
 (t/deftest api-ops
