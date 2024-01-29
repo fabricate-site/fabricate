@@ -126,11 +126,19 @@
     [:site.fabricate.entry/source :site.fabricate.source/location
      :site.fabricate.source/format]))
 
-(defmulti collect
-  "Generate the input entries from a source."
-  (fn ([src options] src) ([src] (collect src {}))))
+(defn collect-dispatch
+  "Equivalent to a multi-arg version of `clojure.core/identity` for a source."
+  {:malli/schema (m/schema [:=> [:cat :site.fabricate.entry/source :map]
+                            :site.fabricate.entry/source]),
+   :private true}
+  [src options]
+  src)
 
+(defmulti collect "Generate the input entries from a source." collect-dispatch)
 
+(def site-schema
+  (m/schema [:map [:site.fabricate.api/entries [:* entry-schema]]
+             [:site.fabricate.api/options :map]]))
 
 (def site-fn-schema
   "Function schema for functions that operate on a site"
@@ -138,13 +146,10 @@
              {:registry {::task-list [:or [:* [:schema [:ref ::site-fn]]]
                                       [:map-of [:schema [:ref ::site-fn]]
                                        [:schema [:ref ::site-fn]]]],
-                         ::site-map
-                           [:map [:site.fabricate.api/entries [:* entry-schema]]
-                            [:site.fabricate.api/options :map]],
                          ::site-fn [:=>
                                     [:cat [:schema [:ref ::task-list]]
-                                     [:schema [:ref ::site-map]]]
-                                    [:schema [:ref ::site-map]]]}} ::site-fn]))
+                                     [:schema site-schema]]
+                                    [:schema site-schema]]}} ::site-fn]))
 
 
 ;; question: should this actually be exactly the same signature /
@@ -159,6 +164,7 @@
   "Execute all the given `setup-tasks`, then `collect` the list of entries from each source.
 
   This list of entries will be appended to any entries passed in as a component of the `site` argument."
+  {:malli/schema (m/schema [:=> [:cat [:* ifn?] :map] site-schema])}
   [setup-tasks
    {:keys [site.fabricate.api/entries :site.fabricate.api/options],
     :or {entries []},
@@ -167,7 +173,7 @@
         collected-entries (vec (for [[source _] (.getMethodTable collect)
                                      entry-data (collect source options)
                                      output (:site.fabricate.page/outputs
-                                              entry-data)]
+                                             entry-data)]
                                  (-> entry-data
                                      (dissoc :site.fabricate.page/outputs)
                                      (merge output))))]
@@ -176,12 +182,18 @@
             (fn [es] (reduce conj es collected-entries)))))
 
 
-;; not enforcing a spec on a multimethod seems like the best way of keeping
-;; it open for extension, and keeps the API simpler.
+(defn build-dispatch
+  "Return the source and document formats for an entry."
+  {:malli/schema (m/schema [:=> [:cat entry-schema :map]
+                            [:tuple :site.fabricate.source/format
+                             :site.fabricate.document/format]])}
+  [entry options]
+  [(:site.fabricate.source/format entry)
+   (:site.fabricate.document/format entry)])
+
 (defmulti build
   "Generate structured (EDN) document content for an entry from a source format. Takes an entry and returns a document (entry)."
-  (fn [entry options] [(:site.fabricate.source/format entry)
-                       (:site.fabricate.document/format entry)]))
+  build-dispatch)
 
 ;; if no build method is implemented for this entry, just pass it through
 ;; unaltered
@@ -196,31 +208,38 @@
 (defn assemble
   "Prepare the entries for `produce!` by calling `build` on each entry, then running `tasks` on the results."
   {:term/definition
-     {:source (URI. "https://www.merriam-webster.com/dictionary/assemble"),
-      :definition "to fit together the parts of"}}
+   {:source (URI. "https://www.merriam-webster.com/dictionary/assemble"),
+    :definition "to fit together the parts of"},
+   :malli/schema site-fn-schema}
   [tasks
    {:keys [site.fabricate.api/entries site.fabricate.api/options], :as site}]
   (let [sort-fn (get options :site.fabricate.api/entry-sort-fn identity)
         doc-entries (mapv (fn [e] (build e options)) (sort-fn entries))]
     (reduce (fn [site task] (task site))
-      (assoc site :site.fabricate.api/entries doc-entries)
-      tasks)))
+            (assoc site :site.fabricate.api/entries doc-entries)
+            tasks)))
 
+(defn produce-dispatch
+  "Return the document and page format for an entry."
+  {:malli/schema (m/schema [:=> [:cat entry-schema :map]
+                            [:tuple :site.fabricate.document/format
+                             :site.fabricate.page/format]])}
+  [entry options])
 
 (defmulti produce!
   "Produce the content of a file from the results of the `build` operation and write it to disk. Takes an entry and returns an entry."
   {:term/definition
-     {:source (URI. "https://www.merriam-webster.com/dictionary/produce"),
-      :definition
-        "to make available for public exhibition or dissemination; to cause to have existence or to happen; to give being, form, or shape to; to compose, create, or bring out by intellectual or physical effort; to bear, make, or yield something"}}
-  (fn [entry options] [(:site.fabricate.document/format entry)
-                       (:site.fabricate.page/format entry)]))
+   {:source (URI. "https://www.merriam-webster.com/dictionary/produce"),
+    :definition
+    "to make available for public exhibition or dissemination; to cause to have existence or to happen; to give being, form, or shape to; to compose, create, or bring out by intellectual or physical effort; to bear, make, or yield something"}}
+  produce-dispatch)
 
 (defmethod produce! :default [entry _opts] entry)
 
 
 (defn construct!
   "Run the tasks necessary to complete the website. Execute `produce` on every page, then run `tasks`."
+  {:malli/schema site-fn-schema}
   [tasks
    {:keys [site.fabricate.api/entries site.fabricate.api/options],
     :as init-site}]

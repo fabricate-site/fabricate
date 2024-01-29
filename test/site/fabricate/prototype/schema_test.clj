@@ -103,6 +103,7 @@
                   site.fabricate.prototype.read
                   site.fabricate.prototype.read.grammar
                   site.fabricate.prototype.page
-                  site.fabricate.prototype.schema)]
+                  site.fabricate.prototype.schema
+                  site.fabricate.prototype.api)]
     (t/testing (str "coverage for namespace " nmspc)
       (let [ns-results (test-ns-schemas nmspc)] (t/is (covered? ns-results))))))
