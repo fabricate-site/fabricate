@@ -2,7 +2,7 @@
   (:require [clojure.test :as t]
             [site.fabricate.prototype.api :as api]
             [site.fabricate.dev.build] ; refer the dev ns to ensure
-                                        ; multimethods have impls
+            ; multimethods have impls
             [site.fabricate.prototype.test-utils :refer [with-instrumentation]]
             [malli.core :as m]
             [babashka.fs :as fs]))
@@ -43,6 +43,7 @@
     (t/testing "production"
       (doseq [e entries]
         (let [built (api/build e {})
+              _ (do (t/is (some? (api/produce-dispatch built {}))))
               {:keys [site.fabricate.page/output], :as produced}
               (api/produce! built {})]
           (t/is (some? (:site.fabricate.page/title produced))
@@ -51,7 +52,15 @@
           (t/is (instance? java.io.File output))
           (t/is (fs/exists? output)))))))
 
+(defn unmap-multimethods
+  "Utility function to ease reloading of redefined multimethods."
+  []
+  (run! #(ns-unmap (find-ns 'site.fabricate.prototype.api) %)
+        '[collect build produce!]))
+
 (comment
+  (unmap-multimethods)
+  (.getMethodTable api/produce!)
   (api/build! {})
   (fs/create-temp-dir {:prefix "something-"})
   (first built-posts-test))

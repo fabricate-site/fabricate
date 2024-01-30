@@ -83,10 +83,10 @@
            :site.fabricate.source/created (time/file-created p),
            :site.fabricate.source/modified (time/file-modified p),
            :site.fabricate.page/outputs
-           [{:site.fabricate.page/format :html,
-             :site.fabricate.page/location
-             (fs/file (:site.fabricate.page/publish-dir options))}]})
-        (fs/glob (System/getProperty "user.dir") src)))
+             [{:site.fabricate.page/format :html,
+               :site.fabricate.page/location
+                 (fs/file (:site.fabricate.page/publish-dir options))}]})
+    (fs/glob (System/getProperty "user.dir") src)))
 
 
 ;; example of single-file handling; conflict resolution can be handled
@@ -102,10 +102,10 @@
     :site.fabricate.source/format :site.fabricate.markdown/v0,
     :site.fabricate.document/format :markdown,
     :site.fabricate.page/outputs
-    [{:site.fabricate.page/format :markdown,
-      :site.fabricate.page/location
-      (fs/file (str (:site.fabricate.page/publish-dir options)
-                    "/README.md"))}]}])
+      [{:site.fabricate.page/format :markdown,
+        :site.fabricate.page/location
+          (fs/file (str (:site.fabricate.page/publish-dir options)
+                        "/README.md"))}]}])
 
 
 (defn fabricate-v0->hiccup
@@ -165,8 +165,7 @@
                                                           (subpath input-file)))
         (instance? java.io.File output-location) output-location))
 
-
-(defmethod api/produce! [:hiccup :html]
+(defn hiccup->html
   [entry _opts]
   (let [output-file (fs/file (str (output-path
                                    (fs/strip-ext
@@ -180,6 +179,8 @@
     (-> entry
         (assoc :site.fabricate.page/output output-file
                :site.fabricate.page/format :html))))
+
+(defmethod api/produce! [:hiccup :html] [entry opts] (hiccup->html entry opts))
 
 (defmethod api/produce! [:markdown :markdown]
   [entry _opts]
@@ -214,4 +215,5 @@
        (api/plan! setup-tasks)
        (api/assemble [])
        (api/construct! []))
-  (run! fs/delete (fs/glob "docs" "**.html")))
+  (run! fs/delete (fs/glob "docs" "**.html"))
+  (.getMethodTable api/produce!))

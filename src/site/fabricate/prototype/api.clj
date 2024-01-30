@@ -224,7 +224,8 @@
   {:malli/schema (m/schema [:=> [:cat entry-schema :map]
                             [:tuple :site.fabricate.document/format
                              :site.fabricate.page/format]])}
-  [entry options])
+  [entry options]
+  [(:site.fabricate.document/format entry) (:site.fabricate.page/format entry)])
 
 (defmulti produce!
   "Produce the content of a file from the results of the `build` operation and write it to disk. Takes an entry and returns an entry."
