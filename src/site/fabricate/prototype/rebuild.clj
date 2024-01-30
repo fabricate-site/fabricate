@@ -84,14 +84,11 @@
 ;; `updated?` `false` get skipped, potentially enabling the main API to
 ;; handle both cases
 
-
-(def ^:private app (agent {:state :waiting, :process nil}))
-
-(def site "Current state of the site." (atom {}))
-
-
-(defn rebuild!
-  "`api/plan!`, `api/assemble`, and `api/construct!` the site, then begin watching sources for changes.
+(comment
+  (def ^:private app (agent {:state :waiting, :process nil}))
+  (def site "Current state of the site." (atom {}))
+  (defn rebuild!
+    "`api/plan!`, `api/assemble`, and `api/construct!` the site, then begin watching sources for changes.
 
   When changes are detected for a source, the following events happen in order:
   1. Changed source entries are unified with unchanged source entries - if two entries
@@ -102,42 +99,38 @@
 
 
   If `rebuild!` is already running, calling `rebuild!` again will shut down the watch functions."
-  [{:keys [site.fabricate.api/entries site.fabricate.api/options],
-    :as initial-site}
-   {:keys [plan-tasks assemble-tasks construct-tasks shutdown-tasks],
-    :as tasks}]
-  (if (= :running (:state @app))
-    ;; shutdown may need to go into its own function
-    (do (send-off app
-                  (fn [s]
-                    (let [final-site (reduce (fn [site task] (site task))
-                                             @site
-                                             shutdown-tasks)]
-                      (reset! site final-site))
-                    (-> s
-                        (update :process #(do (future-cancel %) nil))
-                        (assoc :state :stopped))))
-        :stopped)
-    (let [built-site (->> initial-site
-                          (api/plan! plan-tasks)
-                          (api/assemble assemble-tasks)
-                          (api/construct! construct-tasks))]
-      (reset! site built-site)
-      ;; this doesn't feel like it's correctly implemented; needs more
-      ;; design work
-      (let [proc (future (send app assoc :state :running)
-                         (await app)
-                         (loop [ag app]
-                           (when (= :running (:state @ag))
-                             (do (println "running") (Thread/sleep 5000))
-                             (recur app))))]
-        (send app assoc :process proc))
-      :running)))
+    [{:keys [site.fabricate.api/entries site.fabricate.api/options],
+      :as initial-site}
+     {:keys [plan-tasks assemble-tasks construct-tasks shutdown-tasks],
+      :as tasks}]
+    (if (= :running (:state @app))
+      ;; shutdown may need to go into its own function
+      (do (send-off app
+                    (fn [s]
+                      (let [final-site (reduce (fn [site task] (site task))
+                                               @site
+                                               shutdown-tasks)]
+                        (reset! site final-site))
+                      (-> s
+                          (update :process #(do (future-cancel %) nil))
+                          (assoc :state :stopped))))
+          :stopped)
+      (let [built-site (->> initial-site
+                            (api/plan! plan-tasks)
+                            (api/assemble assemble-tasks)
+                            (api/construct! construct-tasks))]
+        (reset! site built-site)
+        ;; this doesn't feel like it's correctly implemented; needs more
+        ;; design work
+        (let [proc (future (send app assoc :state :running)
+                           (await app)
+                           (loop [ag app]
+                             (when (= :running (:state @ag))
+                               (do (println "running") (Thread/sleep 5000))
+                               (recur app))))]
+          (send app assoc :process proc))
+        :running))))
 
-
-
-(comment
-  (.getMethodTable api/collect))
 
 
 ;; extremely basic, but effective example of the "queue of thunks" idea
