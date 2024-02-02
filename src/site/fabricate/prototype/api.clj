@@ -108,23 +108,24 @@
 (def entry-schema
   "Malli schema describing entries."
   (mu/required-keys
-    (mu/optional-keys
-      (m/schema [:map :site.fabricate.entry/source
-                 :site.fabricate.source/location :site.fabricate.page/output
-                 :site.fabricate.document/data :site.fabricate.document/format
-                 :site.fabricate.source/format :site.fabricate.page/format
-                 :site.fabricate.page/uri :site.fabricate.page/title
-                 :site.fabricate.page/permalink :site.fabricate.page/description
-                 :site.fabricate.page/author :site.fabricate.page/language
-                 :site.fabricate.page/locale :site.fabricate.page/image
-                 :me.ogp/type :site.fabricate.page/published-time
-                 :site.fabricate.page/publish-dir :site.fabricate.source/created
-                 :site.fabricate.source/modified
-                 :site.fabricate.page/modified-time :site.fabricate.page/tags
-                 :site.fabricate.entry/id :site.fabricate.entry/namespace]))
-    ;; entries ultimately have to come from somewhere.
-    [:site.fabricate.entry/source :site.fabricate.source/location
-     :site.fabricate.source/format]))
+   (mu/optional-keys
+    (m/schema [:map :site.fabricate.entry/source
+               :site.fabricate.source/location :site.fabricate.page/output
+               :site.fabricate.document/data :site.fabricate.document/format
+               :site.fabricate.source/format :site.fabricate.page/format
+               :site.fabricate.page/uri :site.fabricate.page/title
+               :site.fabricate.page/permalink :site.fabricate.page/description
+               :site.fabricate.page/author :site.fabricate.page/language
+               :site.fabricate.page/locale :site.fabricate.page/image
+               :me.ogp/type :site.fabricate.page/published-time
+               :site.fabricate.page/publish-dir :site.fabricate.source/created
+               :site.fabricate.source/modified
+               :site.fabricate.page/modified-time :site.fabricate.page/tags
+               :site.fabricate.entry/id :site.fabricate.entry/namespace]))
+   ;; entries ultimately have to come from somewhere.
+   [:site.fabricate.entry/source :site.fabricate.source/location
+    :site.fabricate.source/format]))
+
 
 (defn collect-dispatch
   "Equivalent to a multi-arg version of `clojure.core/identity` for a source."
@@ -134,7 +135,10 @@
   [src options]
   src)
 
-(defmulti collect "Generate the input entries from a source." collect-dispatch)
+(defmulti collect
+  "Generate the input entries from a source."
+  {:malli/schema (:malli/schema (meta #'collect-dispatch))}
+  collect-dispatch)
 
 (def site-schema
   (m/schema [:map [:site.fabricate.api/entries [:* entry-schema]]
@@ -164,7 +168,7 @@
   "Execute all the given `setup-tasks`, then `collect` the list of entries from each source.
 
   This list of entries will be appended to any entries passed in as a component of the `site` argument."
-  {:malli/schema (m/schema [:=> [:cat [:* ifn?] :map] site-schema])}
+  {:malli/schema site-fn-schema}
   [setup-tasks
    {:keys [site.fabricate.api/entries :site.fabricate.api/options],
     :or {entries []},
@@ -193,6 +197,7 @@
 
 (defmulti build
   "Generate structured (EDN) document content for an entry from a source format. Takes an entry and returns a document (entry)."
+  {:malli/schema (:malli/schema (meta #'build-dispatch))}
   build-dispatch)
 
 ;; if no build method is implemented for this entry, just pass it through
@@ -229,7 +234,8 @@
 
 (defmulti produce!
   "Produce the content of a file from the results of the `build` operation and write it to disk. Takes an entry and returns an entry."
-  {:term/definition
+  {:malli/schema (:malli/schema (meta #'produce-dispatch)),
+   :term/definition
    {:source (URI. "https://www.merriam-webster.com/dictionary/produce"),
     :definition
     "to make available for public exhibition or dissemination; to cause to have existence or to happen; to give being, form, or shape to; to compose, create, or bring out by intellectual or physical effort; to bear, make, or yield something"}}
