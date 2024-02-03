@@ -1,0 +1,34 @@
+✳️(ns site.fabricate.docs.guides.site-building
+  (:require [site.fabricate.prototype.api :as api]))🔚
+
+Fabricate: a static website generator in three paired verbs.
+
+Fabricate divides the process of building your website into three stages: plan, assemble, and construct.
+
+plan/collect
+
+Preparing ground
+
+Every website starts from somewhere. When we build things, our work goes most well when we gather up our materials and tools in one place before we begin. Fabricate does this in the plan step. plan carries out a list of preparatory tasks, then generates a list of plans from your website's sources.  
+
+The collect multimethod takes a source and produces one or more entries from that source. These entries are the blueprints for what Fabricate makes in the next two stages. Each source implies two formats: a file format for the source, and a document format produced from that source; the format will inform what happens to that entry during the next step.
+
+A source could be one file, a URL, or a file pattern indicating specific types of files in many different folders. How each source is interpreted is up to you. When building your site, you make that decision by implementing a method for a source.
+
+assemble/build
+
+Generating form
+
+Structure comes before results. Fabricate gives form to each entry by generating data from it, then uses this data to perform another list of tasks on the data.
+
+Fabricate provides an open-ended way of generating structured data for a page using the build multimethod. Each source format can be paired with a document format: the build method will generate Clojure data from the input file format. This could be a function that turns markdown into Hiccup, a template into Clojure data, or anything else.
+
+By representing pages as structured data before turning them into their final formats, Fabricate allows you to create pages that depend on other pages. This could be a chronological index of pages, a sitemap, an index of key terms and where they appear in your website, or anything else. Rather than treating each of these as special cases with their own configurable options, Fabricate gives you the ability to operate on your site as a whole by representing it as data. 
+
+construct/produce
+
+Yielding results
+
+Constructing produces the finished site from assembled form. Each document built by the assemble step will also have a way of defining the output format - most frequently, but not in any way limited to, HTML. Documents get turned into pages when they are produced, and then a list of final tasks gets run on the resulting site. 
+
+These final tasks could be things like normalizing or compressing the resulting HTML, pushing your website to its final host, or anything else you need to do to publish the pages that have been constructed by Fabricate.
