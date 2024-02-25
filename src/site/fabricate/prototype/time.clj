@@ -5,6 +5,7 @@
   (:import [java.time ZonedDateTime ZoneId]
            [java.time.format DateTimeFormatter]))
 
+
 (defn git-modified-times
   "Return the list of times a file was updated in Git.
 
@@ -14,7 +15,8 @@
                               "log" "--follow"
                               "--format=%ad" "--date"
                               "iso-strict" (str fp))]
-    (when out (mapv #(ZonedDateTime/parse %) (str/split out #"\n")))))
+    (when (not-empty out)
+      (mapv #(ZonedDateTime/parse %) (str/split out #"\n")))))
 
 (defn filetime->zdt
   [ft]
