@@ -45,7 +45,7 @@
     site))
 
 (defn get-css!
-  [{:keys [site.fabricate.api/options :as site]}]
+  [{:keys [site.fabricate.api/options], :as site}]
   (let
     [{:keys [site.fabricate.page/publish-dir]} options
      remedy
@@ -56,8 +56,8 @@
        {:file (fs/file (fs/path publish-dir "css" "normalize.css")),
         :url "https://unpkg.com/@csstools/normalize.css@12.1.1/normalize.css"}]
     (doseq [{:keys [file url]} [normalize remedy]]
-      (when-not (fs/exists? file) (io/copy url file))))
-  site)
+      (when-not (fs/exists? file) (io/copy url file)))
+    site))
 
 (defn copy-fonts!
   [{:keys [site.fabricate.api/options], :as site}]
@@ -65,12 +65,13 @@
         font-dir (System/getProperty "user.font-dir")
         fonts []]
     (doseq [{:keys [src file]} fonts]
-      (when-not (fs/exists? file) (fs/copy src file))))
-  site)
+      (when-not (fs/exists? file) (fs/copy src file)))
+    site))
 
 (def options
   "Options for building Fabricate's own documentation."
-  {:site.fabricate.page/publish-dir "docs"})
+  (let [d "docs"]
+    {:site.fabricate.page/publish-dir d, ::server {:port 7779, :dir d}}))
 
 
 (defmethod api/collect "pages/**.fab"
@@ -194,10 +195,10 @@
 
 (defn launch-server!
   [{:keys [site.fabricate.api/options], :as site}]
-  (let [server-options (::server options)]
-    (when (nil? @file-server)
-      (reset! file-server (server/start server-options)))
-    site))
+  (when (nil? @file-server)
+    (reset! file-server (server/start (get options ::server))))
+  site)
+
 
 (defn shutdown-server!
   [& _args]
@@ -211,9 +212,11 @@
   ;; "return a modified site with modified options" implementation:
   ;; potentially storing a reference to a server or other stateful
   ;; component
-  (->> {:site.fabricate.api/options options}
-       (api/plan! setup-tasks)
-       (api/assemble [])
-       (api/construct! []))
+  @file-server
+  (do (->> {:site.fabricate.api/options options}
+           (api/plan! setup-tasks)
+           (api/assemble [])
+           (api/construct! []))
+      :done)
   (run! fs/delete (fs/glob "docs" "**.html"))
   (.getMethodTable api/produce!))
