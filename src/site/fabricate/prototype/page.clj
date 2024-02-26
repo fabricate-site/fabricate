@@ -305,10 +305,9 @@
                       (#(merge default-metadata-map %)))]
     (apply conj-non-nil
       [:head [:title (str (:site-title page-meta) " | " title)]
-       [:link
-        {:rel "stylesheet",
-         :href
-           "https://raw.githubusercontent.com/jensimmons/cssremedy/master/css/remedy.css"}]
+       [:link {:rel "stylesheet", :href "/css/normalize.css"}]
+       [:link {:rel "stylesheet", :href "/css/remedy.css"}]
+       [:link {:rel "stylesheet", :href "/css/patterns.css"}]
        [:link {:rel "stylesheet", :href "/css/extras.css"}]]
       (concat (opengraph-enhance ogp-properties (map ->meta page-meta))
               default-metadata
@@ -463,25 +462,25 @@
 (defmethod node->hiccup :set
   [node]
   (apply span
-         (name (tag node))
-         (span "dispatch" "#" (span "open-brace" "{"))
-         (conj (mapv node->hiccup (:children node)) (span "close-brace" "}"))))
+    (name (tag node))
+    (span "dispatch" "#" (span "open-brace" "{"))
+    (conj (mapv node->hiccup (:children node)) (span "close-brace" "}"))))
 
 (defmethod node->hiccup :newline [node] (repeat (count (:newlines node)) [:br]))
 
 (defmethod node->hiccup :vector
   [node]
   (apply span
-         "vector"
-         (span "open-brace" "[")
-         (conj (mapv node->hiccup (:children node)) (span "close-brace" "]"))))
+    "vector"
+    (span "open-brace" "[")
+    (conj (mapv node->hiccup (:children node)) (span "close-brace" "]"))))
 
 (defmethod node->hiccup :meta
   [node]
   (apply span
-         (name (tag node))
-         (span "caret" "^")
-         (mapv node->hiccup (:children node))))
+    (name (tag node))
+    (span "caret" "^")
+    (mapv node->hiccup (:children node))))
 
 (defmethod node->hiccup :comma
   [node]

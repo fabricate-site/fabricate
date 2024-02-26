@@ -47,16 +47,18 @@
 (defn get-css!
   [{:keys [site.fabricate.api/options], :as site}]
   (let
-    [{:keys [site.fabricate.page/publish-dir]} options
-     remedy
+      [{:keys [site.fabricate.page/publish-dir]} options
+       remedy
        {:file (fs/file (fs/path publish-dir "css" "remedy.css")),
         :url
-          "https://raw.githubusercontent.com/jensimmons/cssremedy/6590d9630bdd324469620636d85b7ea3753e9a7b/css/remedy.css"}
-     normalize
+        "https://raw.githubusercontent.com/jensimmons/cssremedy/6590d9630bdd324469620636d85b7ea3753e9a7b/css/remedy.css"}
+       normalize
        {:file (fs/file (fs/path publish-dir "css" "normalize.css")),
-        :url "https://unpkg.com/@csstools/normalize.css@12.1.1/normalize.css"}]
-    (doseq [{:keys [file url]} [normalize remedy]]
-      (when-not (fs/exists? file) (io/copy url file)))
+        :url "https://unpkg.com/@csstools/normalize.css@12.1.1/normalize.css"}
+       patterns {:file (fs/file (fs/path publish-dir "css" "patterns.css")),
+                 :url "https://iros.github.io/patternfills/patterns.css"}]
+    (doseq [{:keys [file url]} [normalize remedy patterns]]
+      (when-not (fs/exists? file) (spit file (slurp url))))
     site))
 
 (defn copy-fonts!

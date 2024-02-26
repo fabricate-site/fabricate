@@ -20,5 +20,4 @@ docs/**/*.woff2
 
 # Local Netlify folder
 .netlify
-/docs/css/normalize.css
-/docs/css/remedy.css
+/docs/css/*.css
