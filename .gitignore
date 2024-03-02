@@ -22,3 +22,4 @@ docs/**/*.woff2
 .netlify
 /docs/css/*.css
 /docs/media/*
+/docs/README.md
