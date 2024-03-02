@@ -1,0 +1,28 @@
+✳ (ns site.fabricate.notes.api-implementation ) 🔚
+
+✳(def metadata {:title "api implementation notes"})🔚
+
+2024/02/24
+
+- encountering a strange issue with reading in the expressions parsed out of a template after seeing the following error message:
+
+"    Unable to resolve symbol: ️ in this context"
+
+there's a whitespace character that seems inscrutable in that expression. a zero width space? the parsed template also has a curly quote. inspecting the form returned by the template after parsing using rewrite-clj indicates that a zero-width string is one of the forms returned by rewrite-clj.zip/of-string. I think it has something to do with how the emoji keyboard insert fn works on macos, because I haven't encountered this issue on other platforms and in other contexts. clojure.string/trim doesn't remove the whitespace before parsing.
+
+describe-char in emacs says this:
+
+character: ️ (displayed as ️) (codepoint 65039, #o177017, #xfe0f)
+
+  name: VARIATION SELECTOR-16
+  general-category: Mn (Mark, Nonspacing)
+  decomposition: (65039) ('️')
+
+this is probably where I'm getting burned by grapheme boundaries (https://tonsky.me/blog/unicode/).  
+
+incorporating the variation settings character as an optional expression in the grammar is probably the way to go; I successfully parsed an expression after adding it to the template grammar. 
+
+see this stackoverflow answer for how to specify unicode character classes in a java regex,
+which potentially would offer a more general solution than just matching against one or more variation
+selectors encountered in an ad-hoc way.
+https://stackoverflow.com/a/26898253

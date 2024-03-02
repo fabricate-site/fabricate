@@ -21,3 +21,4 @@ docs/**/*.woff2
 # Local Netlify folder
 .netlify
 /docs/css/*.css
+/docs/media/*

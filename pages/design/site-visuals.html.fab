@@ -1,20 +1,21 @@
 ✳️(ns site.fabricate.docs.site-visuals
   (:require [site.fabricate.prototype.api :as api]
-            [garden.core :as garden])) 🔚
-            ✳️
-            (def style
-              (let []
-                (garden/css
-                 (list
-                  [:article {:font-family "'Overpass', sans-serif"
-                             :font-size "min(3vmin, 20px)"
-                             :line-height "1.28"
-                             :display "grid"
-                             :grid-template-columns "repeat(8, minmax(3px, 1fr))"
-                             :grid-column-gap "0.3em"
-                             :grid-row-gap "1em"
-                             }]
-                  [:body {:background "#afc38d"}]
+            [garden.core :as garden]
+            [babashka.fs :as fs])) 🔚
+✳️
+(def style
+  (let []
+    (garden/css
+     (list
+      [:article {:font-family "'Overpass', sans-serif"
+                 :font-size "min(3vmin, 20px)"
+                 :line-height "1.28"
+                 :display "grid"
+                 :grid-template-columns "repeat(8, minmax(3px, 1fr))"
+                 :grid-column-gap "0.3em"
+                 :grid-row-gap "1em"
+                 }]
+      [:body {:background "#afc38d"}]
                   [:h1 :h2 :h3 :h4 :h5 :h6 {:font-family "'Gorton Perfected', monospace"
                                             :text-transform "uppercase"
                                             :font-weight "Bold"
@@ -55,12 +56,17 @@ CSS subgrid now has ✳=[:a {:href "https://developer.mozilla.org/en-US/docs/Web
 ✳= [:h2 "SVG patterns"]🔚
 
 
-✳= [:div {:style (garden/style {:grid-column "1 / 8"
-                              :mix-blend-mode "multiply"})}
-  (hiccup.util/raw-string (slurp "docs/media/component-01.svg"))] 🔚
+✳=
+(let [path "docs/media/component-01.svg"]
+  (when (fs/exists? path)
+    [:div {:style (garden/style {:grid-column "1 / 8"
+                                 :mix-blend-mode "multiply"})}
+     (hiccup.util/raw-string (slurp ))])) 🔚
 
 SVG patterns can be used to visually separate elements, provide simple backgrounds, overlays and borders, use texture as a visual distinction between different types of categorical data, and add visual depth to the page. As seen above, they provide a useful way of displaying the structure of the CSS page grid.
 
 The viewbox (or placeholder elements) could potentially be used to create layouts where the SVG partially overlaps the text, or appears to be behind, blending from an interstitial element to a background one.
+
+Inlining the SVG may not always be the right choice, but it opens up interesting possibilities when the SVG element is parsed into Clojure data, which means it can be modified and transformed before being included in the page.
 
 abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdef

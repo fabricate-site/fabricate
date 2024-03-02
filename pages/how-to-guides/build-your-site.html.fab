@@ -1,5 +1,7 @@
 ✳️(ns site.fabricate.docs.guides.site-building
   (:require [site.fabricate.prototype.api :as api]))🔚
+  
+✳ (def metadata {:title "Building Websites with Fabricate"})️ 🔚
 
 Fabricate: a static website generator in three paired verbs.
 
