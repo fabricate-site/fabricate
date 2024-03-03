@@ -1,13 +1,15 @@
 ✳️(ns site.fabricate.docs.site-visuals
   (:require 
    [garden.core :as garden]
+   [site.fabricate.prototype.page :as page]
+   [rewrite-clj.parser :as p]
    [babashka.fs :as fs])) 🔚
 ✳️
 (def style
   (let []
     (garden/css
      (list
-      [:article {:font-family "'Overpass', sans-serif"
+      [:article {:font-family "'Inter Variable', sans-serif"
                  :font-size "min(3vmin, 20px)"
                  :line-height "1.28"
                  :display "grid"
@@ -16,14 +18,16 @@
                  :grid-row-gap "1em"
                  }]
       [:body {:background "#afc38d"}]
-                  [:h1 :h2 :h3 :h4 :h5 :h6 {:font-family "'Gorton Perfected', monospace"
-                                            :text-transform "uppercase"
-                                            :font-weight "Bold"
-                                            :grid-column "2 / 8"}]
-                  [:p {:grid-column "2 / 8"}]
-                  [:.xl {:font-size "4em"}]
-                  [:h1 {:font-size "2em"}])
-                 )))
+      [:h1 :h2 :h3 :h4 :h5 :h6 {:font-family "'Gorton Perfected', monospace"
+                                :text-transform "uppercase"
+                                :font-weight "Bold"
+                                :grid-column "2 / 8"}]
+      [:p {:grid-column "2 / 8"}]
+      [:pre {:grid-column "2 / 8" :font-family "CommitMonoV142, monospace !important"
+             :line-height "1.45"}]
+      [:.xl {:font-size "4em"}]
+      [:h1 {:font-size "2em"}])
+     )))
 
 🔚
 ✳(def metadata {:title "Fabricate visual specification"
@@ -50,23 +54,54 @@
 CSS subgrid now has ✳=[:a {:href "https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_grid_layout/Subgrid#browser_compatibility"} "enough browser support"]🔚 to be useful for organizing elements regardless of nesting level, which is how the above grid elements were combined as child elements of a single div with the subgrid property.
 
 ✳=[:p {:style (garden/style {:background "#fcfbe7"
+                           :padding "0.7em"
                            :grid-column "2 / 6"})
      } "Core paragraph text is in 4 columns: 2-5. This makes it easy to add asides, notes, parentheticals, small supporting visuals, and other annotations alongside it."]🔚
 
 ✳= [:h2 "SVG patterns"]🔚
 
+SVG patterns can be used to visually separate elements, provide simple backgrounds, overlays and borders, use texture as a visual distinction between different types of categorical data, and add visual depth to the page. As seen above, they provide a useful way of displaying the structure of the CSS page grid.
 
 ✳=
 (let [path "docs/media/component-01.svg"]
   (when (fs/exists? path)
-    [:div {:style (garden/style {:grid-column "1 / 8"
+    [:div {:style (garden/style {:grid-column "1 / 9"
                                  :mix-blend-mode "multiply"})}
-     (hiccup.util/raw-string (slurp ))])) 🔚
+     (hiccup.util/raw-string (slurp path))])) 🔚
 
-SVG patterns can be used to visually separate elements, provide simple backgrounds, overlays and borders, use texture as a visual distinction between different types of categorical data, and add visual depth to the page. As seen above, they provide a useful way of displaying the structure of the CSS page grid.
 
 The viewbox (or placeholder elements) could potentially be used to create layouts where the SVG partially overlaps the text, or appears to be behind, blending from an interstitial element to a background one.
 
 Inlining the SVG may not always be the right choice, but it opens up interesting possibilities when the SVG element is parsed into Clojure data, which means it can be modified and transformed before being included in the page.
 
 abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdef
+
+
+✳= [:h2 "Source code"]🔚
+
+See ✳=[:a {:href "https://respatialized.net/typesetting-sexprs.html"} "Typesetting S-expressions"]🔚 for additional context on how to use flexbox for laying out Clojure code.
+
+✳= [:pre {:style (garden/style {:grid-column "2 / 6"})}
+  [:code {:class "language-clojure"}
+   (page/expr->hiccup
+    '(defmethod api/collect "pages/**.fab"
+       [src options]
+       (mapv (fn path->entry [p]
+               {:site.fabricate.source/format :site.fabricate.read/v0,
+                :site.fabricate.document/format :hiccup,
+                :site.fabricate.source/location (fs/file p),
+                :site.fabricate.entry/source src,
+                :site.fabricate.source/created (time/file-created p),
+                :site.fabricate.source/modified (time/file-modified p),
+                :site.fabricate.page/outputs
+                [{:site.fabricate.page/format :html,
+                  :site.fabricate.page/location
+                  (fs/file (:site.fabricate.page/publish-dir options))}]})
+             (fs/glob (System/getProperty "user.dir") src)))
+    )]]🔚
+
+✳= [:pre  {:style (garden/style {:grid-column "2 / 6"})}
+  [:code {:class "language-cloure"}]
+  (page/expr->hiccup
+   (p/parse-string-all
+   (slurp "dev/site/fabricate/dev/build.clj")))] 🔚

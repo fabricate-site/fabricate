@@ -466,7 +466,7 @@
     (span "dispatch" "#" (span "open-brace" "{"))
     (conj (mapv node->hiccup (:children node)) (span "close-brace" "}"))))
 
-(defmethod node->hiccup :newline [node] (repeat (count (:newlines node)) [:br]))
+(defmethod node->hiccup :newline [node] (repeat (count (:newlines node)) [:br {:class "language-clojure newline"}]))
 
 (defmethod node->hiccup :vector
   [node]

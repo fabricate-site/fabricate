@@ -170,13 +170,14 @@
 
 (defn hiccup->html
   [entry _opts]
-  (let [output-file (fs/file (str (output-path
-                                   (fs/strip-ext
-                                    (fs/strip-ext
-                                     (:site.fabricate.source/location
-                                      entry)))
-                                   (:site.fabricate.page/location entry))
-                                  ".html"))]
+  (let [output-file
+        (fs/file (str (output-path
+                       (fs/strip-ext
+                        (fs/strip-ext
+                         (:site.fabricate.source/location
+                          entry)))
+                       (:site.fabricate.page/location entry))
+                      ".html"))]
     (write-hiccup-html! (:site.fabricate.document/data entry) output-file)
     (assert (fs/exists? output-file))
     (-> entry
