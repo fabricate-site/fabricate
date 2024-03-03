@@ -3,6 +3,7 @@
             [site.fabricate.prototype.read :as read]
             [site.fabricate.dev.styles :as styles]
             [clojure.repl :as repl]
+            [babashka.fs :as fs]
             [garden.core :as garden]
             [garden.stylesheet :refer [at-import]])) 🔚
             ✳ (def metadata
@@ -67,7 +68,7 @@ One of the motivating concerns for this implementation was the ability to suppor
     '(def markdown-state
        "Fabricate markdown input evaluated as markdown string"
        (let [s1 [:map {:closed true, :fsm/name "Evaluated", :fsm/description "Fabricate contents evaluated after parsing"}
-                 [:site.fabricate.file/input-file [:or [:fn site.fabricate.sketch/file?] :string]]
+                 [:site.fabricate.file/input-file [:or [:fn fs/file?] :string]]
                  [:site.fabricate.file/template-suffix [:orn [:default [:= ".fab"]] [:custom :string]]]
                  [:site.fabricate.file/input-filename :string]
                  [:site.fabricate.file/output-extension :string]
@@ -76,7 +77,7 @@ One of the motivating concerns for this implementation was the ability to suppor
                  [:site.fabricate.page/title {:optional true} :string]
                  [:site.fabricate.page/namespace {:optional true} :symbol]
                  [:site.fabricate.file/output-file {:optional true}
-                  [:orn [:path :string] [:file [:fn site.fabricate.sketch/file?]]]]
+                  [:orn [:path :string] [:file [:fn fs/file?]]]]
                  [:site.fabricate.page/evaluated-content
                   [:fn  #(or (list? %) (vector? %)) ]]
                  [:site.fabricate.page/metadata {:optional true} [:map {:closed false}]]]]
