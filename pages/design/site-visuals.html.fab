@@ -1,7 +1,7 @@
 ✳️(ns site.fabricate.docs.site-visuals
-  (:require [site.fabricate.prototype.api :as api]
-            [garden.core :as garden]
-            [babashka.fs :as fs])) 🔚
+  (:require 
+   [garden.core :as garden]
+   [babashka.fs :as fs])) 🔚
 ✳️
 (def style
   (let []

@@ -1,5 +1,5 @@
 (ns site.fabricate.prototype.rebuild
-  (:require [site.fabricate.prototype.api :as api])
+  (:require [site.fabricate.api :as api])
   (:import [java.util.concurrent LinkedBlockingQueue]))
 
 ;; Until I know this works, I think it may be better to keep in a separate

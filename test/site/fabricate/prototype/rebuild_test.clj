@@ -1,6 +1,6 @@
 (ns site.fabricate.prototype.rebuild-test
   (:require [clojure.test :as t]
-            [site.fabricate.prototype.api :as api]
+            [site.fabricate.api :as api]
             [site.fabricate.prototype.rebuild :refer :all])
   (:import [java.util.concurrent LinkedBlockingQueue]))
 

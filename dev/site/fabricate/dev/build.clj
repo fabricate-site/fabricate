@@ -1,6 +1,6 @@
 (ns site.fabricate.dev.build
   "Build namespace for generating Fabricate's own documentation."
-  (:require [site.fabricate.prototype.api :as api]
+  (:require [site.fabricate.api :as api]
             [site.fabricate.dev.styles :as styles]
             [site.fabricate.prototype.time :as time]
             [site.fabricate.prototype.read :as read]

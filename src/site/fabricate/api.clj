@@ -1,4 +1,4 @@
-(ns site.fabricate.prototype.api
+(ns site.fabricate.api
   "Fabricate's public API.
 
   This contains the core set of operations that Fabricate uses to produce a website from input files."
