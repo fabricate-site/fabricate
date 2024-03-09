@@ -1,20 +1,17 @@
 ✳(ns site.fabricate.docs.fsm
-                 (:require [site.fabricate.prototype.page :refer :all]
-                           [site.fabricate.prototype.read :as read]
-                           [site.fabricate.prototype.write :as write]
-                           [site.fabricate.styles :as styles]
-                           [malli.core :as m]
-                           [clojure.repl :as repl]
-                           [garden.core :as garden]
-                           [garden.stylesheet :refer [at-import]])) 🔚
+  (:require [site.fabricate.prototype.page :refer :all]
+            [site.fabricate.prototype.read :as read]
+            [site.fabricate.dev.styles :as styles]
+            [malli.core :as m]
+            [clojure.repl :as repl]
+            [garden.core :as garden]
+            [garden.stylesheet :refer [at-import]])) 🔚
 
 ✳ (def metadata
 {:title "Organizing computation with Finite Schema Machines"
 :description "Using precise schemas to map from data states to functions in Clojure."
 :page-style
-   (garden/css
-    (concat
-     styles/docs)
+   (garden/css styles/docs
     )}) 🔚
 
 ✳= [:header [:h1 (:title metadata)]

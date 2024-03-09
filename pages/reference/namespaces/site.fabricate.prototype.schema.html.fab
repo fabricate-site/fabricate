@@ -4,7 +4,7 @@
             [site.fabricate.prototype.schema :as schema]
                [malli.core :as m]
                [garden.core :as garden]
-               [site.fabricate.styles :as styles]))🔚
+               [site.fabricate.dev.styles :as styles]))🔚
 
 ✳(def metadata {:title "site.fabricate.prototype.schema Namespace"
                :page-style  (garden/css styles/docs)})🔚

@@ -2,7 +2,7 @@
   (:require [site.fabricate.prototype.page :as page]
             [site.fabricate.prototype.read :as read]
             [garden.core :as garden]
-            [site.fabricate.styles :as styles])) 🔚
+            [site.fabricate.dev.styles :as styles])) 🔚
 
 ✳(def metadata {:title "Supporting Fabricate's templates in Emacs"
                :page-style (garden/css styles/docs)}) 🔚
