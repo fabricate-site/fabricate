@@ -4,36 +4,10 @@
    [site.fabricate.prototype.page :as page]
    [rewrite-clj.parser :as p]
    [babashka.fs :as fs])) 🔚
-✳️
-(def style
-  (let []
-    (garden/css
-     (list
-      [:article {:font-family "'Inter Variable', sans-serif"
-                 :font-size "min(3vmin, 20px)"
-                 :line-height "1.28"
-                 :display "grid"
-                 :grid-template-columns "repeat(8, minmax(3px, 1fr))"
-                 :grid-column-gap "0.3em"
-                 :grid-row-gap "1em"
-                 }]
-      [:body {:background "#afc38d"}]
-      [:h1 :h2 :h3 :h4 :h5 :h6 {:font-family "'Gorton Perfected', monospace"
-                                :text-transform "uppercase"
-                                :font-weight "Bold"
-                                :grid-column "2 / 8"}]
-      [:p {:grid-column "2 / 8"}]
-      [:pre {:grid-column "2 / 8" :font-family "CommitMonoV142, monospace !important"
-             :line-height "1.45"}]
-      [:.xl {:font-size "4em"}]
-      [:h1 {:font-size "2em"}])
-     )))
-
-🔚
-✳(def metadata {:title "Fabricate visual specification"
-               :page-style style})🔚
+✳(def metadata {:title "Fabricate: visual specification"
+               :page-style (slurp "docs/css/fabricate.css")})🔚
                ✳=[:h1 (:title metadata)]🔚
-               this document outlines the layout specification for fabricate's documentation.
+this document outlines the layout specification for fabricate's documentation.
                
 
 ✳=
@@ -53,13 +27,21 @@
 
 CSS subgrid now has ✳=[:a {:href "https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_grid_layout/Subgrid#browser_compatibility"} "enough browser support"]🔚 to be useful for organizing elements regardless of nesting level, which is how the above grid elements were combined as child elements of a single div with the subgrid property.
 
-✳=[:p {:style (garden/style {:background "#fcfbe7"
+✳=[:p {:style (garden/style {:background "var(--color-orange)"
                            :padding "0.7em"
+                           :border-radius "0.75em"
                            :grid-column "2 / 6"})
      } "Core paragraph text is in 4 columns: 2-5. This makes it easy to add asides, notes, parentheticals, small supporting visuals, and other annotations alongside it."]🔚
 
 ✳= [:h2 "SVG patterns"]🔚
-
+✳= [:h3 {:style (garden/style {:grid-column "1"
+                             :transform "rotate(180deg)"
+                             :text-align "center"
+                             :background "var(--color-lightgreen)"
+                             :padding "0.7em"
+                             :border-radius "0.75em"
+                             :align-self "end"
+                             :writing-mode "vertical-rl"})} "PATTERNS"]🔚
 SVG patterns can be used to visually separate elements, provide simple backgrounds, overlays and borders, use texture as a visual distinction between different types of categorical data, and add visual depth to the page. As seen above, they provide a useful way of displaying the structure of the CSS page grid.
 
 ✳=
@@ -100,8 +82,11 @@ See ✳=[:a {:href "https://respatialized.net/typesetting-sexprs.html"} "Typeset
              (fs/glob (System/getProperty "user.dir") src)))
     )]]🔚
 
-✳= [:pre  {:style (garden/style {:grid-column "2 / 6"})}
+✳= [:pre  {:style (garden/style {:grid-column "2 / 7"
+                               :background "var(--color-lightgray)"
+                               :padding "0.7em"
+                               :border-radius "0.7em"})}
   [:code {:class "language-cloure"}]
   (page/expr->hiccup
    (p/parse-string-all
-   (slurp "dev/site/fabricate/dev/build.clj")))] 🔚
+    (slurp "dev/site/fabricate/dev/build.clj")))] 🔚

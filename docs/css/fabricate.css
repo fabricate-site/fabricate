@@ -1,0 +1,75 @@
+
+/*
+
+General idea with writing plain CSS: avoid premature abstraction.
+
+Implement the outline of a design system in plain CSS, which is more than capable enough
+for a website like Fabricate's documentation, then translate it into Garden if necessary.
+
+this way, I don't have to worry about things like defselector when working on the essential
+aspects of the layout. not having to translate regular CSS into Garden syntax when working
+from guides and examples will reduce mental overhead as I try to understand the role they
+play in producing the resulting visual style.
+
+if I need to computationally generate things like shades of colors, a modular typographic scale,
+or anything else, I can just make selective use of garden/css and then add the results to
+this stylesheet
+
+*/
+
+:root {
+    --color-white: #fcfbe7;
+    --color-lightgray: #f2efe4;
+    --color-clay: #c8beb7;
+    --color-lightgreen: #afc38d;
+    --color-orange: #f96500;
+}
+
+article {
+  font-family: 'Def Sans', sans-serif;
+  font-size: min(3vmin, 20px);
+  line-height: 1.28;
+  display: grid;
+  grid-template-columns: repeat(8, minmax(3px, 1fr));
+  grid-column-gap: 0.3em;
+  grid-row-gap: 0.3em;
+}
+
+body {
+  background: var(--color-white);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'VC Gosh', sans-serif;
+  font-weight: Bold;
+  grid-column: 2 / 8;
+}
+
+h1 {
+ margin-bottom: 0.12em;
+}
+
+p {
+  margin-top: 0em;
+  margin-bottom: 0.67em;
+  grid-column: 2 / 8;
+}
+
+:where(code, kbd, pre, samp) {
+    font-family: CommitMonoV142, monospace;
+    font-size: 0.85em;
+    line-height: 1.45;
+
+}
+
+pre {
+  grid-column: 2 / 8;
+}
+
+.xl {
+  font-size: 4em;
+}
+
+h1 {
+  font-size: 2em;
+}
