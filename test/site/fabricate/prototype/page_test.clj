@@ -62,6 +62,10 @@
     (t/is (= [:span {:class "language-clojure comment"} ";" " a comment" [:br]]
              (str->hiccup "; a comment\n(+ 3 4)")))
     (t/is (some? (str->hiccup "(defn myfunc [a] \n; commentary\n (inc a))")))
+    (t/is (= [:span {:class "language-clojure keyword"} ":"
+              [:span {:class "language-clojure keyword-ns"} "ns"] "/"
+              [:span {:class "language-clojure keyword-name"} "kw"]]
+             (expr->hiccup :ns/kw)))
     (t/is (some? (re-find #"quote"
                           (get-in (str->hiccup "'(+ something something)")
                                   [1 :class])))
@@ -69,64 +73,62 @@
 
 (t/deftest metadata-transforms
   (t/testing "Metadata transformation"
-    (t/is (= [:meta {:name "meta", :content "something"}]
+    (t/is (= [:meta {:name "meta" :content "something"}]
              (-> {"meta" "something"}
                  seq
                  first
                  ->meta)))
-    (t/is (= [:meta {:name "meta", :content "something", :property "some-prop"}]
-             (-> {"meta" {:content "something", :property "some-prop"}}
+    (t/is (= [:meta {:name "meta" :content "something" :property "some-prop"}]
+             (-> {"meta" {:content "something" :property "some-prop"}}
                  seq
                  first
                  ->meta)))
     (t/is
-      (= #{[:meta
-            {:name "site-name",
-             :property "og:site_name",
-             :content "fabricate.site"}]
-           [:meta {:name "title", :content "Fabricate", :property "og:title"}]
-           [:meta {:name "site-title", :content "Fabricate"}]
-           [:meta
-            {:name "description",
-             :content "Fabricate: static website generation for Clojure",
-             :property "og:description"}]
-           [:meta
-            {:name "viewport",
-             :content "width=device-width, initial-scale=1.0"}]
-           [:meta {:name "locale", :content "en_US", :property "og:locale"}]}
-         (into #{}
-               (opengraph-enhance opengraph-property-map
-                                  (map ->meta default-metadata-map))))))
+     (=
+      #{[:meta
+         {:name "site-name" :property "og:site_name" :content "fabricate.site"}]
+        [:meta {:name "title" :content "Fabricate" :property "og:title"}]
+        [:meta {:name "site-title" :content "Fabricate"}]
+        [:meta
+         {:name     "description"
+          :content  "Fabricate: static website generation for Clojure"
+          :property "og:description"}]
+        [:meta
+         {:name "viewport" :content "width=device-width, initial-scale=1.0"}]
+        [:meta {:name "locale" :content "en_US" :property "og:locale"}]}
+      (into #{}
+            (opengraph-enhance opengraph-property-map
+                               (map ->meta default-metadata-map))))))
   (t/testing "page metadata collection"
     (t/is (= {:icon "src-url.jpg"}
-             (lift-metadata [:article {:lang "en", :page/title "Some document"}
+             (lift-metadata [:article {:lang "en" :page/title "Some document"}
                              [:p "some text"]
                              (let [img-url "src-url.jpg"]
                                (with-meta [:img img-url]
-                                 {:page/icon img-url,
-                                  "some-prop" "a property"}))]
+                                          {:page/icon  img-url
+                                           "some-prop" "a property"}))]
                             {})))))
 
 (def html-newline-gen
   (let [newline-gen
-          (gen/vector
-            (gen/let [a (gen/vector (gen/one-of [(gen/elements ["\n"])
-                                                 gen/string-alphanumeric])
-                                    5)
-                      b (gen/vector (gen/one-of [(gen/elements ["\n\n" "\n"])
-                                                 gen/string-alphanumeric])
-                                    5)
-                      c (gen/vector (gen/one-of [(gen/elements ["\n\n" "\n"
-                                                                "\n\n\n"])
-                                                 gen/string-alphanumeric])
-                                    5)]
-              (apply str (interleave a b c)))
-            2
-            5)]
+        (gen/vector
+         (gen/let [a (gen/vector (gen/one-of [(gen/elements ["\n"])
+                                              gen/string-alphanumeric])
+                                 5)
+                   b (gen/vector (gen/one-of [(gen/elements ["\n\n" "\n"])
+                                              gen/string-alphanumeric])
+                                 5)
+                   c (gen/vector (gen/one-of [(gen/elements ["\n\n" "\n"
+                                                             "\n\n\n"])
+                                              gen/string-alphanumeric])
+                                 5)]
+           (apply str (interleave a b c)))
+         2
+         5)]
     (gen/such-that html/element?
-                   (html-gen/hiccup-recursive-elems {:outer-tags html/flow-tags,
+                   (html-gen/hiccup-recursive-elems {:outer-tags html/flow-tags
                                                      :inner-tags
-                                                       html/phrasing-tags,
+                                                     html/phrasing-tags
                                                      :contents-gen newline-gen})
                    250)))
 
@@ -156,9 +158,9 @@
     (t/is (= [:p [:del [:em [:u "text" [:br] "more text"]]]]
              (parse-paragraphs [:p [:del [:em [:u "text\n\nmore text"]]]]))
           "Paragraphs should be detected at arbitrary levels of nesting")
-    (t/is (= [:svg {:width 100, :height 100} [:circle {:cx 50, :cy 50, :r 3}]]
-             (parse-paragraphs [:svg {:width 100, :height 100}
-                                [:circle {:cx 50, :cy 50, :r 3}]]))
+    (t/is (= [:svg {:width 100 :height 100} [:circle {:cx 50 :cy 50 :r 3}]]
+             (parse-paragraphs [:svg {:width 100 :height 100}
+                                [:circle {:cx 50 :cy 50 :r 3}]]))
           "Paragraph detection should skip SVG elements")
     (t/is (= (list [:p "some text" true 24] [:p "second paragraph"])
              (parse-paragraphs (list "some text" true
@@ -185,8 +187,8 @@
     (t/is
      (let [error-form
            [:div [:h6 "Error"]
-            [:dl [:dt "Error type"]
-             [:dd [:code "clojure.lang.ExceptionInfo"]] [:dt "Error message"]
+            [:dl [:dt "Error type"] [:dd [:code "clojure.lang.ExceptionInfo"]]
+             [:dt "Error message"]
              [:dd [:code "Unexpected EOF while reading item 1 of list."]]
              [:dt "Error phase"] [:dd [:code ""]] [:dt "Location"]
              [:dd '("Line " [:strong 1] ", " "Columns " [:strong 1 "-" 12])]]
@@ -218,8 +220,7 @@
         [:code {:class "ws-normal navy"} "noms"]
         " DB alongside the code that is affected by that configuration in a way that reliably links the two."]]
       (parse-paragraphs
-       [:div {:class "1col"}
-        "\n\nLinked in the comments on Truyers' post was "
+       [:div {:class "1col"} "\n\nLinked in the comments on Truyers' post was "
         [:code {:class "ws-normal navy"} "noms"]
         ", a database directly inspired by Git's decentralized and immutable data model, but designed from the ground up to have a better query model and more flexible schema. Unfortunately, it seems to be unmaintained and not ready for prime time. Additionally, for the use case I'm describing, it's unclear how to effectively distribute the configuration data stored in a "
         [:code {:class "ws-normal navy"} "noms"]
@@ -236,12 +237,11 @@
                     " and more text following, in the same paragraph"]
                    [:h3 "and another header"])
              (parse-paragraphs
-              (list
-               [:h3 "header"]
-               "some preliminary text\n\n followed by a double linebreak, "
-               [:code "with inline code"]
-               " and more text following, in the same paragraph"
-               [:h3 "and another header"]))))
+              (list [:h3 "header"]
+                    "some preliminary text\n\n followed by a double linebreak, "
+                    [:code "with inline code"]
+                    " and more text following, in the same paragraph"
+                    [:h3 "and another header"]))))
     (t/is
      (=
       '([:h2 "a header"]
@@ -258,15 +258,14 @@
               [:p "linebreak"]
               (list [:p "and list contents, "] [:p "also with linebreak"])]
              (parse-paragraphs
-              [:div "orphan text" [:em "with emphasis added"]
-               "and\n\nlinebreak"
+              [:div "orphan text" [:em "with emphasis added"] "and\n\nlinebreak"
                (list "and list contents, \n\nalso with linebreak")]))
           "List elements should be processed in place and in order")
-    (let [expr-form [:pre [:code {"class" "language-clojure"}] "(+ 3 4)"]
+    (let [expr-form   [:pre [:code {"class" "language-clojure"}] "(+ 3 4)"]
           expr-result 7
-          pre-parsed [:div "a section" (list expr-form expr-result)]
-          parsed (parse-paragraphs pre-parsed)
-          tree (tree-seq sequential? identity parsed)]
+          pre-parsed  [:div "a section" (list expr-form expr-result)]
+          parsed      (parse-paragraphs pre-parsed)
+          tree        (tree-seq sequential? identity parsed)]
       (t/is
        (< (.indexOf tree expr-form) (.indexOf tree expr-result))
        "After paragraph detection, expression results should come after the form"))

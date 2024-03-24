@@ -359,9 +359,43 @@
                                (sexpr node)
                                (type (sexpr node)))))
 
+(defn sym-node->hiccup
+  "Generate a Hiccup data structure from the given symbol node.
+
+  Separates the namespace from the symbol, if present."
+  [node]
+  (let [sym      (node/sexpr node)
+        sym-ns   (namespace sym)
+        sym-name (name sym)]
+    (if sym-ns
+      [:span {:class "language-clojure symbol"}
+       [:span {:class "language-clojure symbol-ns"} (hu/escape-html sym-ns)] "/"
+       [:span {:class "language-clojure symbol-name"}
+        (hu/escape-html sym-name)]]
+      [:span {:class "language-clojure symbol"} (hu/escape-html sym-name)])))
+
+(defn kw-node->hiccup
+  "Generate a Hiccup data structure from the given keyword node.
+
+  Separates the namespace from the keyword, if present."
+  [node]
+  (let [kw      (node/sexpr node)
+        kw-ns   (namespace kw)
+        kw-name (name kw)]
+    (if kw-ns
+      [:span {:class "language-clojure keyword"} ":"
+       [:span {:class "language-clojure keyword-ns"} (hu/escape-html kw-ns)] "/"
+       [:span {:class "language-clojure keyword-name"}
+        (hu/escape-html kw-name)]]
+      [:span {:class "language-clojure keyword"} ":"
+       (hu/escape-html kw-name)])))
+
 (defmethod node->hiccup :token
   [node]
-  (span (atom-class node) (hu/escape-html (str node))))
+  (let [node-class (atom-class node)]
+    (cond (= "symbol" node-class) (sym-node->hiccup node)
+          (= "keyword" node-class) (kw-node->hiccup node)
+          :default (span (atom-class node) (hu/escape-html (str node))))))
 
 (defmethod node->hiccup :whitespace
   [node]
