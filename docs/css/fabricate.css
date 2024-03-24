@@ -23,10 +23,12 @@ this stylesheet
     --color-clay: #c8beb7;
     --color-lightgreen: #afc38d;
     --color-orange: #f96500;
+    --color-burntorange: #632300;
+    --display-sans: 'VC Gosh'
 }
 
 article {
-  font-family: 'Def Sans', sans-serif;
+  font-family: 'Def Sans VF', sans-serif;
   font-size: min(3vmin, 20px);
   line-height: 1.28;
   display: grid;
@@ -40,8 +42,8 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'VC Gosh', sans-serif;
-  font-weight: Bold;
+  font-family: var(--display-sans), sans-serif;
+  font-weight: 'Black';
   grid-column: 2 / 8;
 }
 
@@ -72,4 +74,8 @@ pre {
 
 h1 {
   font-size: 2em;
+}
+
+.language-clojure.keyword-ns {
+    color: var(--color-burntorange);
 }
