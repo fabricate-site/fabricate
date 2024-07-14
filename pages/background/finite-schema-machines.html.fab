@@ -2,6 +2,7 @@
   (:require [site.fabricate.prototype.page :refer :all]
             [site.fabricate.prototype.read :as read]
             [site.fabricate.dev.styles :as styles]
+            [site.fabricate.adorn :refer [clj->hiccup]]
             [clojure.repl :as repl]
             [babashka.fs :as fs]
             [garden.core :as garden]
@@ -39,14 +40,14 @@ How should those states be defined? Fabricate already ✳=[:a {:href "https://gi
 Let's take a tour through Fabricate's ✳= [:code [:a {:href "/reference/namespaces/site.fabricate.prototype.fsm.html"} "fsm"]] 🔚 namespace. The implementation is extremely simple right now, consisting of two functions:
 
 ✳= [:pre [:code {:class "language-clojure"}
-          (-> 'site.fabricate.prototype.fsm/advance
-              repl/source-fn
-              str->hiccup)]] 🔚
+        (-> 'site.fabricate.prototype.fsm/advance
+            repl/source-fn
+            clj->hiccup)]] 🔚
 
 ✳= [:pre [:code {:class "language-clojure"}
-          (-> 'site.fabricate.prototype.fsm/complete
-              repl/source-fn
-              str->hiccup)]] 🔚
+        (-> 'site.fabricate.prototype.fsm/complete
+            repl/source-fn
+            clj->hiccup)]] 🔚
 
 What do these do? They take a given piece of arbitrary Clojure data, and move it through a succession of states. This sequence is defined by a map mapping from  ✳= [:code "malli"] 🔚 schemas to functions. Malli schemas are just data, so they are easy to use as map keys. If a piece of data matches one of the states in the keys, it is transformed by calling the corresponding function. If it doesn't, it is returned as-is.
 
@@ -64,7 +65,7 @@ One of the motivating concerns for this implementation was the ability to suppor
 
 ✳= [:pre
   [:code {:class "language-clojure"}
-   (expr->hiccup
+   (clj->hiccup
     '(def markdown-state
        "Fabricate markdown input evaluated as markdown string"
        (let [s1 [:map {:closed true, :fsm/name "Evaluated", :fsm/description "Fabricate contents evaluated after parsing"}
@@ -101,21 +102,21 @@ Other state machine implementations are possible; one could update an entry in p
 This implementation, such as it currently is, will make no attempt to prevent users from doing silly things like an infinite succession of states:
 
 ✳= [:pre [:code {:class "language-clojure"}
-     (expr->hiccup '(fsm/complete {[:enum :A] (fn [_] :B)
-             [:enum :B] (fn [_] :A)}))]] 🔚
+        (clj->hiccup '(fsm/complete {[:enum :A] (fn [_] :B)
+                                     [:enum :B] (fn [_] :A)}))]] 🔚
 
 Or from making a succession of states that only terminates when you reach an integer overflow:
 
-✳= [:pre [:code {:class "language-clojure"} (expr->hiccup '(fsm/complete {:int inc} 1))]] 🔚
+✳= [:pre [:code {:class "language-clojure"} (clj->hiccup '(fsm/complete {:int inc} 1))]] 🔚
 
 It will also advance on the first match, so you have to think carefully about making your states mutually exclusive. Luckily, the fact that map keys have to be distinct in Clojure already forces you to do that for obviously overlapping inputs, but there are many more subtle cases, especially when you're working with maps that may have overlapping keys:
 
 ✳=[:pre [:code {:class "language-clojure"}
-(expr->hiccup '(fsm/advance
-{[:map {:closed true} [:a :int]] (fn [m] (update m :a inc))
-[:map {:closed false} [:a :int]] (fn [m] (update m :a dec))}))]]🔚
+       (clj->hiccup '(fsm/advance
+                      {[:map {:closed true} [:a :int]] (fn [m] (update m :a inc))
+                       [:map {:closed false} [:a :int]] (fn [m] (update m :a dec))}))]]🔚
 
-The value ✳=[:code (expr->hiccup {:a 1})]🔚 will just match against the first entry, even if that's not what you want. Map keys are unordered, so the best way to control this is to make the schemas as specific as possible. Fabricate deals with this by using closed maps and adding new keys to them as data advances through the states.
+The value ✳=[:code (clj->hiccup {:a 1})]🔚 will just match against the first entry, even if that's not what you want. Map keys are unordered, so the best way to control this is to make the schemas as specific as possible. Fabricate deals with this by using closed maps and adding new keys to them as data advances through the states.
 
 I have some design concepts for how the really obvious problems could be anticipated through a validation mechanism for the map defining the FSM, but that is a topic for a future expansion of this post.
 

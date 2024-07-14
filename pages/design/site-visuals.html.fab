@@ -2,6 +2,7 @@
   (:require 
    [garden.core :as garden]
    [site.fabricate.prototype.page :as page]
+   [site.fabricate.adorn :refer [clj->hiccup]]
    [rewrite-clj.parser :as p]
    [babashka.fs :as fs])) 🔚
 ✳(def metadata {:title "Fabricate: visual specification"
@@ -65,7 +66,7 @@ See ✳=[:a {:href "https://respatialized.net/typesetting-sexprs.html"} "Typeset
 
 ✳= [:pre {:style (garden/style {:grid-column "2 / 6"})}
   [:code {:class "language-clojure"}
-   (page/expr->hiccup
+   (page/clj->hiccup
     '(defmethod api/collect "pages/**.fab"
        [src options]
        (mapv (fn path->entry [p]
@@ -87,6 +88,6 @@ See ✳=[:a {:href "https://respatialized.net/typesetting-sexprs.html"} "Typeset
                                :padding "0.7em"
                                :border-radius "0.7em"})}
   [:code {:class "language-cloure"}]
-  (page/expr->hiccup
+  (page/clj->hiccup
    (p/parse-string-all
     (slurp "dev/site/fabricate/dev/build.clj")))] 🔚

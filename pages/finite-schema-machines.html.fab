@@ -2,6 +2,7 @@
   (:require [site.fabricate.prototype.page :refer :all]
             [site.fabricate.prototype.read :as read]
             [site.fabricate.dev.styles :as styles]
+            [site.fabricate.adorn :refer [clj->hiccup]]
             [malli.core :as m]
             [clojure.repl :as repl]
             [garden.core :as garden]
@@ -46,7 +47,7 @@ Let's take a tour through Fabricate's ✳= [:code "fsm"] 🔚 namespace. The imp
   (-> 'site.fabricate.prototype.fsm/advance
       repl/source-fn
       read-string
-      expr->hiccup)
+      clj->hiccup)
   ] 🔚
 
 ✳= [:pre [:code {:class "language-clojure"} (repl/source-fn 'site.fabricate.prototype.fsm/complete)]] 🔚
@@ -68,7 +69,7 @@ One of the motivating concerns for this implementation was the ability to suppor
 ✳= [:pre [:code {:class "language-clojure"}
         (-> (clojure.repl/source-fn 'write/markdown-state)
             read-string
-            expr->hiccup)]] 🔚
+            clj->hiccup)]] 🔚
 
 In the read step, data about the input file is appended to the map holding a page's state. This data allows us to dispatch functions on that map entry, running a function (after the evaluation step) that basically just renders the page as a markdown string for any pages that need to have Markdown as an ✳= [:em "output"] 🔚  format. This allows for special cases in the rendering pipeline to be handled merely by progressively refining the schema to pick out the parts of data that identify them, and writing functions that are compatible with the remaining states.
 

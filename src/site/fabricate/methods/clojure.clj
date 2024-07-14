@@ -61,7 +61,7 @@
 
 ;; flesh this out later
 
-(defmethod display-method)
 
 (comment
+  (defmethod display-method)
   (meta 2))
