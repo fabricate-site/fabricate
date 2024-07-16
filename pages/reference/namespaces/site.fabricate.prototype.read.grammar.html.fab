@@ -1,6 +1,7 @@
 ✳(ns site.fabricate.docs.reference.namespaces.grammar
      (:require [site.fabricate.prototype.read.grammar :as grammar]
                [instaparse.core :as insta]
+             [site.fabricate.adorn :as adorn]
                [instaparse.print :refer [Parser->str]]
                [site.fabricate.prototype.page :as page]
                [malli.core :as m]
@@ -30,5 +31,5 @@ For an informal guide to how these templates get used with examples, please see 
 (conj l [:dt [:code {:class "language-clojure symbol"} k]]
       [:dd [:dl [:dt "Description"] [:dd (:doc (meta v))]
             [:dt "Type"]
-            [:dd [:code (page/expr->hiccup (type (var-get v)))]]]]))
+            [:dd [:code (adorn/clj->hiccup (type (var-get v)))]]]]))
                  [:dl]))]🔚

@@ -1,6 +1,7 @@
 ✳(ns site.fabricate.docs.reference.templates
   (:require
    [clojure.string :as str]
+   [site.fabricate.adorn :as adorn]
    [site.fabricate.prototype.read :as read]
    [site.fabricate.prototype.read.grammar :as grammar]
    [garden.core  :as garden]
@@ -58,7 +59,7 @@ Useful for: anything you'd use HTML for.
                    [:div {:class "example-rows"}
                     [:div {:class "example-row"}
                      [:pre (first grammar/delimiters) "="
-                      [:code (page/expr->hiccup expr)] (last grammar/delimiters)]]
+                      [:code (adorn/clj->hiccup expr)] (last grammar/delimiters)]]
                     [:div {:class "example-row"} expr]]))]
 
          )🔚
@@ -92,11 +93,11 @@ Useful for: when you want to demonstrate some code that contributes to the page 
 
           [:pre
            {:class "example-row"}
-           [:code (first grammar/delimiters) "+" (page/expr->hiccup expr)
+           [:code (first grammar/delimiters) "+" (adorn/clj->hiccup expr)
             (last grammar/delimiters)]]
           [:pre
            {:class "example-row"}
-           [:code (page/expr->hiccup expr)]]
+           [:code (adorn/clj->hiccup expr)]]
           ])))🔚
 
 ✳=[:h4 (first grammar/delimiters) "+=" "Composing control characters"]🔚
@@ -143,7 +144,7 @@ Useful for: showing off your art alongside the code that produced it.
           [:pre
            {:class "example-row"}
 [:code (first grammar/delimiters) "+="
-(page/expr->hiccup expr) (last grammar/delimiters)]]
+(adorn/clj->hiccup expr) (last grammar/delimiters)]]
           [:div
            {:class "example-row"}
            (eval expr)]
@@ -194,7 +195,7 @@ This page itself uses many of the "useful for" tips I mentioned in the first sec
                                 (contains? i :expr) "="
                                 (contains? i :exec) "")]
                       [:span start ctrl-char
-                       (page/expr->hiccup (or (:expr i) (:exec i)))
+                       (adorn/clj->hiccup (or (:expr i) (:exec i)))
                        end])
                     i)))
          (apply list)) ]]🔚

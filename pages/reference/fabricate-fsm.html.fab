@@ -2,6 +2,7 @@
   (:require [site.fabricate.prototype.page :as page]
             [garden.core :as garden]
             [clojure.string :as str]
+            [site.fabricate.adorn :as adorn]
             [site.fabricate.dev.styles :as styles]
             [site.fabricate.prototype.fsm :as fsm]
             [site.fabricate.prototype.schema :as schema]
@@ -131,7 +132,7 @@ Fabricate pages' states are defined using ordinary Clojure maps. At each success
        (->> write/default-operations
             (map (fn [[s f]] [(:fsm/name (m/properties s)) f]))
             (into {})
-            page/expr->hiccup)]]🔚
+            adorn/clj->hiccup)]]🔚
 
 ✳=[:h3 {:class "l-text"} "State definitions"]🔚
 

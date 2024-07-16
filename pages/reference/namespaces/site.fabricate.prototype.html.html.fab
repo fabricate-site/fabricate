@@ -1,6 +1,7 @@
 ✳(ns site.fabricate.docs.reference.namespaces.html
      (:require
             [site.fabricate.prototype.html :as html]
+             [site.fabricate.adorn :as adorn]
             [site.fabricate.prototype.page :as page]
                [malli.core :as m]
                [garden.core :as garden]
@@ -30,7 +31,7 @@
              (apply conj [:ul {:style (garden/style {:list-style-type "none"})}]
                     (map (fn [a]
                            [:li [:code {:class "language-clojure"}
-                                 (page/expr->hiccup a)]])
+                                 (adorn/clj->hiccup a)]])
                          (:arglists (meta v))))]]]))
                  [:dl]))]🔚
 
@@ -42,5 +43,5 @@
 (conj l [:dt [:code {:class "language-clojure symbol"} k]]
       [:dd [:dl [:dt "Description"] [:dd (:doc (meta v))]
             [:dt "Type"]
-            [:dd [:code (page/expr->hiccup (type (var-get v)))]]]]))
+            [:dd [:code (adorn/clj->hiccup (type (var-get v)))]]]]))
                  [:dl]))]🔚
