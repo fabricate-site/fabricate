@@ -3,17 +3,31 @@
             [site.fabricate.prototype.read :as read]
             [site.fabricate.dev.styles :as styles]
             [site.fabricate.adorn :refer [clj->hiccup]]
+            [zprint.core :as zp :refer [zprint-str]]
             [clojure.repl :as repl]
             [babashka.fs :as fs]
             [garden.core :as garden]
             [garden.stylesheet :refer [at-import]])) 🔚
             ✳ (def metadata
-{:title "Organizing computation with Finite Schema Machines"
-:description "Using precise schemas to map from data states to functions in Clojure."
-:page-style
- (garden/css styles/docs)}) 🔚
-✳= [:header [:h1 (:title metadata)]
-   [:h4 "An extensible method of laying out functions executed by a program."]] 🔚
+              {:title "Organizing computation with Finite Schema Machines"
+               :description "Using precise schemas to map from data states to functions in Clojure."
+               :page-style
+               (garden/css styles/docs)}) 🔚
+               ✳= [:header [:h1 (:title metadata)]
+                 [:h4 "An extensible method of laying out functions executed by a program."]] 🔚
+                 
+
+✳= [:div [:strong "NOTE: this post describes an implementation no longer used; it is preserved here for theoretical + historical reasons."]
+  "The " [:a {:href "https://github.com/esuomi/muotti"} [:code "muotti"]] " library also uses Malli schemas to define a directed graph of value transformations. I consider it to be a much more advanced and capable version of the concepts that I describe here in a more rudimentary way. Readers of this post may be interested in that library, which, among its many compelling features, actually implements the cycle checking and validation that I sketch out below."
+  ] 🔚
+  
+
+✳ (zp/set-options! {:style [:community :justified] :map {:comma? false}
+                  :output {:real-le? true :real-le-length 60}}) 🔚
+                  ✳ (defn expr->hiccup [e]
+                    (clj->hiccup (zprint-str e))
+  ) 🔚
+
 ✳=[:figure [:blockquote " Computation is a major topic of computer science, and almost every object that computes is naturally viewed as a state machine. Yet computer scientists are so focused on the languages used to describe computation that they are largely unaware that those languages are all describing state machines." ] [:figcaption "Leslie Lamport, " [:cite [:a {:href "https://lamport.azurewebsites.net/pubs/state-machine.pdf"} "Computation and State Machines"]] " [2008]"]] 🔚
 
 
@@ -26,29 +40,145 @@ After some sketches revealed that my understanding of the concepts was muddled a
 Before going through the code, it's worth going over the definitions outlined by Lamport early on in the paper.
 
 ✳= [:blockquote "I begin by considering what a computation is. There are several ways to define " [:em "computation."] " For now, I take the simplest: a computation is a sequence of steps, which I call a " [:em "behavior."] " There are three common choices for what a step is, leading to three different kinds of behavior:"
- [:dl
-[:dt "Action Behavior" ] [:dd "A step is an " [:em "action,"] " which is just an element of some set of actions. An action behavior is a sequence of actions."]
-[:dt "State Behavior"] [:dd "A step is a pair〈s,t〉of states, where a state is an element of some set of states.  A state behavior is a sequence s1 → s2 → s3 → ··· of states. The step〈si,si+1〉represents a transition from state si to state si+1."]
-[:dt "State-Action Behavior"] [:dd "A step is a triple〈s,α,t〉, where s and t are states and α is an action. A state-action behavior is a sequence s1α1 → s2α2 → s3α3 → ···. The step〈si, αi,si+1〉represents a transition from state si to state si+1 that is performed by action αi."]]] 🔚
-
+  [:dl
+   [:dt "Action Behavior" ] [:dd "A step is an " [:em "action,"] " which is just an element of some set of actions. An action behavior is a sequence of actions."]
+   [:dt "State Behavior"] [:dd "A step is a pair〈s,t〉of states, where a state is an element of some set of states.  A state behavior is a sequence s1 → s2 → s3 → ··· of states. The step〈si,si+1〉represents a transition from state si to state si+1."]
+   [:dt "State-Action Behavior"] [:dd "A step is a triple〈s,α,t〉, where s and t are states and α is an action. A state-action behavior is a sequence s1α1 → s2α2 → s3α3 → ···. The step〈si, αi,si+1〉represents a transition from state si to state si+1 that is performed by action αi."]]] 🔚
+   
 This terminology clarified the shaky concept in my head and in my messy sketches. I was attempting to define a state-action behavior: I wanted to call a function (action) on the basis of some property of the data I was currently working with (state). That function would change the properties of that data - in other words, advance it to a new state.
 
 How should those states be defined? Fabricate already ✳=[:a {:href "https://github.com/fabricate-site/fabricate/blob/main/src/site/fabricate/prototype/html.clj"} "extensively"]🔚 uses the ✳= [:code [:a {:href "https://github.com/metosin/malli"} "malli"]] 🔚 schema library, so that was a natural choice. Its expressivity makes it easy to define states and incrementally refine them to match the data being processed by a program. It also meant that I would have to write my own implementation of a finite state machine, as the existing libraries in the Clojure ecosystem don't really work with Malli. The closest library to this concept that I currently know of is ✳=[:code [:a {:href "https://github.com/agentbellnorm/dativity"} "Dativity"]]🔚, which describes itself as a "stateless process engine." Fabricate's implementation, relying as it does on Malli, is different than Dativity's; it was a conceptual rather than implementational reference point.
 
 ✳= [:h2 "A simple implementation"] 🔚
 
-Let's take a tour through Fabricate's ✳= [:code [:a {:href "/reference/namespaces/site.fabricate.prototype.fsm.html"} "fsm"]] 🔚 namespace. The implementation is extremely simple right now, consisting of two functions:
+Let's take a tour through Fabricate's ✳= [:code [:a {:href "/reference/namespaces/site.fabricate.prototype.fsm.html"} "fsm"]] 🔚 namespace. The implementation is extremely simple right now, consisting of two functions and some helpers:
+
+✳= [:h3 "Helper functions"] 🔚
+
+✳= [:pre [:code {:class :language-clojure}]
+  (expr->hiccup '(require '[malli.core :as m]))
+  [:br] [:br]
+  (expr->hiccup
+   '(defn malli?
+      "Returns true if the given form is a valid malli schema"
+      [form]
+      (try (do (m/schema form) true) (catch Exception e false))))
+  [:br] [:br]
+  (expr->hiccup
+   '(def state-action-map
+      "Malli schema for the map where each entry is a ⟨s,α⟩ tuple,
+  'where s is a state states and α is an action.'
+  The action performs the transition from s to a target state
+  specified by the signature of α.
+
+  In this implementation, states are defined by a malli schema.
+
+  See Lamport [2008] - 'Computation and State Machines'"
+      (m/schema [:map-of
+                 [:fn malli?]
+                 [:fn ifn?]])))
+  [:br] [:br]
+  (expr->hiccup
+   '(defn unify
+      "A lighter-weight version of malli's own unify/merge that's
+  more compatible with number-based indexing/item access"
+      [schemas]
+      (m/into-schema :orn {} (map-indexed vector schemas))))
+  [:br] [:br]
+  (expr->hiccup
+   '(def fsm-value-map
+      "Malli schema for maps defining values with state metadata for finite schema machines."
+      (m/schema
+       [:map
+        [:state/value :any]
+        [:state.name/previous {:optional true} [:or :keyword :string [:fn schema/malli?]]]
+        [:state.name/matched {:optional true} [:fn schema/malli?]]
+        [:state/error {:optional true} :map]])))
+  [:br] [:br]
+  (expr->hiccup
+   '(def fsm-value-map?
+      "Predicate indicating whether the given value defines a state map
+for a finite schema machine."
+      (m/validator fsm-value-map)))
+  [:br] [:br]
+  (expr->hiccup
+   '(def throwable-map?
+      (m/validator
+       [:map [:cause :any] [:phase {:optional true} :any]
+        [:via
+         [:*
+          [:map [:type :symbol] [:message :string] [:at [:vector :any]]
+           [:data {:optional true} :any]]]] [:trace [:vector :any]]])))
+  ] 🔚
+  
+
+
+
+✳= [:h3 "FSM: advance and complete"] 🔚
 
 ✳= [:pre [:code {:class "language-clojure"}
-        (-> 'site.fabricate.prototype.fsm/advance
-            repl/source-fn
-            clj->hiccup)]] 🔚
+        (expr->hiccup
+         '(defn advance
+            "Takes a value, matches it against the schema keys defined in the
+           input state-action map, and calls the appropriate function to advance
+           the value to the next state.
+
+           Additional arguments to the function can be supplied via & args; they will be
+           appended to the arguments passed to the matched function via apply.
+
+           Errors in function execution will be printed and the input value will be returned."
+            [fsm-map value & args]
+            (let [union-schema (unify (keys fsm-map))
+                  fsm-v-map? (fsm-value-map? value)
+                  v (if fsm-v-map? (:state/value value) value)
+                  ;; value (if debug? (:fsm/value value) value)
+                  parsed (m/parse union-schema v)]
+              
+              
+              (if (= :malli.core/invalid parsed)
+                value
+                (let [matched-state (-> union-schema
+                                        m/children
+                                        (nth (first parsed))
+                                        last)
+                      op (get fsm-map matched-state
+                              (get fsm-map (m/form matched-state)
+                                   (fn unmatched-value [vv]
+                                     vv)))
+                      result (try 
+                               (apply op v args)
+                               (catch Exception e (Throwable->map e)))
+                      error-result? (schema/throwable-map? result)]
+                  (cond
+                    (and fsm-v-map? (not error-result?))
+                    (assoc
+                     {:state/value result
+                      :fsm/matched-state matched-state}
+                     :fsm/previous-state
+                     (or (:fsm/matched-state value) :fsm/initial))
+                    (and fsm-v-map? error-result?)
+                    (assoc
+                     {:state/error result
+                      :fsm/matched-state matched-state}
+                     :fsm/previous-state
+                     (or (:fsm/matched-state value) :fsm/initial))
+                    error-result? value
+                    (not (or error-result? fsm-v-map?)) result))))))]] 🔚
 
 ✳= [:pre [:code {:class "language-clojure"}
-        (-> 'site.fabricate.prototype.fsm/complete
-            repl/source-fn
-            clj->hiccup)]] 🔚
-
+        (expr->hiccup
+         '(defn complete
+            "Completes the fsm by advancing through states until the same value is produced twice."
+            [fsm-map value & args]
+            (let [fsm-states (iterate (fn [s] (apply advance fsm-map s args)) value)]
+              (apply concat (select-keys (meta fsm-map) [:fsm/name]))
+              (reduce
+               (fn [current-state next-state]
+                 (if (= current-state next-state) (reduced current-state) next-state))
+               fsm-states)))
+         )
+        ]] 🔚
+        
 What do these do? They take a given piece of arbitrary Clojure data, and move it through a succession of states. This sequence is defined by a map mapping from  ✳= [:code "malli"] 🔚 schemas to functions. Malli schemas are just data, so they are easy to use as map keys. If a piece of data matches one of the states in the keys, it is transformed by calling the corresponding function. If it doesn't, it is returned as-is.
 
 Termination is defined as the same successive value getting returned twice, which is a fairly naive way of representing the fact that there's no longer an action to take. While simple, this aspect mirrors one part of the much more formal and rigorous semantics that Lamport describes in that "that there is no fundamental difference between termination and deadlock."
@@ -65,7 +195,7 @@ One of the motivating concerns for this implementation was the ability to suppor
 
 ✳= [:pre
   [:code {:class "language-clojure"}
-   (clj->hiccup
+   (expr->hiccup
     '(def markdown-state
        "Fabricate markdown input evaluated as markdown string"
        (let [s1 [:map {:closed true, :fsm/name "Evaluated", :fsm/description "Fabricate contents evaluated after parsing"}
@@ -102,8 +232,8 @@ Other state machine implementations are possible; one could update an entry in p
 This implementation, such as it currently is, will make no attempt to prevent users from doing silly things like an infinite succession of states:
 
 ✳= [:pre [:code {:class "language-clojure"}
-        (clj->hiccup '(fsm/complete {[:enum :A] (fn [_] :B)
-                                     [:enum :B] (fn [_] :A)}))]] 🔚
+        (expr->hiccup '(fsm/complete {[:enum :A] (fn [_] :B)
+                                      [:enum :B] (fn [_] :A)}))]] 🔚
 
 Or from making a succession of states that only terminates when you reach an integer overflow:
 
@@ -112,9 +242,9 @@ Or from making a succession of states that only terminates when you reach an int
 It will also advance on the first match, so you have to think carefully about making your states mutually exclusive. Luckily, the fact that map keys have to be distinct in Clojure already forces you to do that for obviously overlapping inputs, but there are many more subtle cases, especially when you're working with maps that may have overlapping keys:
 
 ✳=[:pre [:code {:class "language-clojure"}
-       (clj->hiccup '(fsm/advance
-                      {[:map {:closed true} [:a :int]] (fn [m] (update m :a inc))
-                       [:map {:closed false} [:a :int]] (fn [m] (update m :a dec))}))]]🔚
+       (expr->hiccup '(fsm/advance
+                       {[:map {:closed true} [:a :int]] (fn [m] (update m :a inc))
+                        [:map {:closed false} [:a :int]] (fn [m] (update m :a dec))}))]]🔚
 
 The value ✳=[:code (clj->hiccup {:a 1})]🔚 will just match against the first entry, even if that's not what you want. Map keys are unordered, so the best way to control this is to make the schemas as specific as possible. Fabricate deals with this by using closed maps and adding new keys to them as data advances through the states.
 

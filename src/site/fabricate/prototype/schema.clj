@@ -56,7 +56,7 @@
   "Checks to see if at least one entry in the given map schema has required keys"
   {:malli/schema (m/schema [:=> [:cat [:fn malli?]] :boolean])}
   [schema]
-  (let [s-type (first (m/form schema))
+  (let [s-type  (first (m/form schema))
         entries (m/children schema)]
     (and (= :map s-type)
          (some? (some (fn [[k props type]]
@@ -68,7 +68,7 @@
   {:malli/schema (m/schema [:=> [:cat [:fn malli?] [:or :keyword :string]]
                             [:fn malli?]])}
   [schema new-ref]
-  (let [{:keys [registry], :as props} (m/properties schema)]
+  (let [{:keys [registry] :as props} (m/properties schema)]
     (m/schema [:schema props new-ref])))
 
 (def regex
@@ -79,9 +79,8 @@
   "Returns true if the given form is a valid Clojure (ns ...) special form"
   {:malli/schema (m/schema [:=> [:cat :any] :boolean])}
   [form]
-  (let [form (if (and (sequential? form) (= 'quote (first form)))
-               (last form)
-               form)]
+  (let [form
+        (if (and (sequential? form) (= 'quote (first form))) (last form) form)]
     (not= :clojure.spec.alpha/invalid
           (spec/conform (spec/cat :ns-sym #(= % 'ns)
                                   :ns-name simple-symbol?
