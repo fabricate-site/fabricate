@@ -11,11 +11,10 @@
 
 (t/deftest parser
   (t/testing "rules"
-    (t/is (insta/failure? (template
-                           "some text with unbalanced iniital ✳ and more txt"
-                           :start
-                           :txt))
-          "Unbalanced start characters should cause failure")
+    (t/is
+     (insta/failure?
+      (template "some text with unbalanced iniital ✳ and more txt" :start :txt))
+     "Unbalanced start characters should cause failure")
     (t/is (insta/failure? (template
                            "some text with unbalanced iniital ✳ and more txt"
                            :start
@@ -107,9 +106,10 @@ text
   ;; tree while running tests seems fraught with pitfalls
   (t/testing "backwards compatibility"
     (doseq
-      [p ["https://raw.githubusercontent.com/fabricate-site/fabricate/d0b44d79f78d081b7a2282ccde97e69cfa390ca5/pages/fabricate.html.fab"
-          "https://raw.githubusercontent.com/fabricate-site/fabricate/d0b44d79f78d081b7a2282ccde97e69cfa390ca5/pages/finite-schema-machines.html.fab"
-          "https://raw.githubusercontent.com/fabricate-site/fabricate/d0b44d79f78d081b7a2282ccde97e69cfa390ca5/pages/index.html.fab"]]
+      [p
+       ["https://raw.githubusercontent.com/fabricate-site/fabricate/d0b44d79f78d081b7a2282ccde97e69cfa390ca5/pages/fabricate.html.fab"
+        "https://raw.githubusercontent.com/fabricate-site/fabricate/d0b44d79f78d081b7a2282ccde97e69cfa390ca5/pages/finite-schema-machines.html.fab"
+        "https://raw.githubusercontent.com/fabricate-site/fabricate/d0b44d79f78d081b7a2282ccde97e69cfa390ca5/pages/index.html.fab"]]
       (let [page-name (last (clojure.string/split p #"/"))]
         (t/testing (str " for page " page-name)
           (t/is (not (insta/failure? (template (slurp p))))))))))
@@ -118,7 +118,7 @@ text
   (let [f (slurp "./pages/finite-schema-machines.html.fab")]
     (crit/with-progress-reporting (crit/bench (template f))))
   (template
-    "
+   "
 ✳=[:h1 (:title metadata)]🔚
 
 ✳=[:h4 \"form by art and labor\"]🔚
@@ -146,6 +146,6 @@ Multi-line form here
   (gen/fmap #(apply str %) (mg/generator pathological-input-schema)))
 
 (defspec pathological-input-detection
-  8000
-  (prop/for-all [input pathological-input-generator]
-                (insta/failure? (template input))))
+         8000
+         (prop/for-all [input pathological-input-generator]
+                       (insta/failure? (template input))))

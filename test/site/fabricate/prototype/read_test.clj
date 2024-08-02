@@ -247,10 +247,10 @@
             "https://upload.wikimedia.org/wikipedia/commons/9/90/Pterodroma_mollis_light_morph_-_SE_Tasmania_2019.jpg"}]
           [:figcaption "soft-plumaged petrel"]]]
         (->
-         "✳=[:figure [:img {:src \"https://upload.wikimedia.org/wikipedia/commons/9/90/Pterodroma_mollis_light_morph_-_SE_Tasmania_2019.jpg\"} ]
+          "✳=[:figure [:img {:src \"https://upload.wikimedia.org/wikipedia/commons/9/90/Pterodroma_mollis_light_morph_-_SE_Tasmania_2019.jpg\"} ]
                 [:figcaption \"soft-plumaged petrel\"]]🔚"
-         parse
-         eval-all))
+          parse
+          eval-all))
        "evaluation should not remove content from forms")
       (let [ex-file (-> "README.md.fab"
                         slurp

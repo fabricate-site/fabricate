@@ -50,8 +50,8 @@
                              [:p "some text"]
                              (let [img-url "src-url.jpg"]
                                (with-meta [:img img-url]
-                                 {:page/icon  img-url
-                                  "some-prop" "a property"}))]
+                                          {:page/icon  img-url
+                                           "some-prop" "a property"}))]
                             {})))))
 
 (def html-newline-gen
@@ -246,6 +246,6 @@
         [:figcaption "soft-plumaged petrel"]])))))
 
 (defspec paragraph-detection-output
-  (prop/for-all [html-elem html-newline-gen]
-                (or (m/validate html/atomic-element html-elem)
-                    (html/element? (parse-paragraphs html-elem)))))
+         (prop/for-all [html-elem html-newline-gen]
+                       (or (m/validate html/atomic-element html-elem)
+                           (html/element? (parse-paragraphs html-elem)))))

@@ -108,23 +108,23 @@
 (def entry-schema
   "Malli schema describing entries."
   (mu/required-keys
-   (mu/optional-keys
-    (m/schema [:map :site.fabricate.entry/source
-               :site.fabricate.source/location :site.fabricate.page/output
-               :site.fabricate.document/data :site.fabricate.document/format
-               :site.fabricate.source/format :site.fabricate.page/format
-               :site.fabricate.page/uri :site.fabricate.page/title
-               :site.fabricate.page/permalink :site.fabricate.page/description
-               :site.fabricate.page/author :site.fabricate.page/language
-               :site.fabricate.page/locale :site.fabricate.page/image
-               :me.ogp/type :site.fabricate.page/published-time
-               :site.fabricate.page/publish-dir :site.fabricate.source/created
-               :site.fabricate.source/modified
-               :site.fabricate.page/modified-time :site.fabricate.page/tags
-               :site.fabricate.entry/id :site.fabricate.entry/namespace]))
-   ;; entries ultimately have to come from somewhere.
-   [:site.fabricate.entry/source :site.fabricate.source/location
-    :site.fabricate.source/format]))
+    (mu/optional-keys
+      (m/schema [:map :site.fabricate.entry/source
+                 :site.fabricate.source/location :site.fabricate.page/output
+                 :site.fabricate.document/data :site.fabricate.document/format
+                 :site.fabricate.source/format :site.fabricate.page/format
+                 :site.fabricate.page/uri :site.fabricate.page/title
+                 :site.fabricate.page/permalink :site.fabricate.page/description
+                 :site.fabricate.page/author :site.fabricate.page/language
+                 :site.fabricate.page/locale :site.fabricate.page/image
+                 :me.ogp/type :site.fabricate.page/published-time
+                 :site.fabricate.page/publish-dir :site.fabricate.source/created
+                 :site.fabricate.source/modified
+                 :site.fabricate.page/modified-time :site.fabricate.page/tags
+                 :site.fabricate.entry/id :site.fabricate.entry/namespace]))
+    ;; entries ultimately have to come from somewhere.
+    [:site.fabricate.entry/source :site.fabricate.source/location
+     :site.fabricate.source/format]))
 
 
 (defn collect-dispatch
@@ -177,7 +177,7 @@
         collected-entries (vec (for [[source _] (.getMethodTable collect)
                                      entry-data (collect source options)
                                      output (:site.fabricate.page/outputs
-                                             entry-data)]
+                                              entry-data)]
                                  (-> entry-data
                                      (dissoc :site.fabricate.page/outputs)
                                      (merge output))))]
@@ -213,16 +213,16 @@
 (defn assemble
   "Prepare the entries for `produce!` by calling `build` on each entry, then running `tasks` on the results."
   {:term/definition
-   {:source (URI. "https://www.merriam-webster.com/dictionary/assemble"),
-    :definition "to fit together the parts of"},
+     {:source (URI. "https://www.merriam-webster.com/dictionary/assemble"),
+      :definition "to fit together the parts of"},
    :malli/schema site-fn-schema}
   [tasks
    {:keys [site.fabricate.api/entries site.fabricate.api/options], :as site}]
   (let [sort-fn (get options :site.fabricate.api/entry-sort-fn identity)
         doc-entries (mapv (fn [e] (build e options)) (sort-fn entries))]
     (reduce (fn [site task] (task site))
-            (assoc site :site.fabricate.api/entries doc-entries)
-            tasks)))
+      (assoc site :site.fabricate.api/entries doc-entries)
+      tasks)))
 
 (defn produce-dispatch
   "Return the document and page format for an entry."
@@ -236,9 +236,9 @@
   "Produce the content of a file from the results of the `build` operation and write it to disk. Takes an entry and returns an entry."
   {:malli/schema (:malli/schema (meta #'produce-dispatch)),
    :term/definition
-   {:source (URI. "https://www.merriam-webster.com/dictionary/produce"),
-    :definition
-    "to make available for public exhibition or dissemination; to cause to have existence or to happen; to give being, form, or shape to; to compose, create, or bring out by intellectual or physical effort; to bear, make, or yield something"}}
+     {:source (URI. "https://www.merriam-webster.com/dictionary/produce"),
+      :definition
+        "to make available for public exhibition or dissemination; to cause to have existence or to happen; to give being, form, or shape to; to compose, create, or bring out by intellectual or physical effort; to bear, make, or yield something"}}
   produce-dispatch)
 
 (defmethod produce! :default [entry _opts] entry)

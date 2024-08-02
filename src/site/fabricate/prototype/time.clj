@@ -12,9 +12,9 @@
   Returns nil if not found."
   [fp]
   (let [{:keys [out err]} (sh "git"
-                              "log" "--follow"
+                              "log"          "--follow"
                               "--format=%ad" "--date"
-                              "iso-strict" (str fp))]
+                              "iso-strict"   (str fp))]
     (when (not-empty out)
       (mapv #(ZonedDateTime/parse %) (str/split out #"\n")))))
 

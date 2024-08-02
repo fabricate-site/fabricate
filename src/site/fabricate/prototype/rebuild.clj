@@ -36,21 +36,20 @@
 
 (defn- merge-entries
   [existing-entries new-entries]
-  (mapv (fn [{existing-location :site.fabricate.source/location, :as entry}]
-          (let [new-entry (first (filter (fn
-                                           [{new-location
+  (mapv (fn [{existing-location :site.fabricate.source/location :as entry}]
+          (let [new-entry (first (filter (fn [{new-location
                                                :site.fabricate.source/location}]
                                            (= existing-location new-location))
-                                   new-entries))]
+                                         new-entries))]
             (or new-entry entry)))
-    existing-entries))
+        existing-entries))
 
 (defn- reassemble
   [tasks
    {:keys [site.fabricate.api/entries site.fabricate.api/options
-           rebuild/new-entries],
-    :as site}]
-  (let [sort-fn (get options :site.fabricate.api/entry-sort-fn identity)
+           rebuild/new-entries]
+    :as   site}]
+  (let [sort-fn  (get options :site.fabricate.api/entry-sort-fn identity)
         new-docs (mapv (fn [e] (api/build e options)) (sort-fn new-entries))])
   (reduce (fn [site task] (task site))
           (-> site
@@ -60,8 +59,8 @@
 (defn- reconstruct!
   [tasks
    {:keys [site.fabricate.api/entries site.fabricate.api/options
-           rebuild/new-entries],
-    :as site}]
+           rebuild/new-entries]
+    :as   site}]
   (doseq [e new-entries] (api/produce! e options))
   (reduce (fn [site task] (task site)) (dissoc site :rebuild/new-entries)))
 
@@ -85,7 +84,7 @@
 ;; handle both cases
 
 (comment
-  (def ^:private app (agent {:state :waiting, :process nil}))
+  (def ^:private app (agent {:state :waiting :process nil}))
   (def site "Current state of the site." (atom {}))
   (defn rebuild!
     "`api/plan!`, `api/assemble`, and `api/construct!` the site, then begin watching sources for changes.
@@ -99,10 +98,10 @@
 
 
   If `rebuild!` is already running, calling `rebuild!` again will shut down the watch functions."
-    [{:keys [site.fabricate.api/entries site.fabricate.api/options],
-      :as initial-site}
-     {:keys [plan-tasks assemble-tasks construct-tasks shutdown-tasks],
-      :as tasks}]
+    [{:keys [site.fabricate.api/entries site.fabricate.api/options]
+      :as   initial-site}
+     {:keys [plan-tasks assemble-tasks construct-tasks shutdown-tasks]
+      :as   tasks}]
     (if (= :running (:state @app))
       ;; shutdown may need to go into its own function
       (do (send-off app
@@ -146,33 +145,33 @@
     (vec drain-list)))
 
 (defn update-state
-  [{:keys [queue], :as s}]
-  (let [new-state (condp = queue
-                    :running (let [action (.poll action-queue)]
-                               (if action
-                                 (do (println "executing")
-                                     (try (do (action) :running)
-                                          (catch Exception e
-                                            (do (println "error")
-                                                (println (Throwable->map e))
-                                                :waiting))))
-                                 :running))
-                    :waiting :waiting
-                    :stopped
-                    (let [remaining-actions (drain-queue action-queue)]
-                      ;; should this also short-circuit on the first
-                      ;; failure or attempt every remaining action?
-                      (loop [[action & others] remaining-actions]
-                        (let [result (try
-                                       (do (println "executing") (action) :ok)
-                                       (catch Exception e
-                                         (do (println "error")
-                                             (println (Throwable->map e))
-                                             :failed)))]
-                          (cond (= result :ok) (recur others)
-                                (= result :failed) :failed)))
-                      :terminated)
-                    :terminated (do (.clear action-queue) :terminated))]
+  [{:keys [queue] :as s}]
+  (let [new-state
+        (condp = queue
+          :running    (let [action (.poll action-queue)]
+                        (if action
+                          (do (println "executing")
+                              (try (do (action) :running)
+                                   (catch Exception e
+                                     (do (println "error")
+                                         (println (Throwable->map e))
+                                         :waiting))))
+                          :running))
+          :waiting    :waiting
+          :stopped    (let [remaining-actions (drain-queue action-queue)]
+                        ;; should this also short-circuit on the first
+                        ;; failure or attempt every remaining action?
+                        (loop [[action & others] remaining-actions]
+                          (let [result (try
+                                         (do (println "executing") (action) :ok)
+                                         (catch Exception e
+                                           (do (println "error")
+                                               (println (Throwable->map e))
+                                               :failed)))]
+                            (cond (= result :ok)     (recur others)
+                                  (= result :failed) :failed)))
+                        :terminated)
+          :terminated (do (.clear action-queue) :terminated))]
     (assoc s :queue new-state)))
 
 

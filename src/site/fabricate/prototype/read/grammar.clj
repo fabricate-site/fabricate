@@ -21,18 +21,18 @@
                          w = #'\\s?$'") "\n")
   (re-seq #"\s$" "\n")
   (insta/parse
-    (insta/parser
-      "rule = ( text | terminal | EPSILON ) *
+   (insta/parser
+    "rule = ( text | terminal | EPSILON ) *
                          text = #'^[\\s\\S]*?(?=(?:/{2}?🔚)|$)$'
                          terminal = <#'/{2}?🔚'>")
-    "text with ending\n"
-    :trace
-    true))
+   "text with ending\n"
+   :trace
+   true))
 
 (def ^:private txt-insta-regex
   "the left side of txt's regex is a fast possessive quantifier for the easy case, the right side is the more complex lookahead"
-  (let [fast-possessive "(\\A[^✳🔚]*+\\Z)"
-        reluctant-txt "[\\S\\s]*?"
+  (let [fast-possessive    "(\\A[^✳🔚]*+\\Z)"
+        reluctant-txt      "[\\S\\s]*?"
         terminal-lookahead "(?=\\Z|(?:[\\]})]//🔚|✳|🔚))"]
     (str fast-possessive "|(" reluctant-txt terminal-lookahead ")")))
 
@@ -41,8 +41,8 @@
 (def template
   "The formal grammar for Fabricate templates."
   (insta/parser
-    (format
-      "template = EPSILON | ( expr | txt | extended-form )*
+   (format
+    "template = EPSILON | ( expr | txt | extended-form )*
     initial = '✳' var-settings?
     terminal = '🔚' var-settings?
     (* Unicode range for variation settings used by Apple in the Private Use Area *)
@@ -56,4 +56,4 @@
     extended-form = (<initial> <'//'> '[' #'[^\n✳🔚]*' <'\n'> form-contents ']' <'//'> <terminal>) |
                     (<initial> <'//'> '(' #'[^\n✳🔚]*' <'\n'> form-contents ')' <'//'> <terminal>) |
                     (<initial> <'//'> '{' #'[^\n✳🔚]*' <'\n'> form-contents '}' <'//'> <terminal>)"
-      txt-insta-regex)))
+    txt-insta-regex)))
