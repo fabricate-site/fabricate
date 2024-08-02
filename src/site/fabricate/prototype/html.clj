@@ -2,63 +2,47 @@
   "Namespace for creating HTML forms using Hiccup data structures and
    for verifying their structural correctness using malli schemas.
   The schemas in this namespace implement a non-interactive subset of the MDN HTML spec."
-  (:require
-   [clojure.string :as str]
-   [clojure.set :as set]
-   [clojure.zip :as zip]
-   [clojure.data.finger-tree :as ftree :refer
-    [counted-double-list ft-split-at ft-concat]]
-   [clojure.test.check.generators :as gen]
-   [com.gfredericks.test.chuck.generators :as gen']
-   [malli.core :as m]
-   [malli.generator :as mg]
-   [malli.registry :as mr]
-   [malli.dot :as md]
-   [malli.error :as me]
-   [malli.util :as mu]
-   [site.fabricate.prototype.schema :as schema]))
+  (:require [clojure.string :as str]
+            [clojure.set :as set]
+            [clojure.zip :as zip]
+            [clojure.data.finger-tree :as ftree :refer
+             [counted-double-list ft-split-at ft-concat]]
+            [malli.core :as m]
+            [malli.generator :as mg]
+            [malli.registry :as mr]
+            [malli.dot :as md]
+            [malli.error :as me]
+            [malli.util :as mu]
+            [site.fabricate.prototype.schema :as schema]))
 
 (def block-level-tags
   "MDN list of block-level HTML element tags"
-  #{:address :article :aside :blockquote
-    :details :dialog :dd :div :dl :dt
-    :fieldset :figcaption :figure :footer
-    :form :h1 :h2 :h3 :h4 :h5 :h6 :header
-    :hr :li :main :nav :ol :p :pre :section
-    :table :ul})
+  #{:address :article :aside :blockquote :details :dialog :dd :div :dl :dt
+    :fieldset :figcaption :figure :footer :form :h1 :h2 :h3 :h4 :h5 :h6 :header
+    :hr :li :main :nav :ol :p :pre :section :table :ul})
 
 (def inline-tags
   "MDN list of inline HTML element tags"
-  #{:a :abbr :b :bdi :bdo :br #_:button
-    :canvas :cite :code :data #_:datalist
-    :del :dfn :em #_:embed :i #_:iframe :img
-    #_:input :ins :kbd #_:label :mark #_:meter
-    #_:noscript #_:object #_:output #_:picture
-    #_:progress :q #_:ruby :s :samp :script
-    #_:select #_:slot :small :span :strong
-    :sub :sup #_:svg #_:template :time :u
-    :tt :var #_:video :wbr})
+  #{:a :abbr :b :bdi :bdo :br #_:button :canvas :cite :code :data #_:datalist
+    :del :dfn :em #_:embed :i #_:iframe :img #_:input :ins :kbd #_:label :mark
+    #_:meter #_:noscript #_:object #_:output #_:picture #_:progress :q #_:ruby
+    :s :samp :script #_:select #_:slot :small :span :strong :sub :sup #_:svg
+    #_:template :time :u :tt :var #_:video :wbr})
 
 (def metadata-tags
   "MDN list of metadata content element tags"
-  #{#_ :base :link :meta #_:noscript :script
-    :style :title})
+  #{#_:base :link :meta #_:noscript :script :style :title})
 
 (def flow-tags
   "MDN list of flow content element tags"
-  #{:a :abbr :aside :address :article #_:audio :b :bdo :bdi
-    :blockquote :br #_:button #_:canvas :cite
-    :code :data #_:datalist :del :details :dfn
-    :div :dl :em #_:embed #_:fieldset :figure
-    :footer #_:form :h1 :h2 :h3 :h4 :h5 :h6
-    :header :hr :i #_:iframe :img #_:input :ins
-    :kbd #_:label :link :main #_:map :mark #_:math #_:menu
-    #_:meter :nav #_:noscript #_:object :ol #_:output
-    :p #_:picture :pre #_:progress :q #_:ruby :s
-    :samp :script :section #_:select :small
-    :span :strong :sub :sup #_:svg :table
-    #_:template #_:textarea :time :ul :var #_:video
-    #_:wbr})
+  #{:a :abbr :aside :address :article #_:audio :b :bdo :bdi :blockquote :br
+    #_:button #_:canvas :cite :code :data #_:datalist :del :details :dfn :div
+    :dl :em #_:embed #_:fieldset :figure :footer #_:form :h1 :h2 :h3 :h4 :h5 :h6
+    :header :hr :i #_:iframe :img #_:input :ins :kbd #_:label :link :main #_:map
+    :mark #_:math #_:menu #_:meter :nav #_:noscript #_:object :ol #_:output :p
+    #_:picture :pre #_:progress :q #_:ruby :s :samp :script :section #_:select
+    :small :span :strong :sub :sup #_:svg :table #_:template #_:textarea :time
+    :ul :var #_:video #_:wbr})
 
 (def sectioning-tags
   "MDN list of sectioning content element tags"
