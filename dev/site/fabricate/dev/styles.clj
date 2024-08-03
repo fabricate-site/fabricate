@@ -74,12 +74,16 @@
       :font-weight      "700"
       :content          "\"+\""}]
     [(select/ins select/after) {:content "\"\"" :display "block"}]]
-   [:dl {:display "grid" :grid-column-gap "0.5em" :grid-row-gap "0.65em"}
-    [:dt {:grid-column "1 / 3 !important" :font-weight "600"}]
-    [:dd {:grid-column "3 !important" :margin-left "0em" :min-width "25ch"}]]
    [:dl
-    [:dl {:display "block"} [:dt {:grid-column "auto"}]
-     [:dd {:grid-column "auto"}]]]
+    {:display         "grid"
+     :grid-column-gap "0.5em"
+     :grid-row-gap    "0.65em"
+     :grid-template-columns "subgrid"}
+    [:dt {:grid-column "1 / 3" :font-weight "600"}]
+    [:dd {:grid-column "3 " :margin-left "0em" :min-width "25ch"}]]
+   #_[:dl
+      [:dl {:display "block"} [:dt {:grid-column "auto"}]
+       [:dd {:grid-column "auto"}]]]
    (stylesheet/at-media {:max-width "900px"}
                         [:p :ul :ol {:grid-column "1 / 10"}]
                         [:div {:grid-column "1 / 13"}]
@@ -111,6 +115,8 @@
    [:.shell
     [(select/code select/before) {:position "relative" :content "\"$ \""}]]
    [:.small {:font-size "0.75em"}]
+   [:.fabricate-src {:max-width "85ch"}]
+   [:.instaparse-grammar {:line-height 1.45}]
    #_[:.example-rows
       {:display         "flex"
        :flex-flow       "row wrap"

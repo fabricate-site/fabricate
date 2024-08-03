@@ -5,6 +5,7 @@
    [site.fabricate.prototype.read :as read]
    [site.fabricate.prototype.read.grammar :as grammar]
    [garden.core  :as garden]
+   [zprint.core :as zp]
    [garden.stylesheet :as stylesheet]
    [site.fabricate.dev.styles :as styles]
    [site.fabricate.prototype.page :as page])) 🔚
@@ -14,6 +15,11 @@
                             (concat styles/docs
                                     (list [:.example-rows {:grid-column-start 1}])))})🔚
                                     ✳=[:h1 {:class "xl-text"} (:title metadata)]🔚
+                                    
+✳ (defn expr->hiccup [e]
+  (adorn/clj->hiccup (zp/zprint-str e {:style [:community :justified] :map {:comma? false}}
+                                    ))) 🔚
+
 
 This page has an informal explanation of the parts that make up a Fabricate page, using inputs and outputs paired together for demonstration purposes.
 
@@ -35,9 +41,12 @@ Useful for: namespace declarations, variable definitions, and other side effects
        (:require [site.fabricate.prototype.page :as page]))
      (def metadata {:title "My page"})])🔚
      ✳=(list [:h5 {:class "l-text"} "Examples"]
-      (apply conj [:div {:class "small"}]
-            (for [expr run-exprs]
-              [:pre [:code (page/simple-expr expr {:ctrl-char ""})]])))🔚
+           (apply conj [:div {:class "small"}]
+                  (for [expr run-exprs]
+                    [:pre (first grammar/delimiters)
+                     [:code {:class "language-clojure"}
+                      (expr->hiccup expr)]
+                     (peek grammar/delimiters)])))🔚
 
 ✳=[:h4 (first grammar/delimiters) "= - " "Yield expressions"]🔚
 ✳(def yield-exprs
@@ -53,16 +62,16 @@ If you add the "=" character after the asterisk - ✳=[:span (first grammar/deli
 Useful for: anything you'd use HTML for.
 
 ✳= (list [:h5 {:class "l-text"} "Examples"]
-         [:div
-          (apply list
-                 (for [expr yield-exprs]
-                   [:div {:class "example-rows"}
-                    [:div {:class "example-row"}
-                     [:pre (first grammar/delimiters) "="
-                      [:code (adorn/clj->hiccup expr)] (last grammar/delimiters)]]
-                    [:div {:class "example-row"} expr]]))]
+       [:div
+        (apply list
+               (for [expr yield-exprs]
+                 [:div {:class "example-rows"}
+                  [:div {:class "example-row"}
+                   [:pre (first grammar/delimiters) "="
+                    [:code (expr->hiccup expr)] (last grammar/delimiters)]]
+                  [:div {:class "example-row"} expr]]))]
 
-         )🔚
+       )🔚
 
 ✳=[:h4 (first grammar/delimiters) "+"  "Insert expressions"]🔚
 Use this for when you want to evaluate some code and insert the expression into the result, but not its output.
@@ -87,18 +96,18 @@ Useful for: when you want to demonstrate some code that contributes to the page 
   (def clifford-example (clifford 1.24 1.14 1.23 1.89))])🔚
 
 ✳=(list [:h5 "Examples"]
-(apply conj [:div {:class "small"}]
-       (for [expr insert-exprs]
-         [:div {:class "example-rows"}
+      (apply conj [:div {:class "small"}]
+             (for [expr insert-exprs]
+               [:div {:class "example-rows"}
 
-          [:pre
-           {:class "example-row"}
-           [:code (first grammar/delimiters) "+" (adorn/clj->hiccup expr)
-            (last grammar/delimiters)]]
-          [:pre
-           {:class "example-row"}
-           [:code (adorn/clj->hiccup expr)]]
-          ])))🔚
+                [:pre
+                 {:class "example-row"}
+                 [:code (first grammar/delimiters) "+" (expr->hiccup expr)
+                  (last grammar/delimiters)]]
+                [:pre
+                 {:class "example-row"}
+                 [:code (expr->hiccup expr) ]]
+                ])))🔚
 
 ✳=[:h4 (first grammar/delimiters) "+=" "Composing control characters"]🔚
 
@@ -137,18 +146,19 @@ Useful for: showing off your art alongside the code that produced it.
 
 
 ✳=(list [:h5 "Examples"]
-(apply conj [:div]
-       (for [expr insert-display-exprs]
-         [:div {:class "example-rows"}
+      (apply conj [:div]
+             (for [expr insert-display-exprs]
+               [:div {:class "example-rows"}
 
-          [:pre
-           {:class "example-row"}
-[:code (first grammar/delimiters) "+="
-(adorn/clj->hiccup expr) (last grammar/delimiters)]]
-          [:div
-           {:class "example-row"}
-           (eval expr)]
-          ])))🔚
+                [:pre
+                 {:class "example-row"}
+                 [:code (first grammar/delimiters) "+="
+                  (expr->hiccup expr)
+                  (last grammar/delimiters)]]
+                [:div
+                 {:class "example-row"}
+                 (eval expr)]
+                ])))🔚
 
 ✳=[:h4 "Interlude: (code) documentation as data"]🔚
 
@@ -179,23 +189,29 @@ Sometimes it's preferable to group multiple forms together along with paragraphs
 
 This page itself uses many of the "useful for" tips I mentioned in the first section. You might find the source code of the page instructive, so it is included below:
 
-✳=[:pre {:class "small"}
+✳=[:pre {:class "small fabricate-src"}
  
  [:code (->> 
          "pages/reference/template-structure.html.fab"
          slurp
          (#(read/parse %
                        {:filename "pages/reference/template-structure.html.fab"}))
-         (clojure.walk/postwalk
-          (fn [i] (if (read/fabricate-expr? i)
-                    (let [[start end] grammar/delimiters
-                          ctrl-char
-                          (cond (and (contains? i :expr) (:display i)) "+="
-                                (:display i) "+"
-                                (contains? i :expr) "="
-                                (contains? i :exec) "")]
-                      [:span start ctrl-char
-                       (adorn/clj->hiccup (or (:expr i) (:exec i)))
-                       end])
-                    i)))
+         (map
+          (fn [i] (cond (read/fabricate-expr? i)
+                        (let [[start end] grammar/delimiters
+                              ctrl-char
+                              (cond (and (contains? i :expr) (:display i)) "+="
+                                    (:display i) "+"
+                                    (contains? i :expr) "="
+                                    (contains? i :exec) "")]
+                          [:span start ctrl-char
+                           (expr->hiccup
+                            
+                            (or (:expr i) (:exec i))
+                            
+                            )
+                           end])
+                        (string? i) [:span {:class "fabricate-txt"} i]
+                        :default i
+                        )))
          (apply list)) ]]🔚
