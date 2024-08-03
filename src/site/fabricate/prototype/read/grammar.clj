@@ -38,22 +38,25 @@
 
 (def delimiters ["✳" "🔚"])
 
-(def template
+(def grammar
   "The formal grammar for Fabricate templates."
-  (insta/parser
-   (format
-    "template = EPSILON | ( expr | txt | extended-form )*
-    initial = '✳' var-settings?
-    terminal = '🔚' var-settings?
-    (* Unicode range for variation settings used by Apple in the Private Use Area *)
-    var-settings = #'[\\uFE00-\\uFE0F]'
-    ctrl = ('=' | '+' | '+=')
-    expr = <initial> !'//'  ctrl?  #'[^=+][^🔚]*' !'//' <terminal>
-    txt = #'%s'
+  (format
+   "template = EPSILON | ( expr | txt | extended-form )*
+initial = '✳' var-settings?
+terminal = '🔚' var-settings?
+(* Unicode range for variation settings used by Apple in the Private Use Area *)
+var-settings = #'[\\uFE00-\\uFE0F]'
+ctrl = ('=' | '+' | '+=')
+expr = <initial> !'//'  ctrl?  #'[^=+][^🔚]*' !'//' <terminal>
+txt = #'%s'
 
-    (* extended forms allow arbitrary nesting without breaking the flow *)
-    form-contents = (expr|txt|extended-form)+
-    extended-form = (<initial> <'//'> '[' #'[^\n✳🔚]*' <'\n'> form-contents ']' <'//'> <terminal>) |
-                    (<initial> <'//'> '(' #'[^\n✳🔚]*' <'\n'> form-contents ')' <'//'> <terminal>) |
-                    (<initial> <'//'> '{' #'[^\n✳🔚]*' <'\n'> form-contents '}' <'//'> <terminal>)"
-    txt-insta-regex)))
+(* extended forms allow arbitrary nesting without breaking the flow *)
+form-contents = (expr|txt|extended-form)+
+extended-form = (<initial> <'//'> '[' #'[^\n✳🔚]*' <'\n'> form-contents ']' <'//'> <terminal>) |
+(<initial> <'//'> '(' #'[^\n✳🔚]*' <'\n'> form-contents ')' <'//'> <terminal>) |
+(<initial> <'//'> '{' #'[^\n✳🔚]*' <'\n'> form-contents '}' <'//'> <terminal>)"
+   txt-insta-regex))
+
+(def template
+  "An Instaparse parser for Fabricate templates."
+  (insta/parser grammar))
