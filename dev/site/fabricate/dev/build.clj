@@ -4,6 +4,7 @@
             [site.fabricate.dev.styles :as styles]
             [site.fabricate.prototype.time :as time]
             [site.fabricate.prototype.read :as read]
+            [site.fabricate.prototype.read.grammar :as grammar]
             [site.fabricate.prototype.page :as page]
             [site.fabricate.prototype.html :as html]
             [garden.core :as garden]
@@ -25,6 +26,14 @@
   (let [fzip (z/of-file src-file)]
     (adorn/clj->hiccup (z/node (z/find-next-depth-first fzip
                                                         #(pred (z/sexpr %)))))))
+
+
+(defn simple-expr
+  "Takes a Clojure form and yields a string with the Fabricate template expression for that form."
+  {:malli/schema [:=> [:cat :any :map] :string]}
+  [form {:keys [ctrl-char format-fn] :or {format-fn str ctrl-char ""}}]
+  (let [[start end] grammar/delimiters]
+    (str start ctrl-char (format-fn form) end)))
 
 (defn create-dir-recursive
   [target-dir]
