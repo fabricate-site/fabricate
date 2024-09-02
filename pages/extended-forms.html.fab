@@ -1,7 +1,7 @@
 ✳(ns site.fabricate.docs.ext-forms
-                 (:require [site.fabricate.prototype.page :refer :all]
-                           [garden.core :as garden]
-[garden.stylesheet :refer [at-import]]))🔚
+  (:require 
+   [garden.core :as garden]
+   [garden.stylesheet :refer [at-import]]))🔚
 
 ✳(def page-style nil)🔚
 

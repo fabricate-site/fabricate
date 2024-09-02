@@ -1,17 +1,17 @@
-✳(ns site.fabricate.docs.reference.namespaces.page
-     (:require
-            [site.fabricate.prototype.page :as page]
-             [site.fabricate.adorn :as adorn]
-               [malli.core :as m]
-               [garden.core :as garden]
-               [site.fabricate.dev.styles :as styles]))🔚
+✳(ns site.fabricate.docs.reference.namespaces.hiccup
+  (:require
+   [site.fabricate.prototype.hiccup :as hiccup]
+   [site.fabricate.adorn :as adorn]
+   [malli.core :as m]
+   [garden.core :as garden]
+   [site.fabricate.dev.styles :as styles]))🔚
 
-✳(def metadata {:title "site.fabricate.prototype.page Namespace"
+✳(def metadata {:title "site.fabricate.prototype.hiccup Namespace"
                :page-style  (garden/css styles/docs)})🔚
-✳(def doc-ns (find-ns 'site.fabricate.prototype.page))🔚
+               ✳(def doc-ns (find-ns 'site.fabricate.prototype.hiccup))🔚
 
 ✳=[:div
-  [:h1 [:code "site.fabricate.prototype.page"] " Namespace"]
+  [:h1 [:code "site.fabricate.prototype.hiccup"] " Namespace"]
    (:doc (meta doc-ns))]🔚
 
 ✳(def vars (ns-publics doc-ns))🔚

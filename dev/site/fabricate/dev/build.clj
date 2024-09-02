@@ -5,7 +5,7 @@
             [site.fabricate.prototype.time :as time]
             [site.fabricate.prototype.read :as read]
             [site.fabricate.prototype.read.grammar :as grammar]
-            [site.fabricate.prototype.page :as page]
+            [site.fabricate.prototype.hiccup :as hiccup]
             [site.fabricate.prototype.html :as html]
             [garden.core :as garden]
             [garden.stylesheet :refer [at-import]]
@@ -13,7 +13,7 @@
             [site.fabricate.adorn :as adorn]
             [babashka.fs :as fs]
             [hiccup.page]
-            [hiccup.core :as hiccup]
+            [hiccup.core]
             [clojure.string :as str]
             [clojure.java.io :as io]
             [http.server :as server]))
@@ -145,18 +145,18 @@
   (let [parsed-page    (read/parse (slurp (:site.fabricate.source/location
                                            entry)))
         evaluated-page (read/eval-all parsed-page)
-        page-metadata  (page/lift-metadata evaluated-page
-                                           (let [m (:metadata (meta
-                                                               evaluated-page))]
-                                             ;; TODO: better handling of
-                                             ;; unbound metadata vars
-                                             (if (map? m) m {})))
-        hiccup-page    [:html (page/doc-header page-metadata)
+        page-metadata  (hiccup/lift-metadata evaluated-page
+                                             (let [m (:metadata
+                                                      (meta evaluated-page))]
+                                               ;; TODO: better handling of
+                                               ;; unbound metadata vars
+                                               (if (map? m) m {})))
+        hiccup-page    [:html (hiccup/doc-header page-metadata)
                         [:body
                          [:main
                           (apply conj
                                  [:article {:lang "en-us"}]
-                                 (page/parse-paragraphs evaluated-page))]
+                                 (hiccup/parse-paragraphs evaluated-page))]
                          [:footer [:div [:a {:href "/"} "Home"]]]]]]
     (assoc entry
            :site.fabricate.document/data hiccup-page
@@ -181,7 +181,7 @@
   [hiccup-page-data output-file]
   (let [parent-dir (fs/parent output-file)]
     (create-dir? parent-dir)
-    (spit output-file (hiccup/html hiccup-page-data))))
+    (spit output-file (hiccup.core/html hiccup-page-data))))
 
 (defn subpath
   ([dir p] (apply fs/path (drop 1 (fs/components (fs/relativize dir p)))))

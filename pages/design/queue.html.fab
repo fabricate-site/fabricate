@@ -4,7 +4,7 @@
    [garden.core  :as garden]
    [garden.stylesheet :as stylesheet]
    [site.fabricate.dev.styles :as styles]
-   [site.fabricate.prototype.page :as page])) 🔚
+   [site.fabricate.prototype.hiccup :as hiccup])) 🔚
    
 ✳(def metadata {:title "Design Doc for Work Queue"
                :written  "2022-10-10"

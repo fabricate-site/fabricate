@@ -6,25 +6,25 @@
             [clojure.test.check :as check]
             [clojure.test.check.properties :as prop]
             [site.fabricate.prototype.read :as read]
-            [site.fabricate.prototype.page :as page]
+            [site.fabricate.prototype.hiccup :as hiccup]
             [site.fabricate.prototype.html :as html]
-            [site.fabricate.prototype.page-test :as page-test]))
+            [site.fabricate.prototype.hiccup-test :as hiccup-test]))
 
 (t/deftest ^:performance paragraph-detection
   (t/testing "profiling call graph of paragraph detection"
     #_(check/quick-check 100
-                         (prop/for-all [html-elem page-test/html-newline-gen]
+                         (prop/for-all [html-elem hiccup-test/html-newline-gen]
                                        (profiler/start)
-                                       (page/parse-paragraphs html-elem)
+                                       (hiccup/parse-paragraphs html-elem)
                                        (profiler/stop)))
     (profiler/profile (dotimes [_ 500]
-                        (page/parse-paragraphs
+                        (hiccup/parse-paragraphs
                          [:div {:class "row"} "orphan text"
                           [:em "with emphasis added"] "and\n\nlinebreak"]))))
   (t/testing "benchmarking execution time"
-    (bench/quick-bench (page/parse-paragraphs [:div {:class "row"} "orphan text"
-                                               [:em "with emphasis added"]
-                                               "and\n\nlinebreak"]))))
+    (bench/quick-bench (hiccup/parse-paragraphs
+                        [:div {:class "row"} "orphan text"
+                         [:em "with emphasis added"] "and\n\nlinebreak"]))))
 
 (t/deftest ^:performance paragraph-detection-revised
   (with-redefs [html/permitted-contents html/tag-contents]
@@ -32,14 +32,14 @@
       #_(check/quick-check 100
                            (prop/for-all [html-elem page-test/html-newline-gen]
                                          (profiler/start)
-                                         (page/parse-paragraphs html-elem)
+                                         (hiccup/parse-paragraphs html-elem)
                                          (profiler/stop)))
       (profiler/profile (dotimes [_ 500]
-                          (page/parse-paragraphs
+                          (hiccup/parse-paragraphs
                            [:div {:class "row"} "orphan text"
                             [:em "with emphasis added"] "and\n\nlinebreak"]))))
     (t/testing "benchmarking execution time"
-      (bench/quick-bench (page/parse-paragraphs
+      (bench/quick-bench (hiccup/parse-paragraphs
                           [:div {:class "row"} "orphan text"
                            [:em "with emphasis added"] "and\n\nlinebreak"])))))
 

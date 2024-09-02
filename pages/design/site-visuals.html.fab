@@ -1,7 +1,6 @@
 ✳️(ns site.fabricate.docs.site-visuals
   (:require 
    [garden.core :as garden]
-   [site.fabricate.prototype.page :as page]
    [site.fabricate.adorn :refer [clj->hiccup]]
    [zprint.core :as zp :refer [zprint-str]]
    [rewrite-clj.parser :as p]

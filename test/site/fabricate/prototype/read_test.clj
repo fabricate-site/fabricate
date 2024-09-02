@@ -1,6 +1,5 @@
 (ns site.fabricate.prototype.read-test
   (:require [clojure.test :as t]
-            [site.fabricate.prototype.page :as page]
             [malli.core :as m]
             [malli.instrument :as mi]
             [hiccup.core :as hiccup]
@@ -217,11 +216,6 @@
               "Namespace information should be attached to evaluated form")
         (t/is (= {:a 3} (:metadata form-meta))
               "Metadata should be attached to evaluated form"))
-      #_(t/is (= [[:em 3]]
-                 (parse-eval "✳=(site.fabricate.prototype.page/em 3)🔚"))
-              "Namespace scoping should be preserved")
-      #_(t/is (= [[:em 3]] (parse-eval "✳=(em 3)🔚"))
-              "Namespace scoping should be preserved")
       (t/is (= [[:em "text"] ", with a comma following"]
                (parse-eval "✳=[:em \"text\"]🔚, with a comma following")))
       (t/is (= (parse-eval "✳=:foo🔚 bar ✳=:baz🔚") [:foo " bar " :baz]))
@@ -244,10 +238,10 @@
             "https://upload.wikimedia.org/wikipedia/commons/9/90/Pterodroma_mollis_light_morph_-_SE_Tasmania_2019.jpg"}]
           [:figcaption "soft-plumaged petrel"]]]
         (->
-          "✳=[:figure [:img {:src \"https://upload.wikimedia.org/wikipedia/commons/9/90/Pterodroma_mollis_light_morph_-_SE_Tasmania_2019.jpg\"} ]
+         "✳=[:figure [:img {:src \"https://upload.wikimedia.org/wikipedia/commons/9/90/Pterodroma_mollis_light_morph_-_SE_Tasmania_2019.jpg\"} ]
                 [:figcaption \"soft-plumaged petrel\"]]🔚"
-          parse
-          eval-all))
+         parse
+         eval-all))
        "evaluation should not remove content from forms")
       (let [ex-file (-> "README.md.fab"
                         slurp
@@ -262,9 +256,6 @@
                   :column 1}
                  ex-meta)
               "Vars should preserve information about their source files"))
-      #_(t/is (= (parse-eval "✳=(site.fabricate.prototype.page/em 3)🔚")
-                 [[:em 3]])
-              "Namespace scoping should be preserved")
       #_(t/is (= (parse-eval "✳=(em 3)🔚") [[:em 3]])
               "Namespace scoping should be preserved")
       (t/is (= [[:em "text"] ", with a comma following"]

@@ -1,5 +1,5 @@
 ✳(ns site.fabricate.docs.background.fsm
-  (:require [site.fabricate.prototype.page :refer :all]
+  (:require [site.fabricate.prototype.hiccup :refer :all]
             [site.fabricate.prototype.read :as read]
             [site.fabricate.dev.styles :as styles]
             [site.fabricate.adorn :refer [clj->hiccup]]

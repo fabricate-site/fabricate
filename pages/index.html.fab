@@ -8,7 +8,7 @@
    [site.fabricate.prototype.read]
    [site.fabricate.prototype.schema]
    [site.fabricate.prototype.fsm]
-   [site.fabricate.prototype.page])) 🔚
+   [site.fabricate.prototype.hiccup])) 🔚
 
 
 ✳(def metadata {:title "Fabricate"
@@ -87,7 +87,7 @@ The namespace descriptions, automatically generated from the namespace forms, in
                'site.fabricate.prototype.html
                'site.fabricate.prototype.read
                'site.fabricate.prototype.read.grammar
-               'site.fabricate.prototype.page
+               'site.fabricate.prototype.hiccup
                'site.fabricate.prototype.fsm
                ]))]
 🔚

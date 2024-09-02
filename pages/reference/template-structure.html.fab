@@ -8,7 +8,7 @@
    [zprint.core :as zp]
    [garden.stylesheet :as stylesheet]
    [site.fabricate.dev.styles :as styles]
-   [site.fabricate.prototype.page :as page])) 🔚
+   )) 🔚
    
 ✳(def metadata {:title "A Reference to Fabricate's Page Templates"
                :page-style (garden/css
@@ -37,9 +37,9 @@ If you don't specify any additional characters, Fabricate evaluates the expressi
 
 Useful for: namespace declarations, variable definitions, and other side effects - anything where you don't need to see the result of what you run.
 ✳(def run-exprs
-   '[(ns my-demo-ns
-       (:require [site.fabricate.prototype.page :as page]))
-     (def metadata {:title "My page"})])🔚
+  '[(ns my-demo-ns
+      (:require [site.fabricate.prototype.hiccup :as hiccup]))
+    (def metadata {:title "My page"})])🔚
      ✳=(list [:h5 {:class "l-text"} "Examples"]
            (apply conj [:div {:class "small"}]
                   (for [expr run-exprs]

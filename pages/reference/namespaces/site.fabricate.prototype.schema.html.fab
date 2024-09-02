@@ -2,7 +2,6 @@
      (:require
              [site.fabricate.adorn :as adorn]
 
-            [site.fabricate.prototype.page :as page]
             [site.fabricate.prototype.schema :as schema]
                [malli.core :as m]
 

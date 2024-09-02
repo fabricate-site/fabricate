@@ -1,4 +1,4 @@
-(ns site.fabricate.prototype.page
+(ns site.fabricate.prototype.hiccup
   "Functions for transforming Hiccup elements after processing."
   (:require [site.fabricate.prototype.html :as html]
             [site.fabricate.prototype.read.grammar :as grammar]

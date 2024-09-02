@@ -1,6 +1,5 @@
 ✳(ns site.fabricate.docs.reference.namespaces.read
      (:require [site.fabricate.prototype.read :as read]
-               [site.fabricate.prototype.page :as page]
                [site.fabricate.adorn :as adorn]
                [malli.core :as m]
                [garden.core :as garden]

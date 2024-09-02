@@ -6,7 +6,7 @@
  [garden.core :as garden]
  [garden.selectors :as select]
  [garden.stylesheet :as stylesheet]
- [site.fabricate.prototype.page])) 🔚
+ )) 🔚
 
 ✳(def metadata {:title "Tutorial: Creating Documentation for Clojure Projects with Fabricate" :page-style (garden/css styles/docs) })🔚
 ✳=

@@ -6,8 +6,7 @@
             [rewrite-clj.zip :as zip]
             [malli.core :as m]
             [babashka.fs :as fs]
-            [clojure.java.io :as io]
-            [site.fabricate.prototype.page :as page]))
+            [clojure.java.io :as io]))
 
 
 

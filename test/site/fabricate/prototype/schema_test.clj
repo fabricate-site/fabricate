@@ -1,7 +1,7 @@
 (ns site.fabricate.prototype.schema-test
   (:require [site.fabricate.prototype.schema :refer :all]
             [site.fabricate.prototype.html]
-            [site.fabricate.prototype.page]
+            [site.fabricate.prototype.hiccup]
             [site.fabricate.prototype.read]
             [site.fabricate.prototype.read.grammar]
             [site.fabricate.prototype.test-utils :as test-utils]
@@ -62,8 +62,7 @@
         (not (fn? (var-get v))))))
 
 (comment
-  (has-schema? #'site.fabricate.prototype.html/element-flat-explainer)
-  (has-schema? #'site.fabricate.prototype.page/em))
+  (has-schema? #'site.fabricate.prototype.html/element-flat-explainer))
 
 (defn test-ns-schemas
   [nmspc]
@@ -97,7 +96,7 @@
   (doseq [nmspc '(site.fabricate.prototype.html
                   site.fabricate.prototype.read
                   site.fabricate.prototype.read.grammar
-                  site.fabricate.prototype.page
+                  site.fabricate.prototype.hiccup
                   site.fabricate.prototype.schema
                   site.fabricate.api)]
     (t/testing (str "coverage for namespace " nmspc)

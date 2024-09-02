@@ -1,8 +1,8 @@
 ✳(ns site.fabricate.docs.guides.emacs
-  (:require [site.fabricate.prototype.page :as page]
-            [site.fabricate.prototype.read :as read]
-            [garden.core :as garden]
-            [site.fabricate.dev.styles :as styles])) 🔚
+  (:require 
+   [site.fabricate.prototype.read :as read]
+   [garden.core :as garden]
+   [site.fabricate.dev.styles :as styles])) 🔚
 
 ✳(def metadata {:title "Supporting Fabricate's templates in Emacs"
                :page-style (garden/css styles/docs)}) 🔚

@@ -1,5 +1,5 @@
-(ns site.fabricate.prototype.page-test
-  (:require [site.fabricate.prototype.page :refer :all]
+(ns site.fabricate.prototype.hiccup-test
+  (:require [site.fabricate.prototype.hiccup :refer :all]
             [site.fabricate.prototype.html :as html]
             [site.fabricate.prototype.html-test.generators :as html-gen]
             [site.fabricate.prototype.test-utils :refer [with-instrumentation]]
@@ -102,11 +102,11 @@
 (t/deftest content-transforms
   (t/testing "Paragraph detection"
     (t/testing ": utilities"
-      (t/is (#'site.fabricate.prototype.page/final-match? #"\n\n" "abc\n\n"))
-      (t/is (not (#'site.fabricate.prototype.page/final-match?
+      (t/is (#'site.fabricate.prototype.hiccup/final-match? #"\n\n" "abc\n\n"))
+      (t/is (not (#'site.fabricate.prototype.hiccup/final-match?
                   #"\n\n"
                   "abc\n\ndef")))
-      (t/is (not (#'site.fabricate.prototype.page/final-match?
+      (t/is (not (#'site.fabricate.prototype.hiccup/final-match?
                   #"\n\n"
                   "abc\n\ndef\n\n"))))
     (t/is (= [:div [:p "some"] [:p "text"]]

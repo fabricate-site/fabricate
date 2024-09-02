@@ -2,7 +2,7 @@
 (:require [garden.core :as garden]
 [site.fabricate.prototype.read :as read]
 [site.fabricate.prototype.read.grammar :as grammar]
-[site.fabricate.prototype.page :refer :all]
+[site.fabricate.prototype.hiccup :refer :all]
 [garden.stylesheet :as stylesheet])) 🔚
 
 ✳ (def page-css nil) 🔚
