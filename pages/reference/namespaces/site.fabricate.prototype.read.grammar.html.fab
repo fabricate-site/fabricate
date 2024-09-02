@@ -3,6 +3,8 @@
             [instaparse.core :as insta]
             [site.fabricate.adorn :as adorn]
             [instaparse.print :refer [Parser->str]]
+            [zprint.core :as zp]
+            [instaparse.combinators :as combo]
             [site.fabricate.prototype.page :as page]
             [hiccup.util]
             [malli.core :as m]
@@ -28,6 +30,17 @@ This ✳=[:a {:href "https://github.com/engelberg/instaparse"} [:code "Instapars
   (Parser->str (var-get ('template vars))))]🔚
 
 For an informal guide to how these templates get used with examples, please see the page ✳=[:a {:href "/reference/template-structure.html"} "A Reference to Fabricate's Page Templates"]🔚.
+
+
+✳
+nil
+;; combinator version - needs to be structured into
+;; something more legible
+#_(adorn/clj->hiccup (zp/zprint-str (combo/ebnf (Parser->str grammar/template)
+                                                )
+                                    {:style [:community :justified]
+                                     :map {:comma? false}}))🔚
+
 ✳=[:h2 "Constants"]🔚
 
 ✳= [:div (->> vars
