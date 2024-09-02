@@ -31,12 +31,14 @@ this stylesheet.
     --color-lightgreen: #afc38d;
     --color-orange: #f96500;
     --color-burntorange: #632300;
-    --display-sans: 'Lapidar 03'
+    --display-sans: 'Lapidar 03';
+    --sans: -apple-system, BlinkMacSystemFont, 'avenir next', avenir, 'segoe ui', 'helvetica neue', helvetica, Cantarell, Ubuntu, roboto, noto, arial, sans-serif;
+
 }
 
 article {
   /* font-family: 'Def Sans VF', sans-serif; */
-    font-family: -apple-system, BlinkMacSystemFont, avenir next, avenir, segoe ui, helvetica neue, helvetica, Cantarell, Ubuntu, roboto, noto, arial, sans-serif;
+  font-family: var(--sans);
   font-size: min(3vmin, 20px);
   line-height: 1.28;
   display: grid;
@@ -68,12 +70,16 @@ p {
   grid-column: 2 / 8;
 }
 
-:where(code, kbd, pre, samp) {
+.mono-txt,:where(code, kbd, pre, samp) {
     font-family: CommitMonoV142, monospace;
     font-size: 0.85em;
     line-height: 1.45;
-
 }
+
+.prop-txt {
+    font-family: var(--sans);
+}
+
 
 pre {
   grid-column: 2 / 8;

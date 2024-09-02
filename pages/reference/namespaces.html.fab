@@ -1,0 +1,47 @@
+
+✳(ns site.fabricate.docs.reference.namespaces
+  (:require [site.fabricate.api]
+            [site.fabricate.prototype.read]
+            [site.fabricate.prototype.hiccup]
+            )
+  ) 🔚
+  
+
+✳(def metadata {:title "Namespace layout"
+               :page-style (slurp "docs/css/fabricate.css")})🔚
+               
+✳= [:h1 (:title metadata)] 🔚
+
+Core organization for Fabricate's namespaces.
+
+
+✳= [:ul {:class "main-track mono-txt"}
+  [:li "site.fabricate"]
+  [:ul
+   [:li "api"
+    [:br] [:span {:class "prop-txt"} "Fabricate core API"]
+    ]
+   [:li "source"
+    [:br] [:span {:class "prop-txt"} "The source namespace registers all of fabricate's default collect methods for source files. Requiring this namespace also allows for shorthanding entry properties: " [:code {:class "language-clojure keyword"} "::source/location"] "."]
+    ]
+   [:li "document"
+    [:br] [:span {:class "prop-txt"} "Document namespace registers Fabricate's default assemble methods for documents."]
+    [:ul
+     [:li "fabricate"]
+     [:li "clojure"]
+     [:li "markdown"]]
+    ]
+   [:li "page"
+    [:br] [:span {:class "prop-txt"} "Page namespace registers Fabricate's default produce methods for pages."]
+    [:ul [:li "html"]]]
+   [:li "prototype"
+    [:br ] [:span {:class "prop-txt"} "Prototype namespaces contain not-yet-stabilized features."]
+    [:ul
+     [:li "read"
+      [:ul [:li "grammar"]]]
+     [:li "schema"]
+     [:li "html"]
+     [:li "hiccup"]
+     ]]]
+  ] 🔚
+  
