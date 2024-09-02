@@ -5,8 +5,6 @@
   of those expressions within the Hiccup document."
   (:require [clojure.edn :as edn]
             [hiccup.util :as util]
-            [clojure.pprint :refer [pprint]]
-            [clojure.tools.reader :as r]
             [rewrite-clj.zip :as z]
             [rewrite-clj.parser :as p]
             [malli.core :as m]
@@ -287,32 +285,13 @@
               (fn [i] (if (fabricate-expr? i) (eval-parsed-expr i simplify?) i))
               parsed-form)]
          (with-meta final-form
-                    {:namespace nmspc
-                     :metadata  (when-let [m (ns-resolve *ns* 'metadata)]
-                                  (var-get m))})))))
+           {:namespace nmspc
+            :metadata  (when-let [m (ns-resolve *ns* 'metadata)]
+                         (var-get m))})))))
   ([parsed-form simplify?] (eval-all parsed-form simplify? nil))
   ([parsed-form] (eval-all parsed-form true)))
 
-(defn include-source
-  "Includes the source code in the given file as a [:pre] Hiccup element."
-  {:malli/schema [:=> [:cat :map :string] [:vector :any]]}
-  ([{:keys [details] :or {details nil} :as opts} file-path]
-   (let [source-code (slurp file-path)
-         src-element (adorn/clj->hiccup source-code)]
-     (if details
-       (conj [:details [:summary details]]
-             [:pre [:code {:class "language-clojure"} src-element]])
-       [:pre [:code {:class "language-clojure"} src-element]])))
-  ([file-path] (include-source {} file-path)))
 
-
-
-(defn include-form
-  "Return the form in the file matching the predicate as a rewrite-clj node."
-  {:malli/schema [:=> [:cat :string [:fn fn?]] :any]}
-  [src-file pred]
-  (let [fzip (z/of-file src-file)]
-    (z/node (z/find-next-depth-first fzip #(pred (z/sexpr %))))))
 
 (def file-metadata-schema
   "Schema describing a map of file metadata used by fabricate"
@@ -352,19 +331,6 @@
      :site.fabricate.file/output-extension output-extension
      :site.fabricate.file/template-suffix  (str "." suffix)}))
 
-(defn ->dir-local-file
-  "Return the given file with a path relative to the current working directory (project root by default)."
-  {:malli/schema [:=> [:cat [:fn #(.isInstance java.io.File %)]] :any]}
-  [file]
-  (.toFile (.relativize (-> (System/getProperty "user.dir")
-                            io/file
-                            .getCanonicalFile
-                            .toPath
-                            .toAbsolutePath)
-                        (-> file
-                            .getCanonicalFile
-                            .toPath
-                            .toAbsolutePath))))
 
 (def ^:private parsed-encoder
   (m/encoder parsed-schema (mt/transformer {:name :get})))

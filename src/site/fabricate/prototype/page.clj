@@ -1,96 +1,19 @@
 (ns site.fabricate.prototype.page
   "Functions for transforming processed page contents."
   (:require [site.fabricate.prototype.html :as html]
-            [hiccup2.core :as hiccup]
-            [hiccup.page :as hp]
-            [hiccup.util :as hu]
             [clojure.data.finger-tree :as ftree :refer
              [counted-double-list ft-split-at ft-concat]]
             [malli.core :as m]
             [clojure.string :as string]
-            [clojure.repl :refer [source-fn]]
-            [rewrite-clj.node :as node :refer [tag sexpr]]
-            [rewrite-clj.parser :as p]
-            [rewrite-clj.zip :as z]
             [site.fabricate.prototype.read.grammar :as grammar]
             [site.fabricate.prototype.schema :as schema]))
 
-(defn not-in-form?
-  {:malli/schema [:=> [:cat :any] :boolean]}
-  [e]
-  (and (vector? e) (not (contains? html/phrasing-tags (first e)))))
+;; (defn not-in-form?
+;;   {:malli/schema [:=> [:cat :any] :boolean]}
+;;   [e]
+;;   (and (vector? e) (not (contains? html/phrasing-tags (first e)))))
 
-(defn para?
-  {:malli/schema [:=> [:cat :any] :boolean]}
-  [i]
-  (and (vector? i) (= :p (first i))))
-(defn in-para?
-  {:malli/schema [:=> [:cat :any] :boolean]}
-  [i]
-  (or (m/validate html/atomic-element i)
-      (and (vector? i) (html/phrasing-tags (first i)))))
 
-(defn detect-paragraphs
-  {:doc
-   "For each string in the element split it by the given regex, and insert the result into the original element. Leaves sub-elements as is and inserts them into the preceding paragraph."
-   :deprecated true
-   :malli/schema [:=> [:cat [:? [:fn seq?]] [:? schema/regex]] html/element]}
-  ([seq re]
-   (let [v? (vector? seq)
-         r
-         (loop [s     (apply ftree/counted-double-list seq)
-                final (ftree/counted-double-list)]
-           (cond
-             ; skip paragraph detection on phrasing elements
-             (or (html/phrasing? seq) (html/heading? seq)) seq
-             ; terminating case
-             (empty? s) final
-             :else
-             (let [h (first s)
-                   t (rest s)
-                   current-elem (last final)]
-               (cond
-                 (and (string? h) (some? (re-find re h)))
-                 (let [[hh & tt] (string/split h re)
-                       rest      (map (fn [i] [:p i]) tt)]
-                   (cond (or (empty? hh) (re-matches (re-pattern "\\s+") hh))
-                         (recur (concat rest t) final)
-                         ((get html/element-validators ::html/p) current-elem)
-                         (recur (concat rest t)
-                                (conj (first (ft-split-at final
-                                                          (- (count final) 1)))
-                                      (conj current-elem hh)))
-                         :else (recur (concat rest t) (conj final [:p hh]))))
-                 ;; non-string atomic elements remain in the current
-                 ;; element
-                 (and (not (string? h)) (html/atomic-element? h))
-                 (recur t
-                        (conj (first (ft-split-at final (- (count final) 1)))
-                              (conj current-elem h)))
-                 (html/phrasing? h)
-                 (if ((get html/element-validators ::html/p) current-elem)
-                   (recur t
-                          (conj (first (ft-split-at final (- (count final) 1)))
-                                (conj current-elem h)))
-                   (recur t (conj final [:p h])))
-                 :else (recur t (conj final h))))))]
-     (if v? (apply vector r) r)))
-  ([re] (fn [seq] (detect-paragraphs seq re)))
-  ([] (detect-paragraphs (re-pattern "\n\n"))))
-
-(defn split-paragraphs
-  {:malli/schema [:=> [:cat :string [:fn #(= java.util.regex.Pattern (type %))]]
-                  [:or [:* :string] :string]]}
-  ([s re]
-   (if (and (string? s) (re-find #"\n\n" s))
-     (clojure.string/split s #"\n\n")
-     s)))
-
-(defn- non-hiccup-seq?
-  [form]
-  (and (seq? form)
-       (not (string? form))
-       (or (not (vector? form)) (not (keyword? (first form))))))
 
 (defn- reconstruct
   [s sequence-type]
@@ -106,7 +29,8 @@
          (= (.end m) (count s)))))
 
 (defn parse-paragraphs
-  "Detects the paragraphs within the form"
+  "Detects the paragraphs within the form based on a delimiter and
+  separates them into distinct <p> elements."
   {:malli/schema [:=> [:cat [:vector :any] :map] [:vector :any]]}
   ([form
     {:keys [paragraph-pattern default-form current-paragraph?]
@@ -116,7 +40,7 @@
      :as   opts}]
    (let [sequence-type (type form)
          res (cond
-               ; don't detect in specific elements
+                                        ; don't detect in specific elements
                (#{:svg :dl :figure :pre} (first form)) form
                ;; (non-hiccup-seq? form)
                ;; recurse?
@@ -162,8 +86,8 @@
                       (apply conj
                              acc
                              (let [r (interpose [:br]
-                                      (clojure.string/split next
-                                                            paragraph-pattern))]
+                                                (clojure.string/split next
+                                                                      paragraph-pattern))]
                                (if (= 1 (count r)) (conj (into [] r) [:br]) r)))
                       ;; corner case: trailing paragraph-pattern
                       (and (string? next)
@@ -197,7 +121,7 @@
                       ;; skip empty or whitespace strings or not:
                       #_#_(and (string? next)
                                (or (empty? next) (re-matches #"\s+" next)))
-                        acc
+                      acc
                       ;; add to previous paragraph
                       (and previous-paragraph? (html/phrasing? next))
                       (conj r-acc (conj previous next))
@@ -224,27 +148,6 @@
   [[k v]]
   (let [attrs (if (map? v) v {:content v})]
     [:meta (merge {:name (if (keyword? k) (str (name k)) k)} attrs)]))
-
-
-(defn nil-or-empty?
-  {:malli/schema [:=> [:cat :any] :boolean]}
-  [v]
-  (if (seqable? v) (empty? v) (nil? v)))
-
-(defn conj-non-nil
-  {:malli/schema [:=> [:cat [:schema [:* :any]] [:* :any]] [:schema [:* :any]]]}
-  [s & args]
-  (reduce conj s (filter #(not (nil-or-empty? %)) args)))
-
-
-
-(defn metadata-map->head-elements
-  "Return the contents of the metadata map as a sequence of Hiccup elements"
-  {:malli/schema [:=> [:cat :map] [:vector :any]]}
-  [{:keys [page-style scripts title] ; some keys are special
-    :as   metadata}]
-  (let [rest (dissoc metadata :page-style :scripts)]
-    (apply conj-non-nil (map ->meta rest) page-style scripts)))
 
 (defn opengraph-enhance
   "Enriches the metadata items given by mapping from metadata names to opengraph properties.
@@ -299,16 +202,17 @@
   (let [page-meta (-> metadata
                       (dissoc :title :page-style :scripts)
                       (#(merge default-metadata-map %)))]
-    (apply conj-non-nil
-           [:head [:title (str (:site-title page-meta) " | " title)]
-            [:link {:rel "stylesheet" :href "/css/normalize.css"}]
-            [:link {:rel "stylesheet" :href "/css/remedy.css"}]
-            [:link {:rel "stylesheet" :href "/css/patterns.css"}]
-            [:link {:rel "stylesheet" :href "/css/extras.css"}]]
-           (concat (opengraph-enhance ogp-properties (map ->meta page-meta))
-                   default-metadata
-                   (if scripts scripts)
-                   (if page-style [[:style page-style]])))))
+    (into [:head [:title (str (:site-title page-meta) " | " title)]
+           [:link {:rel "stylesheet" :href "/css/normalize.css"}]
+           [:link {:rel "stylesheet" :href "/css/remedy.css"}]
+           [:link {:rel "stylesheet" :href "/css/patterns.css"}]
+           [:link {:rel "stylesheet" :href "/css/extras.css"}]]
+          (filter some?
+                  (concat (opengraph-enhance ogp-properties
+                                             (map ->meta page-meta))
+                          default-metadata
+                          (if scripts scripts)
+                          (if page-style [[:style page-style]]))))))
 
 (defn- rename-meta
   [m]
@@ -326,10 +230,6 @@
   (reduce (fn [m v] (if (meta v) (merge m (rename-meta (meta v))) m))
           metadata
           (tree-seq sequential? identity page-contents)))
-
-;; stop writing dead code: every instance of clojure code embedded in a string
-;; in a fabricate document is an antipattern / code smell
-;; code is data, it should be handled as such by Fabricate
 
 (defn simple-expr
   "Takes a Clojure form and yields a string with the Fabricate template expression for that form."

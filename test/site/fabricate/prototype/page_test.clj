@@ -50,10 +50,29 @@
                              [:p "some text"]
                              (let [img-url "src-url.jpg"]
                                (with-meta [:img img-url]
-                                          {:page/icon  img-url
-                                           "some-prop" "a property"}))]
-                            {})))))
-
+                                 {:page/icon  img-url
+                                  "some-prop" "a property"}))]
+                            {}))))
+  (t/testing "html header"
+    (t/is
+     (= [:head [:title "Fabricate | example page"]
+         [:link {:rel "stylesheet" :href "/css/normalize.css"}]
+         [:link {:rel "stylesheet" :href "/css/remedy.css"}]
+         [:link {:rel "stylesheet" :href "/css/patterns.css"}]
+         [:link {:rel "stylesheet" :href "/css/extras.css"}]
+         [:meta {:name "title" :content "Fabricate" :property "og:title"}]
+         [:meta
+          {:name "description" :content "test page" :property "og:description"}]
+         [:meta
+          {:name "viewport" :content "width=device-width, initial-scale=1.0"}]
+         [:meta {:name "locale" :content "en_US"}]
+         [:meta {:name "site-name" :content "fabricate.site"}]
+         [:meta
+          {:name "site-title" :content "Fabricate" :property "og:site_name"}]
+         [:meta {:charset "utf-8"}]
+         [:meta {:http-equiv "X-UA-Compatible" :content "IE=edge"}]]
+        (doc-header {:title "example page" :description "test page"}))
+     "header fn should derive opengraph + metadata from page attributes")))
 (def html-newline-gen
   (let [newline-gen
         (gen/vector

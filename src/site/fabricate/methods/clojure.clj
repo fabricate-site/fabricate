@@ -53,15 +53,3 @@
   [f]
   (let [parsed (parser/parse-file-all f)]
     (mapv #(node->map % {:input/file f}) (:children parsed))))
-
-(defmulti display-method
-  "Display the given value using the target type. Dispatches on class if type keyword not found."
-  (fn [x target] (let [t (get (meta x) :type)] (if (keyword? t) t (class x)))))
-
-
-;; flesh this out later
-
-
-(comment
-  (defmethod display-method)
-  (meta 2))

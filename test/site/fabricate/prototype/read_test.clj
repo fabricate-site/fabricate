@@ -41,10 +41,7 @@
     (t/is (= {:site.fabricate.file/input-filename   "content/test"
               :site.fabricate.file/output-extension "md"
               :site.fabricate.file/template-suffix  ".fab"}
-             (get-file-metadata "content/test.md.fab")))
-    (let [fsm-f (io/file "pages/finite-schema-machines.html.fab")]
-      (t/is (= (io/file "pages/finite-schema-machines.html.fab")
-               (->dir-local-file fsm-f))))))
+             (get-file-metadata "content/test.md.fab")))))
 
 (t/deftest text-parser
   (t/testing "parsed element schema"
@@ -95,14 +92,14 @@
         "(let [s \"output\"]\n    [:code (format \"a form evaluated and displayed with its %s\" s)]) "]
        [:txt "\n"]]
       (->
-        "✳//[:div
+       "✳//[:div
 
 ✳+=(let [s \"output\"]
     [:code (format \"a form evaluated and displayed with its %s\" s)]) 🔚
 ]//🔚"
-        template
-        second
-        extended-form->form)))
+       template
+       second
+       extended-form->form)))
     (t/is (-> "✳=(+ 2 3)🔚"
               read-template
               second

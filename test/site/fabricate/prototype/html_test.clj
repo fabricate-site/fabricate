@@ -1,12 +1,14 @@
 (ns site.fabricate.prototype.html-test
   (:require [site.fabricate.prototype.html :as html :refer :all]
             [site.fabricate.prototype.schema :as schema]
-            [malli.core :as m :refer [validate]]
+            [site.fabricate.prototype.html-test.generators :as html-gen]
+            [malli.core :as m]
             [malli.error :as me]
             [malli.generator :as mg]
             [clojure.set :as set]
             [clojure.pprint :as pprint]
-            [clojure.test :as t]))
+            [clojure.test :as t]
+            [clojure.test.check.generators :as gen]))
 
 (defmethod t/assert-expr 'valid-schema?
   [msg form]
@@ -112,10 +114,17 @@
                          [:div [:div [:div [:p "text"]]]])))
   (t/testing "example forms"
     (doseq [[k v] example-forms]
-      (let [schema (schema/subschema html
-                                     (ns-kw 'site.fabricate.prototype.html k))]
-        (t/testing (str "schema for element: <" (symbol k) ">")
-          (t/is (valid-schema? schema v))))))
+      (let [qualified-kw   (ns-kw 'site.fabricate.prototype.html k)
+            subschema      (schema/subschema html qualified-kw)
+            elem-parser    (get element-parsers qualified-kw)
+            elem-validator (get element-validators qualified-kw)
+            elem-tag       (str "<" (symbol k) ">")]
+        (t/testing (str "subschema for element: " elem-tag)
+          (t/is (valid-schema? subschema v)))
+        (t/testing (str "validator for element: " elem-tag)
+          (t/is (elem-validator v)))
+        (t/testing (str "parser for element: " elem-tag)
+          (t/is (not= ::m/invalid (elem-parser v)))))))
   (t/testing "page structure"
     (doseq [[tag element] example-forms]
       (let [example-page [:html [:head] [:body element]]]
@@ -140,3 +149,15 @@
                   parse-element
                   unparse-element))
            (str "<" (name tag) "> should parse and unparse correctly")))))))
+
+(t/deftest element-generation
+  (t/is (every? element?
+                (gen/sample (gen/such-that element? html-gen/hiccup-base))))
+  (doseq [tag-set [block-level-tags inline-tags metadata-tags phrasing-subtags
+                   embedded-tags transparent-tags interactive-tags]]
+    (t/is (every? element?
+                  (gen/sample (gen/such-that element?
+                                             (html-gen/hiccup-recursive-elems
+                                              {:outer-tags tag-set})
+                                             50)))
+          "elements should be generated from tag sets")))

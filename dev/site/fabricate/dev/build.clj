@@ -8,6 +8,8 @@
             [site.fabricate.prototype.html :as html]
             [garden.core :as garden]
             [garden.stylesheet :refer [at-import]]
+            [rewrite-clj.zip :as z]
+            [site.fabricate.adorn :as adorn]
             [babashka.fs :as fs]
             [hiccup.page]
             [hiccup.core :as hiccup]
@@ -15,6 +17,14 @@
             [clojure.java.io :as io]
             [http.server :as server]))
 
+
+(defn include-form
+  "Return the form in the file matching the predicate as a rewrite-clj node."
+  {:malli/schema [:=> [:cat :string [:fn fn?]] :any]}
+  [src-file pred]
+  (let [fzip (z/of-file src-file)]
+    (adorn/clj->hiccup (z/node (z/find-next-depth-first fzip
+                                                        #(pred (z/sexpr %)))))))
 
 (defn create-dir-recursive
   [target-dir]

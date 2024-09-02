@@ -5,8 +5,6 @@
   (:require [clojure.string :as str]
             [clojure.set :as set]
             [clojure.zip :as zip]
-            [clojure.data.finger-tree :as ftree :refer
-             [counted-double-list ft-split-at ft-concat]]
             [malli.core :as m]
             [malli.generator :as mg]
             [malli.registry :as mr]
