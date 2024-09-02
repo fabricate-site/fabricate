@@ -19,9 +19,9 @@
 (defn create-dir-recursive
   [target-dir]
   (let [absolute-path? (fs/absolute? target-dir)
-        target-dir (if (fs/relative? target-dir)
-                     (fs/relativize (fs/cwd) (fs/path (fs/cwd) target-dir))
-                     target-dir)]
+        target-dir     (if (fs/relative? target-dir)
+                         (fs/relativize (fs/cwd) (fs/path (fs/cwd) target-dir))
+                         target-dir)]
     (->> target-dir
          fs/components
          (reduce (fn [paths path]
@@ -30,42 +30,49 @@
                            (if absolute-path?
                              (fs/absolutize (str fs/file-separator next-path))
                              next-path))))
-           [])
+                 [])
          (filter #(not (fs/exists? %)))
          (run! fs/create-dir))))
 
 (defn create-dir? [d] (when-not (fs/exists? d) (create-dir-recursive d)))
 
 (defn create-publish-dirs!
-  [{:keys [site.fabricate.api/options], :as site}]
+  [{:keys [site.fabricate.api/options] :as site}]
   (let [{:keys [site.fabricate.page/publish-dir]} options
-        css-dir (fs/path publish-dir "css")
+        css-dir   (fs/path publish-dir "css")
         fonts-dir (fs/path publish-dir "fonts")]
     (run! create-dir? [publish-dir css-dir fonts-dir])
     site))
 
 (defn get-css!
-  [{:keys [site.fabricate.api/options], :as site}]
+  [{:keys [site.fabricate.api/options] :as site}]
   (let
-      [{:keys [site.fabricate.page/publish-dir]} options
-       remedy
-       {:file (fs/file (fs/path publish-dir "css" "remedy.css")),
-        :url
-        "https://raw.githubusercontent.com/jensimmons/cssremedy/6590d9630bdd324469620636d85b7ea3753e9a7b/css/remedy.css"}
-       normalize
-       {:file (fs/file (fs/path publish-dir "css" "normalize.css")),
-        :url "https://unpkg.com/@csstools/normalize.css@12.1.1/normalize.css"}
-       patterns {:file (fs/file (fs/path publish-dir "css" "patterns.css")),
-                 :url "https://iros.github.io/patternfills/patterns.css"}]
+    [{:keys [site.fabricate.page/publish-dir]} options
+     remedy
+     {:file (fs/file (fs/path publish-dir "css" "remedy.css"))
+      :url
+      "https://raw.githubusercontent.com/jensimmons/cssremedy/6590d9630bdd324469620636d85b7ea3753e9a7b/css/remedy.css"}
+     normalize
+     {:file (fs/file (fs/path publish-dir "css" "normalize.css"))
+      :url  "https://unpkg.com/@csstools/normalize.css@12.1.1/normalize.css"}
+     patterns {:file (fs/file (fs/path publish-dir "css" "patterns.css"))
+               :url  "https://iros.github.io/patternfills/patterns.css"}]
     (doseq [{:keys [file url]} [normalize remedy patterns]]
       (when-not (fs/exists? file) (spit file (slurp url))))
     site))
 
 (defn copy-fonts!
-  [{:keys [site.fabricate.api/options], :as site}]
+  [{:keys [site.fabricate.api/options] :as site}]
   (let [{:keys [site.fabricate.page/publish-dir]} options
         font-dir (System/getProperty "user.font-dir")
-        fonts []]
+        fonts    (reduce
+                  (fn [fonts path] (conj fonts {:src "" :file ""}))
+                  [{:src
+                    (fs/file
+                     font-dir
+                     "CommitMono-stdV142-design/CommitMono VariableFont.woff2")
+                    :file "docs/fonts/CommitMono VariableFont.woff2"}]
+                  (fs/glob (fs/path font-dir "Lapidar0.3") "*.woff2"))]
     (doseq [{:keys [src file]} fonts]
       (when-not (fs/exists? file) (fs/copy src file)))
     site))
@@ -73,23 +80,24 @@
 (def options
   "Options for building Fabricate's own documentation."
   (let [d "docs"]
-    {:site.fabricate.page/publish-dir d, ::server {:port 7779, :dir d}}))
+    {:site.fabricate.page/publish-dir d ::server {:port 7779 :dir d}}))
 
 
 (defmethod api/collect "pages/**.fab"
   [src options]
   (mapv (fn path->entry [p]
-          {:site.fabricate.source/format :site.fabricate.read/v0,
-           :site.fabricate.document/format :hiccup,
-           :site.fabricate.source/location (fs/file p),
-           :site.fabricate.entry/source src,
-           :site.fabricate.source/created (time/file-created p),
-           :site.fabricate.source/modified (time/file-modified p),
-           :site.fabricate.page/outputs
-             [{:site.fabricate.page/format :html,
-               :site.fabricate.page/location
-                 (fs/file (:site.fabricate.page/publish-dir options))}]})
-    (fs/glob (System/getProperty "user.dir") src)))
+          {:site.fabricate.source/format   :site.fabricate.read/v0
+           :site.fabricate.document/format :hiccup
+           :site.fabricate.source/location (fs/file p)
+           :site.fabricate.entry/source    src
+           :site.fabricate.source/created  (time/file-created p)
+           :site.fabricate.source/modified (time/file-modified p)
+           :site.fabricate.page/outputs    [{:site.fabricate.page/format :html
+                                             :site.fabricate.page/location
+                                             (fs/file
+                                              (:site.fabricate.page/publish-dir
+                                               options))}]})
+        (fs/glob (System/getProperty "user.dir") src)))
 
 
 ;; example of single-file handling; conflict resolution can be handled
@@ -97,41 +105,43 @@
 
 (defmethod api/collect "README.md.fab"
   [src options]
-  [{:site.fabricate.source/location (fs/file src),
-    :site.fabricate.entry/source src,
-    :site.fabricate.source/created (time/file-created src),
-    :site.fabricate.source/modified (time/file-modified src),
-    :site.fabricate.page/title "Fabricate: README",
-    :site.fabricate.source/format :site.fabricate.markdown/v0,
-    :site.fabricate.document/format :markdown,
-    :site.fabricate.page/outputs
-      [{:site.fabricate.page/format :markdown,
-        :site.fabricate.page/location
-          (fs/file (str (:site.fabricate.page/publish-dir options)
-                        "/README.md"))}]}])
+  [{:site.fabricate.source/location (fs/file src)
+    :site.fabricate.entry/source    src
+    :site.fabricate.source/created  (time/file-created src)
+    :site.fabricate.source/modified (time/file-modified src)
+    :site.fabricate.page/title      "Fabricate: README"
+    :site.fabricate.source/format   :site.fabricate.markdown/v0
+    :site.fabricate.document/format :markdown
+    :site.fabricate.page/outputs    [{:site.fabricate.page/format :markdown
+                                      :site.fabricate.page/location
+                                      (fs/file
+                                       (str (:site.fabricate.page/publish-dir
+                                             options)
+                                            "/README.md"))}]}])
 
 
 (defn fabricate-v0->hiccup
   "Generate a Hiccup representation of the page by evaluating the parsed Fabricate template of the page contents."
   [entry]
-  (let [parsed-page (read/parse (slurp (:site.fabricate.source/location entry)))
+  (let [parsed-page    (read/parse (slurp (:site.fabricate.source/location
+                                           entry)))
         evaluated-page (read/eval-all parsed-page)
-        page-metadata (page/lift-metadata evaluated-page
-                                          (let [m (:metadata (meta
+        page-metadata  (page/lift-metadata evaluated-page
+                                           (let [m (:metadata (meta
                                                                evaluated-page))]
-                                            ;; TODO: better handling of
-                                            ;; unbound metadata vars
-                                            (if (map? m) m {})))
-        hiccup-page [:html (page/doc-header page-metadata)
-                     [:body
-                      [:main
-                       (apply conj
-                         [:article {:lang "en-us"}]
-                         (page/parse-paragraphs evaluated-page))]
-                      [:footer [:div [:a {:href "/"} "Home"]]]]]]
+                                             ;; TODO: better handling of
+                                             ;; unbound metadata vars
+                                             (if (map? m) m {})))
+        hiccup-page    [:html (page/doc-header page-metadata)
+                        [:body
+                         [:main
+                          (apply conj
+                                 [:article {:lang "en-us"}]
+                                 (page/parse-paragraphs evaluated-page))]
+                         [:footer [:div [:a {:href "/"} "Home"]]]]]]
     (assoc entry
-      :site.fabricate.document/data hiccup-page
-      :site.fabricate.page/title (:title page-metadata))))
+           :site.fabricate.document/data hiccup-page
+           :site.fabricate.page/title    (:title page-metadata))))
 
 (defmethod api/build [:site.fabricate.read/v0 :hiccup]
   ([entry _opts] (fabricate-v0->hiccup entry)))
@@ -139,8 +149,8 @@
 (defmethod api/build [:site.fabricate.markdown/v0 :markdown]
   ([entry _opts]
    (assoc entry
-          :site.fabricate.document/data (slurp (:site.fabricate.source/location
-                                                entry)))))
+          :site.fabricate.document/data
+          (slurp (:site.fabricate.source/location entry)))))
 
 ;; (def assemble-index nil)
 
@@ -170,14 +180,12 @@
 
 (defn hiccup->html
   [entry _opts]
-  (let [output-file
-        (fs/file (str (output-path
-                       (fs/strip-ext
-                        (fs/strip-ext
-                         (:site.fabricate.source/location
-                          entry)))
-                       (:site.fabricate.page/location entry))
-                      ".html"))]
+  (let [output-file (fs/file (str (output-path
+                                   (fs/strip-ext
+                                    (fs/strip-ext
+                                     (:site.fabricate.source/location entry)))
+                                   (:site.fabricate.page/location entry))
+                                  ".html"))]
     (write-hiccup-html! (:site.fabricate.document/data entry) output-file)
     (assert (fs/exists? output-file))
     (-> entry
@@ -197,7 +205,7 @@
 (defonce file-server (atom nil))
 
 (defn launch-server!
-  [{:keys [site.fabricate.api/options], :as site}]
+  [{:keys [site.fabricate.api/options] :as site}]
   (when (nil? @file-server)
     (reset! file-server (server/start (get options ::server))))
   site)
@@ -223,3 +231,8 @@
       :done)
   (run! fs/delete (fs/glob "docs" "**.html"))
   (.getMethodTable api/produce!))
+
+
+(comment
+  (run! (fn [[_ v]] (clojure.pprint/pprint [v (:doc (meta v))]))
+        (ns-publics (find-ns 'site.fabricate.api))))

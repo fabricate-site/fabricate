@@ -13,9 +13,16 @@ play in producing the resulting visual style.
 
 if I need to computationally generate things like shades of colors, a modular typographic scale,
 or anything else, I can just make selective use of garden/css and then add the results to
-this stylesheet
+this stylesheet.
 
 */
+
+@font-face {
+    font-family: "Commit Mono";
+    font-weight: 200 800;
+    src:
+        url("") format("woff2");
+}
 
 :root {
     --color-white: #fcfbe7;
@@ -24,11 +31,12 @@ this stylesheet
     --color-lightgreen: #afc38d;
     --color-orange: #f96500;
     --color-burntorange: #632300;
-    --display-sans: 'VC Gosh'
+    --display-sans: 'Lapidar 03'
 }
 
 article {
-  font-family: 'Def Sans VF', sans-serif;
+  /* font-family: 'Def Sans VF', sans-serif; */
+    font-family: -apple-system, BlinkMacSystemFont, avenir next, avenir, segoe ui, helvetica neue, helvetica, Cantarell, Ubuntu, roboto, noto, arial, sans-serif;
   font-size: min(3vmin, 20px);
   line-height: 1.28;
   display: grid;
@@ -43,7 +51,10 @@ body {
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--display-sans), sans-serif;
-  font-weight: 'Black';
+  font-weight: 900;
+  grid-column: 2 / 8;
+}
+.main-track {
   grid-column: 2 / 8;
 }
 
@@ -76,6 +87,17 @@ h1 {
   font-size: 2em;
 }
 
-.language-clojure.keyword-ns {
+.language-clojure.keyword {
     color: var(--color-burntorange);
+}
+.language-clojure.symbol {
+    color: var(--color-lightgreen);
+}
+
+
+p:empty {
+    display: none;
+}
+p :-moz-only-whitespace {
+    display: none;
 }
