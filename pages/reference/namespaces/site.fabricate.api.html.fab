@@ -1,0 +1,10 @@
+✳ (ns site.fabricate.docs.reference.namespaces.api
+  (:require [site.fabricate.api :as api])
+  ) 🔚
+✳(def doc-ns (find-ns 'site.fabricate.api)) 🔚
+✳(def metadata {:title "Fabricate main API"
+               ;; new API, new style
+               :page-style (slurp "docs/css/fabricate.css")}) 🔚
+               ✳=[:div {:class "main-track"}
+                [:h1 [:code "site.fabricate.api"] " Namespace"]
+ (:doc (meta doc-ns))]🔚

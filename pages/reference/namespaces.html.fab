@@ -32,7 +32,8 @@ Core organization for Fabricate's namespaces.
      [:li "markdown"]]
     ]
    [:li "page"
-    [:br] [:span {:class "prop-txt"} "Page namespace registers Fabricate's default produce methods for pages."]
+    [:br] [:span {:class "prop-txt"} "Page namespace registers Fabricate's default " [:code {:class "language-clojure symbol"} "produce!"
+                                                                                     ] " methods for pages."]
     [:ul [:li "html"]]]
    [:li "prototype"
     [:br ] [:span {:class "prop-txt"} "Prototype namespaces contain not-yet-stabilized features."]

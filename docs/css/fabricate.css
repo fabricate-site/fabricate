@@ -29,9 +29,10 @@ this stylesheet.
     --color-lightgray: #f2efe4;
     --color-clay: #c8beb7;
     --color-lightgreen: #afc38d;
+    --color-darkgreen: 505D3B;
     --color-orange: #f96500;
     --color-burntorange: #632300;
-    --display-sans: 'Lapidar 03';
+    --display-sans: 'Lapidar 03', sans-serif;
     --sans: -apple-system, BlinkMacSystemFont, 'avenir next', avenir, 'segoe ui', 'helvetica neue', helvetica, Cantarell, Ubuntu, roboto, noto, arial, sans-serif;
 
 }
@@ -97,7 +98,7 @@ h1 {
     color: var(--color-burntorange);
 }
 .language-clojure.symbol {
-    color: var(--color-lightgreen);
+    color: var(--color-darkgreen);
 }
 
 
@@ -106,4 +107,8 @@ p:empty {
 }
 p :-moz-only-whitespace {
     display: none;
+}
+
+footer {
+    font-family: var(--sans);
 }
