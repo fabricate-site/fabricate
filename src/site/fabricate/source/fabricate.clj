@@ -1,4 +1,5 @@
 (ns site.fabricate.source.fabricate
+  "Default data processing functions for Fabricate's page templates."
   (:require [site.fabricate.prototype.read :as read]
             [site.fabricate.prototype.read.grammar :as grammar]
             [site.fabricate.prototype.hiccup :as hiccup]

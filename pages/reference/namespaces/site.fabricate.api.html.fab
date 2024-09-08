@@ -1,10 +1,31 @@
 ✳ (ns site.fabricate.docs.reference.namespaces.api
-  (:require [site.fabricate.api :as api])
+  (:require [site.fabricate.api :as api]
+  [cybermonday.core :as md]
+  [site.fabricate.adorn :refer [clj->hiccup]])
   ) 🔚
 ✳(def doc-ns (find-ns 'site.fabricate.api)) 🔚
 ✳(def metadata {:title "Fabricate main API"
                ;; new API, new style
                :page-style (slurp "docs/css/fabricate.css")}) 🔚
-               ✳=[:div {:class "main-track"}
-                [:h1 [:code "site.fabricate.api"] " Namespace"]
- (:doc (meta doc-ns))]🔚
+               
+
+✳= [:div {:class "main-track"}
+  [:h1 {:class "contrast-card"} [:span {:class "main-ns"} "site.fabricate.api"] [:br] [:span {:class "ns-annotation"} "Namespace"]]
+  (:doc (meta doc-ns))] 🔚
+✳= [:div {:class "contrast-card"}
+[:h2 {:class "primary-fn"} "plan!"]
+[:code {:class "primary-fn-fqn"} "site.fabricate.api/" [:strong "plan!"]]
+[:div {:class "anti-contrast"}
+ [:dl {:class "fn-description"}
+  [:dt "Function"] 
+  [:dd  (md/parse-body 
+         (:doc (meta #'site.fabricate.api/plan!)))]
+  [:dt "Inputs"] 
+  [:dd [:code {:class "language-clojure"} (clj->hiccup (into [] (apply concat (:arglists (meta #'site.fabricate.api/plan!)))))]]
+  [:dt "Output"]
+  [:dd "site: a map with two keys: " [:code (clj->hiccup :site.fabricate.api/entries)] " with the list of entries, and " 
+   [:code (clj->hiccup :site.fabricate.api/options)] ", containing site-wide options."]]
+
+]
+
+ ] 🔚

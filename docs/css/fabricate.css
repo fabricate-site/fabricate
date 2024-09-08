@@ -28,12 +28,19 @@ this stylesheet.
     --color-white: #fcfbe7;
     --color-lightgray: #f2efe4;
     --color-clay: #c8beb7;
+    --color-sand: #F0EEEA;
+    --color-brown: #926844;
+    --color-darkbrown: #34281D;
     --color-lightgreen: #afc38d;
     --color-darkgreen: 505D3B;
     --color-orange: #f96500;
     --color-burntorange: #632300;
     --display-sans: 'Lapidar 03', sans-serif;
     --sans: -apple-system, BlinkMacSystemFont, 'avenir next', avenir, 'segoe ui', 'helvetica neue', helvetica, Cantarell, Ubuntu, roboto, noto, arial, sans-serif;
+    --grid-gap-x: min(10px, 1vw);
+
+    --font-big: min(60px, 3em);
+    --font-medium: min(24px, 2em);
 
 }
 
@@ -44,12 +51,13 @@ article {
   line-height: 1.28;
   display: grid;
   grid-template-columns: repeat(8, minmax(3px, 1fr));
-  grid-column-gap: 0.3em;
+  grid-column-gap: var(--grid-gap-x);
   grid-row-gap: 0.3em;
+  color: var(--color-darkbrown);
 }
 
 body {
-  background: var(--color-white);
+  background: var(--color-sand);
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -58,10 +66,13 @@ h1, h2, h3, h4, h5, h6 {
   grid-column: 2 / 8;
 }
 .main-track {
-  grid-column: 2 / 8;
+    grid-column: 2 / 8;
+    /* display: grid; */
+    /* grid-template-columns: subgrid; */
 }
 
-h1 {
+h1,h2 {
+ margin-top: 0.12em;
  margin-bottom: 0.12em;
 }
 
@@ -111,4 +122,77 @@ p :-moz-only-whitespace {
 
 footer {
     font-family: var(--sans);
+}
+
+
+/* you know this is what borders in CSS are for, right? */
+.contrast-card {
+    background: var(--color-brown);
+    color: var(--color-sand);
+    margin-left: calc(var(--grid-gap-x) * -1);
+    margin-right: calc(var(--grid-gap-x) * -1);
+    padding-top: 0.5em;
+    padding-bottom: var(--grid-gap-x);
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: 2 / 8;
+}
+
+.anti-contrast {
+    padding-left: calc(var(--grid-gap-x) * 0.5);
+    padding-right: calc(var(--grid-gap-x) * 0.5);
+    padding-bottom: 0;
+    color: var(--color-darkbrown);
+    background: var(--color-sand);
+    grid-column: 1 / 7;
+    display: grid;
+    grid-template-columns: subgrid;
+}
+
+
+
+.contrast-card > * {
+    margin-left: var(--grid-gap-x);
+    margin-right: var(--grid-gap-x);
+}
+
+.main-ns, .primary-fn {
+    font-size: var(--font-big);
+    font-weight: 900;
+    grid-column-start: 1;
+}
+
+.ns-annotation, .primary-fn-fqn {
+    font-weight: 500;
+    font-size: var(--font-medium);
+    grid-column-start: 1;
+}
+
+.contrast-card > p {
+    grid-column-start: 1;
+}
+
+.anti-contrast > dl {
+    display: grid;
+    grid-column: 1 / 7;
+    grid-template-columns: subgrid;
+    grid-row-gap: 0.5em;
+}
+
+.fn-description > dt {
+    font-family: var(--display-sans);
+    font-size: var(--font-medium);
+    font-weight: 800;
+    grid-column: 1 / 2;
+}
+
+
+
+.fn-description > dt:after {
+    content: ": "
+}
+
+.fn-description > dd {
+    grid-column: 3 / 7;
+    margin-left: 0;
 }
