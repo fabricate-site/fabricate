@@ -32,6 +32,7 @@ this stylesheet.
     --color-brown: #926844;
     --color-darkbrown: #34281D;
     --color-lightgreen: #afc38d;
+    --color-green:  #3F6226;
     --color-darkgreen: 505D3B;
     --color-orange: #f96500;
     --color-burntorange: #632300;
@@ -94,7 +95,10 @@ p {
 
 
 pre {
+  margin-top: 0;
+  margin-bottom: 0;
   grid-column: 2 / 8;
+  font-size: 0.9em;
 }
 
 .xl {
@@ -149,6 +153,17 @@ footer {
     grid-template-columns: subgrid;
 }
 
+.bg-green {
+    background: var(--color-green);
+}
+
+.bg-brown {
+    background: var(--color-brown);
+}
+.ol-brown {
+    outline-color: var(--color-brown);
+}
+
 
 
 .contrast-card > * {
@@ -172,7 +187,7 @@ footer {
     grid-column-start: 1;
 }
 
-.anti-contrast > dl {
+.anti-contrast > dl, .card > dl {
     display: grid;
     grid-column: 1 / 7;
     grid-template-columns: subgrid;
@@ -195,4 +210,21 @@ footer {
 .fn-description > dd {
     grid-column: 3 / 7;
     margin-left: 0;
+}
+
+.fn-description > dd ul,ol {
+    padding-left: calc(var(--grid-gap-x) * 3);
+}
+
+.card {
+    display: grid;
+    grid-template-columns: subgrid;
+    outline-style: solid;
+    outline-width: var(--grid-gap-x);
+    grid-column: 2 / 8;
+}
+
+.card .top {
+    grid-column: 1 / 8;
+    color: var(--color-sand);
 }
