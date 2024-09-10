@@ -74,7 +74,17 @@ The entries collected from all of the sources are flattened into a single vector
 
 ✳= [:div {:class "card ol-brown"}
   [:div {:class "top bg-brown"} 
+   #_[:strong {:class "primary-fn"}  "1."]
    [:h2 {:class "primary-fn"} "assemble"]]
 [:dl {:class "fn-description"}
- [:dt "Function"] [:dd (:doc  (meta #'api/assemble))]]
+ [:dt "Function"] [:dd  (md/parse-body (:doc  (meta #'api/assemble)))]
+ [:dt "Inputs"] [:dd [:code {:class "language-clojure"} 
+        (->> (meta #'site.fabricate.api/assemble)
+             :arglists
+             (apply concat)
+             (map (fn [i] [:li (utils/expr->hiccup i)]))
+             (into [:ol]))
+        ]]
+ [:dt "Output"] [:dd "A site, specified as a map."]
+ ]
 ] 🔚

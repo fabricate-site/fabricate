@@ -42,3 +42,9 @@ Core organization for Fabricate's namespaces.
 
 🔚
 
+
+This could be made a bit nicer by adapting two points of inspiration:
+✳=
+[:ul {:style "grid-column: 2 / 6;"} [:li [:a {:href "https://iamkate.com/code/tree-views/"} "Kate Morley's 'Tree views in CSS'"] " (omitting the details elements)"]
+[:li [:a {:href "https://owickstrom.github.io/the-monospace-web/"} "Oskar Wickström's 'The Monospace Web'"]]]
+🔚
