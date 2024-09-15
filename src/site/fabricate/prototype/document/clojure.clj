@@ -1,4 +1,4 @@
-(ns site.fabricate.prototype.source.clojure
+(ns site.fabricate.prototype.document.clojure
   "Fabricate namespace defining methods for turning Clojure namespaces into Hiccup documents"
   (:require [hiccup2.core :as hiccup]
             [rewrite-clj.parser :as parser]

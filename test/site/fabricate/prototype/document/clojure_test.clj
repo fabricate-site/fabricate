@@ -1,8 +1,8 @@
-(ns site.fabricate.methods.clojure-test
+(ns site.fabricate.prototype.document.clojure-test
   (:require [clojure.test :as t]
             [babashka.fs :as fs]
             [malli.core :as m]
-            [site.fabricate.methods.clojure :as clj]))
+            [site.fabricate.prototype.document.clojure :as clj]))
 
 (def valid-form-map? (m/validator clj/form-map-schema))
 
