@@ -37,8 +37,9 @@ Core organization for Fabricate's namespaces.
   [:li "prototype" [:br]
    [:span {:class "prop-txt"}
     "Prototype namespaces contain not-yet-stabilized features."]
-   [:ul [:li "read" [:ul [:li "grammar"]]] [:li "schema"] [:li "html"]
-    [:li "hiccup"]]]]]
+   [:ul [:li "read" [:ul [:li "grammar"]]] [:li "schema"] [:li "html"
+                                                           [:ul [:li "paragraphs"]]]
+    [:li "hiccup" [:br] [:aside {:class "prop-txt"} [:em "should the HTML and hiccup namespaces be merged?"]]]]]]]
 
 🔚
 
