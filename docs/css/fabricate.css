@@ -33,6 +33,9 @@ this stylesheet.
     --color-darkbrown: #34281D;
     --color-lightgreen: #afc38d;
     --color-green:  #3F6226;
+    --color-gray:  #656565;
+    --color-blue: #3C506F;
+    --color-yellow: #AFA840;
     --color-darkgreen: 505D3B;
     --color-orange: #f96500;
     --color-burntorange: #632300;
@@ -227,4 +230,60 @@ footer {
 .card .top {
     grid-column: 1 / 8;
     color: var(--color-sand);
+}
+
+.split {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: subgrid;
+    margin-left: var(--grid-gap-x);
+    margin-right: var(--grid-gap-x);
+}
+
+.split dl {
+    /* grid-row-gap: calc(var(--grid-gap-x) * 2); */
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: 1 / -1;
+    grid-row-gap: calc(var(--grid-gap-x) * 1.9);
+    margin-left: var(--grid-gap-x);
+    margin-right: var(--grid-gap-x);
+}
+
+.split dl div {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: 1 / -1;
+    outline-style: solid;
+    outline-width: var(--grid-gap-x);
+    /* grid-row-gap: calc(var(--grid-gap-x) * 0.95); */
+}
+
+.split dl div>* {
+    padding-bottom: 0.5em;
+}
+
+.split dl div dt:first-child {
+    color: var(--color-sand);
+}
+
+.split dl div dt:not(:first-child) {
+    background: var(--color-sand);
+}
+
+.split dl dt {
+    grid-column: 1 / 4;
+    font-family: var(--display-sans);
+    font-weight: 900;
+    font-size: 1.5em;
+    padding-left: 0.15em;
+    padding-right: 0.15em;
+}
+
+.split dl dd {
+    grid-column: 4 / -1;
+    margin-left: 0em;
+    background: var(--color-sand);
+    color: var(--color-black);
+    padding: 0.1em;
 }

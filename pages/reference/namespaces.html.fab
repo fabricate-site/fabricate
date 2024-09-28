@@ -1,51 +1,89 @@
-
 ✳
 (ns site.fabricate.docs.reference.namespaces
   (:require [site.fabricate.api]
             [site.fabricate.prototype.read]
             [site.fabricate.prototype.hiccup]))
 🔚
-
-
 ✳
 (def metadata
-  {:title "Namespace layout" :page-style (slurp "docs/css/fabricate.css")})
+  {:title "Namespaces" :page-style (slurp "docs/css/fabricate.css")})
 🔚
-
-✳=
-[:h1 (:title metadata)]
-🔚
-
-Core organization for Fabricate's namespaces.
-
 ✳=
 
-[:ul {:class "main-track mono-txt"} [:li "site.fabricate"]
- [:ul [:li [:a {:href "/reference/namespaces/site.fabricate.api.html"} "api"] [:br] [:span {:class "prop-txt"} "Fabricate core API"]]
-  [:li "source" [:br]
-   [:span {:class "prop-txt"}
-    "The source namespace registers all of fabricate's default collect methods for source files. Requiring this namespace also allows for shorthanding entry properties: "
-    [:code {:class "language-clojure keyword"} "::source/location"] "."]]
-  [:li "document" [:br]
-   [:span {:class "prop-txt"}
-    "Document namespace registers Fabricate's default assemble methods for documents."]
-   [:ul [:li "fabricate"] [:li "clojure"] [:li "markdown"]]]
-  [:li "page" [:br]
-   [:span {:class "prop-txt"} "Page namespace registers Fabricate's default "
-    [:code {:class "language-clojure symbol"} "produce!"] " methods for pages."]
-   [:ul [:li "html"]]]
-  [:li "prototype" [:br]
-   [:span {:class "prop-txt"}
-    "Prototype namespaces contain not-yet-stabilized features."]
-   [:ul [:li "read" [:ul [:li "grammar"]]] [:li "schema"] [:li "html"
-                                                           [:ul [:li "paragraphs"]]]
-    [:li "hiccup" [:br] [:aside {:class "prop-txt"} [:em "should the HTML and hiccup namespaces be merged?"]]]]]]]
+[:div {:class "split"}
+ 
+ [:h1 {:style {:grid-column "1 / -1"
+               :background "var(--color-brown)"
+               :color "var(--color-sand)"
+               :padding-left "var(--grid-gap-x)"
+               :padding-right "var(--grid-gap-x)"
+               :padding-bottom "0.25em"
+               :margin-bottom "0em"}}
+  (:title metadata)]
+ [:p {:background "var(--color-brown)"} "Organization of Fabricate's namespaces."]
+ [:dl {:style {:margin-top "0em"}}
+  [:div {:style {:grid-column "1 / -1"
+                 :display "grid" :grid-template-columns "subgrid"
+                 :background "var(--color-brown)"
+                 :outline-color "var(--color-brown)"
+                 :border-color "var(--color-brown)"
+                 }}
+   [:dt {:style {:background "var(--color-sand)"
+                 :color "var(--color-brown)"
+                 }} "site.fabricate"] [:dd {:style {:background "var(--color-brown)"}}]
+   
+   [:dt {:style {:color "var(--color-sand)"
+                 :background "var(--color-brown)"}} "api"] [:dd {:style {:background "var(--color-sand)"}} "core API for Fabricate."]]
+  [:div {:style {:background "var(--color-gray)"
+                 :border-bottom-color "var(--color-gray)"
+                 :outline-color "var(--color-gray)"}}
+   [:dt {:style {:color "var(--color-sand)"}} "source"]
+   [:dd "Registers default collect methods for source files. Requiring it enables shorthand for entry keys: " 
+    [:code {:class "language-clojure keyword"} "::source/location."]]]
+  [:div {:style {:background "var(--color-blue)"
+                 :outline-color "var(--color-blue)"
+                 :border-color "var(--color-blue)"
+                 :outline-width "var(--grid-gap-x)"}}
+   [:dt {:style {:color "var(--color-sand)"}} "document"] 
+   [:dd "Registers default " [:code {:class "language-clojure symbol"} "api/assemble"] " methods for documents."]
+   [:dt {:style {:background "var(--color-sand)"
+                 :color "var(--color-blue)"
+                 :padding-left "0.75em"}} "fabricate"]
+    [:dd "Fabricate's template files, which mix plaintext, Hiccup, and Clojure code."]
+   [:dt
+    {:style {:background "var(--color-sand)"
+             :padding-left "0.75em"
+             :color "var(--color-blue)"}}
+ "clojure"] [:dd "Convert comments and the results of expressions in a Clojure file to Hiccup."]
+   [:dt {:style {:background "var(--color-sand)"
+                 :padding-left "0.75em"
+             :color "var(--color-blue)"}} "markdown"] [:dd "Convert Markdown to Hiccup."]
+]
+  [:div
+   {:style {:background "var(--color-green)"
+            :outline-color "var(--color-green)"
+            :border-color "var(--color-green)"
+            }}
+   [:dt {:style {:color "var(--color-sand)"}} "page"]
+   [:dd {:style {:background "var(--color-sand)"}} "Registers default " [:code {:class "language-clojure symbol"} "api/produce!"] " methods for documents."]
+   [:dt {:style {:background "var(--color-sand)"
+                 :padding-left "0.75em"
+                 :color "var(--color-green)"}} "html"] 
+   [:dd "Converts Hiccup to HTML."]]
+  [:div {:style {:background "var(--color-yellow)"
+                 :outline-color "var(--color-yellow)"}}
+   [:dt  "prototype"]
+   [:dd "Prototype namespaces contain not-yet-stabilized features."]
+   [:dt {:style {:color "var(--color-yellow)"
+                 :padding-left "0.75em"}} "read"] [:dd "Functions to parse and evaluate Fabricate's template files."]
+   [:dt {:style {:color "var(--color-yellow)"
+                 :padding-left "1.5em"}} "grammar"] [:dd "Specifies the EBNF grammar that defines Fabricate's page templates."]
+   [:dt {:style {:color "var(--color-yellow)"
+                 :padding-left "0.75em"}} "schema"] [:dd "Utility namespace for working with Malli schemas."]
+   [:dt {:style {:color "var(--color-yellow)"
+                 :padding-left "0.75em"}} "html"] [:dd "Defines a Malli schema for HTML in Hiccup form and functions for processing Hiccup elements."]
+   [:dt {:style {:color "var(--color-yellow)"
+                 :padding-left "0.75em"}} "hiccup"] [:dd]]
+  ]]
 
-🔚
-
-
-This could be made a bit nicer by adapting two points of inspiration:
-✳=
-[:ul {:style "grid-column: 2 / 6;"} [:li [:a {:href "https://iamkate.com/code/tree-views/"} "Kate Morley's 'Tree views in CSS'"] " (omitting the details elements)"]
-[:li [:a {:href "https://owickstrom.github.io/the-monospace-web/"} "Oskar Wickström's 'The Monospace Web'"]]]
 🔚
