@@ -14,6 +14,7 @@
             [babashka.fs :as fs]
             [hiccup.page]
             [hiccup.core]
+            [dev.onionpancakes.chassis.core :as c]
             [clojure.string :as str]
             [clojure.java.io :as io]
             [http.server :as server]))
@@ -181,7 +182,7 @@
   [hiccup-page-data output-file]
   (let [parent-dir (fs/parent output-file)]
     (create-dir? parent-dir)
-    (spit output-file (hiccup.core/html hiccup-page-data))))
+    (spit output-file (c/html [c/doctype-html5] hiccup-page-data))))
 
 (defn subpath
   ([dir p] (apply fs/path (drop 1 (fs/components (fs/relativize dir p)))))
