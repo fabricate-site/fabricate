@@ -24,9 +24,8 @@
 This ✳=[:a {:href "https://github.com/engelberg/instaparse"} [:code "Instaparse"]]🔚 grammar defines the structure of Fabricate templates. Once parsed into an Instaparse parse tree, the ✳=[:a {:href "/reference/namespaces/site.fabricate.prototype.read.html"} [:code "read"] " namespace"]🔚 walks the parsed template and evaluates the expressions embedded within it. The grammar, as defined, intentionally does not concern itself with whether the contents of the expressions in each template are syntactically valid Clojure forms; that task is left to the reader. Defining the grammar this way allows Clojure read errors to be caught and handled on a form-by-form basis instead of throwing an error for the whole page.
 
 ✳=[:pre {:class "instaparse-grammar"}
- (hiccup.util/escape-html
-  #_(str/replace )
-  (Parser->str (var-get ('template vars))))]🔚
+ 
+ (Parser->str (var-get ('template vars)))]🔚
 
 For an informal guide to how these templates get used with examples, please see the page ✳=[:a {:href "/reference/template-structure.html"} "A Reference to Fabricate's Page Templates"]🔚.
 
