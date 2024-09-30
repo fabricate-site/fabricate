@@ -287,3 +287,18 @@ footer {
     color: var(--color-black);
     padding: 0.1em;
 }
+
+
+a.decor-internal {
+    text-decoration: none;
+    color: inherit;
+}
+
+a.decor-internal:after {
+    content: "▸";
+}
+
+a.decor-internal:hover {
+    color: inherit;
+    text-decoration: underline;
+}
