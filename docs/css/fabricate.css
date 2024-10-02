@@ -197,6 +197,10 @@ footer {
     grid-row-gap: 0.5em;
 }
 
+.fn-description {
+
+}
+
 .fn-description > dt {
     font-family: var(--display-sans);
     font-size: var(--font-medium);
@@ -225,12 +229,37 @@ footer {
     outline-style: solid;
     outline-width: var(--grid-gap-x);
     grid-column: 2 / 8;
+    margin-bottom: var(--grid-gap-x);
 }
 
 .card .top {
     grid-column: 1 / 8;
     color: var(--color-sand);
 }
+
+.card dl {
+    display: grid;
+    grid-column: 1 / 8;
+    grid-template-columns: subgrid;
+    margin-top: 0em;
+}
+
+.card dl dt {
+    grid-column: 1 / 3;
+    font-family: var(--display-sans);
+    font-weight: 900;
+    font-size: 1.25em;
+    margin-left: 0.15em;
+}
+
+.card dl dd {
+    grid-column: 3 / 7;
+    margin-left: 0em;
+}
+
+
+
+
 
 .split {
     grid-column: 1 / -1;

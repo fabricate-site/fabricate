@@ -16,27 +16,28 @@
   (:doc (meta doc-ns))] 🔚
 
 Fabricate's API is meant to be used in a specific order.  This document explains each core aspect step-by-step.
-✳= [:div {:class "contrast-card"}
-[:h2 {:class "primary-fn"} "plan!"]
-[:code {:class "primary-fn-fqn"} "site.fabricate.api/" [:strong "plan!"]]
-[:div {:class "anti-contrast"}
- [:dl {:class "fn-description"}
-  [:dt "Function"] 
-  [:dd  (md/parse-body 
-         (:doc (meta #'site.fabricate.api/plan!)))]
-  [:dt "Inputs"] 
-  [:dd [:code {:class "language-clojure"} 
-        (->> (meta #'site.fabricate.api/plan!)
-             :arglists
-             (apply concat)
-             (map (fn [i] [:li (utils/expr->hiccup i)]))
-             (into [:ol]))
-        ]]
-  [:dt "Output"]
-  [:dd "site: a map with two keys: " [:code (clj->hiccup :site.fabricate.api/entries)] " with the list of entries, and " 
-   [:code (clj->hiccup :site.fabricate.api/options)] ", containing site-wide options."]]
+✳= [:div {:class "card ol-brown"}
+  [:div {:class "top bg-brown "} [:h2 {:class "primary-fn"} "plan!"]
+   [:code {:class "primary-fn-fqn"} "site.fabricate.api/" [:strong "plan!"]]]
+  
+  [:dl {:class "fn-description"
+        }
+   [:dt "Function"] 
+   [:dd  (md/parse-body 
+          (:doc (meta #'site.fabricate.api/plan!)))]
+   [:dt "Inputs"] 
+   [:dd [:code {:class "language-clojure"} 
+         (->> (meta #'site.fabricate.api/plan!)
+              :arglists
+              (apply concat)
+              (map (fn [i] [:li (utils/expr->hiccup i)]))
+              (into [:ol]))
+         ]]
+   [:dt "Output"]
+   [:dd "site: a map with two keys: " [:code (clj->hiccup :site.fabricate.api/entries)] " with the list of entries, and " 
+    [:code (clj->hiccup :site.fabricate.api/options)] ", containing site-wide options."]]
 
-]
+
  ] 🔚
 
 The plan step executes a list of setup functions, and then collects the initial list of entries that will be assembled during the build step. Each implementation of the collect multimethod specifies a source location that entries will be collected from - typically a string indicating a file path - and a function that uses that location to produce a list of entries. 
@@ -46,15 +47,15 @@ Each source can produce one or more entries. For example, Fabricate, in building
   [src options]
   (mapv (fn path->entry [p]
           ...)
-        (fs/glob (System/getProperty "user.dir") src))))
-]
-] 🔚
+        (fs/glob (System/getProperty "user.dir") src))))]] 🔚
 
 ✳= 
-[:div {:class "contrast-card bg-green"}
-[:h2 {:class "primary-fn"} "collect"]
-[:code {:class "primary-fn-fqn"} "site.fabricate.api/" [:strong "collect"]]
-[:div {:class "anti-contrast"}
+[:div {:class "card"
+       :style {:outline-color "var(--color-green)"}}
+ [:div {:class "top bg-green" }
+  [:h2 {:class "primary-fn"} "collect"]
+  [:code {:class "primary-fn-fqn"} "site.fabricate.api/" [:strong "collect"]]]
+  
  [:dl {:class "fn-description"}
   [:dt "Multimethod"] 
   [:dd  (md/parse-body 
@@ -64,8 +65,8 @@ Each source can produce one or more entries. For example, Fabricate, in building
   [:dt "Output"]
   [:dd "a list of entries, specified as maps."]
 
-]
- ]]
+  ]
+ ]
  🔚
 
 The entries collected from all of the sources are flattened into a single vector at the end of the plan step.
