@@ -197,7 +197,8 @@
            [:link {:rel "stylesheet" :href "/css/normalize.css"}]
            [:link {:rel "stylesheet" :href "/css/remedy.css"}]
            [:link {:rel "stylesheet" :href "/css/patterns.css"}]
-           [:link {:rel "stylesheet" :href "/css/extras.css"}]]
+           [:link {:rel "stylesheet" :href "/css/extras.css"}]
+           [:link {:rel "stylesheet" :href "/css/fabricate.css"}]]
           (filter some?
                   (concat (opengraph-enhance opengraph-properties
                                              (map ->meta page-meta))
