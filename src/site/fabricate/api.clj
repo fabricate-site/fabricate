@@ -20,8 +20,9 @@
     :type [:or :string [:fn fs/exists?]]}
    {:doc
     "The source from which input entries are derived. collect dispatches on ::source"
+    ;; TODO: rename this to align with new namespace convention
     :term :site.fabricate.entry/source
-    :type :string}
+    :type :any}
    {:doc
     "A map representing a component of a page before, during, and after the assemble and produce operations. One source may produce multiple entries."
     :term :site.fabricate.api/entry

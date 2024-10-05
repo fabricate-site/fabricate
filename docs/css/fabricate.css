@@ -210,8 +210,8 @@ footer {
 
 
 
-.fn-description > dt:after {
-    content: ": "
+.fn-description dt:after {
+    content: ": ";
 }
 
 .fn-description > dd {
