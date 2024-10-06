@@ -51,8 +51,8 @@
                              [:p "some text"]
                              (let [img-url "src-url.jpg"]
                                (with-meta [:img img-url]
-                                 {:page/icon  img-url
-                                  "some-prop" "a property"}))]
+                                          {:page/icon  img-url
+                                           "some-prop" "a property"}))]
                             {}))))
   (t/testing "html header"
     (t/is
@@ -62,6 +62,7 @@
        [:link {:rel "stylesheet" :href "/css/remedy.css"}]
        [:link {:rel "stylesheet" :href "/css/patterns.css"}]
        [:link {:rel "stylesheet" :href "/css/extras.css"}]
+       [:link {:rel "stylesheet" :href "/css/fabricate.css"}]
        [:meta {:name "title" :content "Fabricate" :property "og:title"}]
        [:meta
         {:name "description" :content "test page" :property "og:description"}]

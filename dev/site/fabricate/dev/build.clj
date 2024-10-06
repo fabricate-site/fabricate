@@ -182,7 +182,7 @@
   [hiccup-page-data output-file]
   (let [parent-dir (fs/parent output-file)]
     (create-dir? parent-dir)
-    (spit output-file (c/html [c/doctype-html5] hiccup-page-data))))
+    (spit output-file (c/html [c/doctype-html5 hiccup-page-data]))))
 
 (defn subpath
   ([dir p] (apply fs/path (drop 1 (fs/components (fs/relativize dir p)))))
