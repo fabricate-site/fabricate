@@ -3,6 +3,9 @@
   [cybermonday.core :as md]
   [site.fabricate.adorn :refer [clj->hiccup]]
   [site.fabricate.dev.build.utils :as utils]
+  [rewrite-clj.zip :as z]
+  [rewrite-clj.parser :as parser]
+  [rewrite-clj.node :as node]
 )
   ) 🔚
 ✳(def doc-ns (find-ns 'site.fabricate.api)) 🔚
@@ -195,3 +198,75 @@ The produce! multimethod creates output for the entry passed as an argument. It 
 The implementation will generate output of the given page format from data of the given document format. By default, this is a HTML file, generated from the Hiccup data built in the assemble step.
 
 The produce! multimethod returns an entry with a key added: ✳= [:code {:class "language-clojure keyword"} ":site.fabricate.page/location"] 🔚. This key indicates the URL or file path of a generated page.
+
+
+✳= [:h2 "In use"] 🔚
+
+The API provides an elegant combination of extensibility and ease of use. This example is simplified from Fabricate's own page generation code.
+
+✳= [:pre [:code {:class "language-clojure"} (utils/expr->hiccup '(require 
+[site.fabricate.api :as api]
+[site.fabricate.dev.styles :as styles]
+[site.fabricate.prototype.time :as time]
+[site.fabricate.prototype.read :as read]
+[site.fabricate.prototype.read.grammar :as grammar]
+[site.fabricate.prototype.hiccup :as hiccup]
+[dev.onionpancakes.chassis.core :as c]
+            ))]] 🔚
+
+✳ (def build-ns-zip (z/of-node (parser/parse-file-all "dev/site/fabricate/dev/build.clj"))) 🔚
+✳= [:h3 "Setting up with " [:code {:class "language-clojure symbol"} "defmethod"]] 🔚
+
+✳= [:h4 [:code {:class "language-clojure symbol"} "api/collect"]] 🔚
+
+This implementation generates entries from each Fabricate template.
+✳= [:pre {:id "collect-template-example"
+        }
+   [:code {:class "language-clojure"}
+    (-> build-ns-zip
+            (z/find-next (fn [zloc]
+                           (let [n  (z/node zloc)
+                                 cforms (node/child-sexprs n)]
+                             (and cforms
+                                  (= 'defmethod (first cforms))
+                                  (= 'api/collect (second cforms))
+                                  (= "pages/**.fab" )))))
+            z/sexpr
+            utils/expr->hiccup)
+
+    ]
+  
+  ] 🔚
+
+
+To dynamically create the contents of the README from a template, Fabricate also defines a single-file source for it:
+✳= [:pre {:id "collect-readme-example"}
+  [:code {:class "language-clojure"}
+   (-> build-ns-zip
+            (z/find-next (fn [zloc]
+                           (let [n  (z/node zloc)
+                                 cforms (node/child-sexprs n)]
+                             (and cforms
+                                  (= 'defmethod (first cforms))
+                                  (= 'api/collect (second cforms))
+                                  (= "README.md.fab")))))
+            z/sexpr
+            utils/expr->hiccup)]] 🔚
+
+
+✳= [:h4 [:code {:class "language-clojure symbol"} "api/build"]] 🔚
+
+
+✳= [:pre [:code {:class "language-clojure"} 
+        (-> build-ns-zip
+            (z/find-next (fn [zloc]
+                           (let [n  (z/node zloc)
+                                 cforms (node/child-sexprs n)]
+                             (and cforms
+                                  (= 'defmethod (first cforms))
+                                  (= 'api/build (second cforms))
+                                  (= [:site.fabricate.read/v0 :hiccup])))))
+            z/sexpr
+            utils/expr->hiccup)]] 🔚
+
+✳= [:h4 [:code {:class "language-clojure symbol"} "api/produce!"]] 🔚
