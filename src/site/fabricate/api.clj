@@ -175,6 +175,8 @@
   (let [post-setup-site   (reduce (fn [site task] (task site)) site setup-tasks)
         collected-entries (vec (for [[source _] (.getMethodTable collect)
                                      entry-data (collect source options)
+                                     ;; this is superfluous and can be
+                                     ;; eliminated now
                                      output     (:site.fabricate.page/outputs
                                                  entry-data)]
                                  (-> entry-data

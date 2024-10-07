@@ -112,6 +112,8 @@
            :site.fabricate.entry/source    src
            :site.fabricate.source/created  (time/file-created p)
            :site.fabricate.source/modified (time/file-modified p)
+           ;; multi-outputs are superfluous; this should be replaced with a
+           ;; call to mapcat
            :site.fabricate.page/outputs    [{:site.fabricate.page/format :html
                                              :site.fabricate.page/location
                                              (fs/file
