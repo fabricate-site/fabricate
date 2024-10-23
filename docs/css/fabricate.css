@@ -42,9 +42,9 @@ this stylesheet.
     --display-sans: 'Lapidar 03', sans-serif;
     --sans: -apple-system, BlinkMacSystemFont, 'avenir next', avenir, 'segoe ui', 'helvetica neue', helvetica, Cantarell, Ubuntu, roboto, noto, arial, sans-serif;
     --grid-gap-x: min(10px, 1vw);
-    --font-main: clamp(13px, 3vmin, 20px);
-    --font-big: clamp(22px, 3rem, 56px);
-    --font-medium: clamp(15px, 1.5rem, 22px);
+    --font-main: clamp(14px, 3vmin, 20px);
+    --font-big: clamp(22px, 9.5vmin, 56px);
+    --font-medium: clamp(15px, 4.5vmin, 22px);
 
 }
 
