@@ -15,6 +15,7 @@
                
 
 ✳= [:div {:class "card"
+        :id "top"
         :style {:outline-color "var(--color-blue)"}}
   [:h1 {:style {:grid-column-start "1" :margin-top "0em"
                 :background "var(--color-blue)"
@@ -198,9 +199,14 @@ The produce! multimethod creates output for the entry passed as an argument. It 
 The implementation will generate output of the given page format from data of the given document format. By default, this is a HTML file, generated from the Hiccup data built in the assemble step.
 
 The produce! multimethod returns an entry with a key added: ✳= [:code {:class "language-clojure keyword"} ":site.fabricate.page/location"] 🔚. This key indicates the URL or file path of a generated page.
-
-
-✳= [:h2 "In use"] 🔚
+✳= [:figure {:style {:grid-column "3 / span 4"
+                   :margin 0
+                   }} [:img {:src "/media/api-illustration.svg"
+                } ]] 🔚
+✳= [:h2 {:id "in-use"
+       :style {:font-size "var(--font-big)"
+               :border-bottom "solid var(--color-yellow) var(--grid-gap-x)"
+               }} "In use"] 🔚
 
 The API provides an elegant combination of extensibility and ease of use. This example is simplified from Fabricate's own page generation code.
 
@@ -215,13 +221,14 @@ The API provides an elegant combination of extensibility and ease of use. This e
             ))]] 🔚
 
 ✳ (def build-ns-zip (z/of-node (parser/parse-file-all "dev/site/fabricate/dev/build.clj"))) 🔚
-✳= [:h3 "Setting up with " [:code {:class "language-clojure symbol"} "defmethod"]] 🔚
+✳= [:h3 {:style {:font-size "var(--font-medium)"}} "Setting up with " [:code {:class "language-clojure symbol"} "defmethod"]] 🔚
 
-✳= [:h4 [:code {:class "language-clojure symbol"} "api/collect"]] 🔚
+Before running the API's 3 main functions, the build process defines methods for each of these multimethods.
+
+✳= [:h4 {:style {:font-size "var(--font-medium)"}} "1. " [:code {:class "language-clojure symbol"} "api/collect"]] 🔚
 
 This implementation generates entries from each Fabricate template.
-✳= [:pre {:id "collect-template-example"
-        }
+✳= [:pre {:id "collect-template-example"}
    [:code {:class "language-clojure"}
     (-> build-ns-zip
             (z/find-next (fn [zloc]
@@ -254,8 +261,8 @@ To dynamically create the contents of the README from a template, Fabricate also
             utils/expr->hiccup)]] 🔚
 
 
-✳= [:h4 [:code {:class "language-clojure symbol"} "api/build"]] 🔚
-
+✳= [:h4 {:style {:font-size "var(--font-medium)"}} "2. " [:code {:class "language-clojure symbol"} "api/build"]] 🔚
+This implementation of the build multimethod evaluates Fabricate's templates and produces Hiccup from the results.
 
 ✳= [:pre [:code {:class "language-clojure"} 
         (-> build-ns-zip
@@ -269,4 +276,53 @@ To dynamically create the contents of the README from a template, Fabricate also
             z/sexpr
             utils/expr->hiccup)]] 🔚
 
-✳= [:h4 [:code {:class "language-clojure symbol"} "api/produce!"]] 🔚
+✳= [:h4 {:style {:font-size "var(--font-medium)"}} "3. " [:code {:class "language-clojure symbol"} "api/produce!"]] 🔚
+
+This implementation of the produce! generates HTML from Hiccup elements. 
+
+
+✳= [:pre [:code {:class "language-clojure"} 
+        (-> build-ns-zip
+            (z/find-next (fn [zloc]
+                           (let [n  (z/node zloc)
+                                 cforms (node/child-sexprs n)]
+                             (and cforms
+                                  (= 'defmethod (first cforms))
+                                  (= 'api/produce! (second cforms))
+                                  (= [:hiccup :html])))))
+            z/sexpr
+            utils/expr->hiccup)]] 🔚
+
+✳= [:h3 {:style {:font-size "var(--font-medium)"}} "Evaluating using the main API functions" ] 🔚
+Fabricate defines a few setup functions:
+✳= [:pre [:code {:class "language-clojure"} 
+        (-> build-ns-zip
+            (z/find-next (fn [zloc]
+                           (let [n  (z/node zloc)
+                                 cforms (node/child-sexprs n)]
+                             (and cforms
+                                  (= 'def (first cforms))
+                                  (= 'setup-tasks (second cforms))
+                                  ))))
+            z/sexpr
+            utils/expr->hiccup)]] 🔚
+And some options:
+✳= [:pre [:code {:class "language-clojure"} 
+        (-> build-ns-zip
+            (z/find-next (fn [zloc]
+                           (let [n  (z/node zloc)
+                                 cforms (node/child-sexprs n)]
+                             (and cforms
+                                  (= 'def (first cforms))
+                                  (= 'options (second cforms))
+                                  ))))
+            z/sexpr
+            utils/expr->hiccup)]] 🔚
+
+With all of that defined, this is all that Fabricate needs to do to generate its own documentation:
+✳= [:pre [:code {:class "language-clojure"}
+        (utils/expr->hiccup 
+         '(->> {:site.fabricate.api/options options}
+                    (api/plan! setup-tasks)
+                    (api/assemble [])
+                    (api/construct! [])))]] 🔚
