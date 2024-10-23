@@ -1,6 +1,7 @@
 ✳ (ns site.fabricate.docs.reference.namespaces.api
   (:require [site.fabricate.api :as api]
   [cybermonday.core :as md]
+  [dev.onionpancakes.chassis.core :as c]
   [site.fabricate.adorn :refer [clj->hiccup]]
   [site.fabricate.dev.build.utils :as utils]
   [rewrite-clj.zip :as z]
@@ -19,7 +20,9 @@
         :style {:outline-color "var(--color-blue)"}}
   [:h1 {:style {:grid-column-start "1" :margin-top "0em"
                 :background "var(--color-blue)"
-                :color "var(--color-sand)"}} [:span {:class "main-ns"} "site.fabricate.api"] [:br] [:span {:class "ns-annotation"
+                :color "var(--color-sand)"}} [:span {:class "main-ns"} 
+"site." [:wbr] "fabricate." [:wbr] "api"
+#_"site.fabricate.api"] [:br] [:span {:class "ns-annotation"
                                                                                                            } "Namespace"]]
   [:div {:style {:grid-column "1 / 7"}} (:doc (meta doc-ns))]] 🔚
 
@@ -67,7 +70,7 @@ Each source can produce one or more entries. For example, Fabricate, in building
   [:code {:class "primary-fn-fqn"} "site.fabricate.api/" [:strong "collect"]]]
   
  [:dl {:class "fn-description"}
-  [:dt "Multimethod"] 
+  [:dt (c/raw "Multi&shy;method") ] 
   [:dd  (md/parse-body 
          (:doc (meta #'site.fabricate.api/collect)))]
   [:dt "Inputs"] 
@@ -118,7 +121,7 @@ After this, each function in the sequence of tasks passed as an argument gets ca
    [:h2 {:class "primary-fn"} "build"]
 [:code {:class "primary-fn-fqn"} "site.fabricate.api/" [:strong "build"]]]
 [:dl {:class "fn-description"}
- [:dt "Multimethod"] [:dd  (md/parse-body (:doc  (meta #'api/build)))]
+ [:dt (c/raw "Multi&shy;method")] [:dd  (md/parse-body (:doc  (meta #'api/build)))]
  [:dt "Inputs"] [:dd #_[:code {:class "language-clojure"} 
         (->> (meta #'site.fabricate.api/build)
              :arglists
@@ -177,7 +180,7 @@ By default, they are HTML. Any other output format could be generated from the e
    [:h2 {:class "primary-fn"} "produce!"]
 [:code {:class "primary-fn-fqn"} "site.fabricate.api/" [:strong "produce!"]]]
 [:dl {:class "fn-description"}
- [:dt "Multimethod"] [:dd  (md/parse-body (:doc  (meta #'api/produce!)))]
+ [:dt (c/raw "Multi&shy;method") ] [:dd  (md/parse-body (:doc  (meta #'api/produce!)))]
  [:dt "Inputs"] [:dd #_[:code {:class "language-clojure"} 
         (->> (meta #'site.fabricate.api/build)
              :arglists

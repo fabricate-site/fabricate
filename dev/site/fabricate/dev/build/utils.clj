@@ -6,5 +6,6 @@
 (defn expr->hiccup
   [form]
   (clj->hiccup (zp/zprint-str form
-                              {:style [:community :justified]
+                              {:width 60
+                               :style [:community :justified]
                                :map   {:comma? false :sort? false}})))
