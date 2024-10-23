@@ -2,6 +2,7 @@
   "Build namespace for generating Fabricate's own documentation."
   (:require [site.fabricate.api :as api]
             [site.fabricate.dev.styles :as styles]
+            [site.fabricate.dev.elements :as elements]
             [site.fabricate.prototype.time :as time]
             [site.fabricate.prototype.read :as read]
             [site.fabricate.prototype.read.grammar :as grammar]
@@ -100,7 +101,8 @@
 (def options
   "Options for building Fabricate's own documentation."
   (let [d "docs"]
-    {:site.fabricate.page/publish-dir d ::server {:port 7779 :dir d}}))
+    {:site.fabricate.page/publish-dir d
+     :site.fabricate.dev.build/server {:port 7779 :dir d}}))
 
 
 (defmethod api/collect "pages/**.fab"
@@ -160,7 +162,8 @@
                           (apply conj
                                  [:article {:lang "en-us"}]
                                  (hiccup/parse-paragraphs evaluated-page))]
-                         [:footer [:div [:a {:href "/"} "Home"]]]]]]
+                         (elements/footer)
+                         #_[:footer [:div [:a {:href "/"} "Home"]]]]]]
     (assoc entry
            :site.fabricate.document/data hiccup-page
            :site.fabricate.page/title    (:title page-metadata))))
