@@ -160,7 +160,7 @@
   {:malli/schema [:=> [:cat parsed-expr-schema] [:or error-form-schema :any]]}
   [{:keys [expr-src exec expr error result display] :as parsed-expr}]
   (cond error   [:div {:class "fabricate-error"} [:h6 "Error"]
-                 [:dl [:dt "Error type"]
+                 [:dl {:class "fabricate-error-info"} [:dt "Error type"]
                   [:dd {:class "fabricate-error-type"}
                    [:code (str (:type error))]] [:dt "Error message"]
                   [:dd {:class "fabricate-error-msg"}
@@ -170,9 +170,9 @@
                   [:dd {:class "fabricate-error-location"}
                    (lines->msg (meta parsed-expr))]]
                  [:details [:summary "Source expression"]
-                  [:pre
-                   [:code {:class "language-clojure fabricate-error-src"}
-                    expr-src]]]]
+                  [:pre {:class "fabricate-error-src"}
+                   [:code {:class "language-clojure"}
+                    (adorn/clj->hiccup expr-src)]]]]
         display (list [:pre
                        [:code {:class "language-clojure"}
                         (adorn/clj->hiccup (or exec expr))]]
@@ -285,9 +285,9 @@
               (fn [i] (if (fabricate-expr? i) (eval-parsed-expr i simplify?) i))
               parsed-form)]
          (with-meta final-form
-           {:namespace nmspc
-            :metadata  (when-let [m (ns-resolve *ns* 'metadata)]
-                         (var-get m))})))))
+                    {:namespace nmspc
+                     :metadata  (when-let [m (ns-resolve *ns* 'metadata)]
+                                  (var-get m))})))))
   ([parsed-form simplify?] (eval-all parsed-form simplify? nil))
   ([parsed-form] (eval-all parsed-form true)))
 
