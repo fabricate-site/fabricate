@@ -169,7 +169,13 @@
            :site.fabricate.page/title    (:title page-metadata))))
 
 (defmethod api/build [:site.fabricate.read/v0 :hiccup]
-  ([entry _opts] (fabricate-v0->hiccup entry)))
+  ([{loc :site.fabricate.source/location :as entry} _opts]
+   (try (fabricate-v0->hiccup entry)
+        (catch Exception ex
+          (throw (ex-info (ex-message ex)
+                          (assoc (Throwable->map ex
+                                                 :site.fabricate.source/location
+                                                 loc))))))))
 
 (defmethod api/build [:site.fabricate.markdown/v0 :markdown]
   ([entry _opts]
