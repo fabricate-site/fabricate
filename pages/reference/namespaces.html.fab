@@ -20,7 +20,7 @@
                :padding-bottom "0.25em"
                :margin-bottom "0em"}}
   (:title metadata)]
- [:p {:style {:background "var(--color-sand)"
+ [:div {:style {:background "var(--color-sand)"
               :display "block"
               :grid-column "1 / -1"
               :padding-left "0.15em"
@@ -31,7 +31,7 @@
               :border-right-style "solid"
               :border-right-width "var(--grid-gap-x)"
               :margin-bottom "0em"
-              :padding-bottom "0.75em"
+              ;:padding-bottom "0.75em"
               }} "Organization of Fabricate's namespaces."]
  [:dl {:style {:margin-top "0em"}}
   [:div {:style {:grid-column "1 / -1"

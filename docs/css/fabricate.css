@@ -282,8 +282,11 @@ footer {
 }
 
 .split dl div>* {
-    padding-bottom: 0.5em;
+    /* padding-bottom: 0.5em; */
+     /* margin-bottom: 0.5em; */
 }
+
+
 
 .split dl div dt:first-child {
     color: var(--color-sand);
@@ -308,6 +311,7 @@ footer {
     background: var(--color-sand);
     color: var(--color-black);
     padding: 0.1em;
+    padding-left: 0.25em;
 }
 
 
