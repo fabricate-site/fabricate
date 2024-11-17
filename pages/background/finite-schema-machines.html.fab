@@ -11,8 +11,7 @@
             ✳ (def metadata
               {:title "Organizing computation with Finite Schema Machines"
                :description "Using precise schemas to map from data states to functions in Clojure."
-               :page-style
-               (garden/css styles/docs)}) 🔚
+               }) 🔚
                ✳= [:header [:h1 (:title metadata)]
                  [:h4 "An extensible method of laying out functions executed by a program."]] 🔚
                  

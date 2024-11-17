@@ -5,8 +5,7 @@
                [garden.core :as garden]
                [site.fabricate.dev.styles :as styles]))🔚
 
-✳(def metadata {:title "site.fabricate.prototype.read Namespace"
-               :page-style  (garden/css styles/docs)})🔚
+✳(def metadata {:title "site.fabricate.prototype.read Namespace"})🔚
 ✳(def doc-ns (find-ns 'site.fabricate.prototype.read))🔚
 
 ✳=[:div

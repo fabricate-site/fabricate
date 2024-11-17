@@ -11,10 +11,8 @@
    )) 🔚
    
 ✳(def metadata {:title "A Reference to Fabricate's Page Templates"
-               :page-style (garden/css
-                            (concat styles/docs
-                                    (list [:.example-rows {:grid-column-start 1}])))})🔚
-                                    ✳=[:h1 {:class "xl-text"} (:title metadata)]🔚
+              })🔚
+                                    ✳=[:h1 {:class "big-text"} (:title metadata)]🔚
                                     
 ✳ (defn expr->hiccup [e]
   (adorn/clj->hiccup (zp/zprint-str e {:style [:community :justified] :map {:comma? false}}
@@ -41,7 +39,7 @@ Useful for: namespace declarations, variable definitions, and other side effects
       (:require [site.fabricate.prototype.hiccup :as hiccup]))
     (def metadata {:title "My page"})])🔚
      ✳=(list [:h5 {:class "l-text"} "Examples"]
-           (apply conj [:div {:class "small"}]
+           (apply conj [:div {:class "main-track small"}]
                   (for [expr run-exprs]
                     [:pre (first grammar/delimiters)
                      [:code {:class "language-clojure"}
@@ -65,7 +63,7 @@ Useful for: anything you'd use HTML for.
        [:div
         (apply list
                (for [expr yield-exprs]
-                 [:div {:class "example-rows"}
+                 [:div {:class "main-track example-rows"}
                   [:div {:class "example-row"}
                    [:pre (first grammar/delimiters) "="
                     [:code (expr->hiccup expr)] (last grammar/delimiters)]]

@@ -11,8 +11,7 @@
             [site.fabricate.dev.styles :as styles]
             [clojure.string :as str])) 🔚
 
-✳(def metadata {:title "site.fabricate.prototype.read.grammar Namespace"
-               :page-style  (garden/css styles/docs)}) 🔚
+✳(def metadata {:title "site.fabricate.prototype.read.grammar Namespace"}) 🔚
 ✳(def doc-ns (find-ns 'site.fabricate.prototype.read.grammar)) 🔚
 
 ✳=[:div

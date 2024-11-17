@@ -5,7 +5,7 @@
    [site.fabricate.dev.styles :as styles])) 🔚
 
 ✳(def metadata {:title "Supporting Fabricate's templates in Emacs"
-               :page-style (garden/css styles/docs)}) 🔚
+               }) 🔚
 ✳=[:h1 (:title metadata)]🔚
 
 In its current state, Fabricate is best supported by the Emacs text editor. This is because of the very convenient package ✳=[:a {:href "https://polymode.github.io/"} [:code "polymode"]]🔚, which allows for context-sensitive definitions of major modes based on a syntax that uses regular expressions.

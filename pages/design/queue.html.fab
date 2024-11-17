@@ -8,7 +8,7 @@
    
 ✳(def metadata {:title "Design Doc for Work Queue"
                :written  "2022-10-10"
-               :page-style (garden/css styles/docs)})🔚
+               })🔚
                
 ✳=[:h1 {:class "xl-text"} (:title metadata)]🔚
 ✳=[:h4 (str (:written metadata))]🔚

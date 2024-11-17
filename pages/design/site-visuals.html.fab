@@ -3,6 +3,7 @@
    [garden.core :as garden]
    [site.fabricate.adorn :refer [clj->hiccup]]
    [zprint.core :as zp :refer [zprint-str]]
+   [dev.onionpancakes.chassis.core :as c]
    [rewrite-clj.parser :as p]
    [babashka.fs :as fs])) 🔚
 ✳(def metadata {:title "Fabricate: visual specification"
@@ -50,7 +51,7 @@ SVG patterns can be used to visually separate elements, provide simple backgroun
   (when (fs/exists? path)
     [:div {:style (garden/style {:grid-column "1 / 9"
                                  :mix-blend-mode "multiply"})}
-     (hiccup.util/raw-string (slurp path))])) 🔚
+     (c/raw (slurp path))])) 🔚
 
 
 The viewbox (or placeholder elements) could potentially be used to create layouts where the SVG partially overlaps the text, or appears to be behind, blending from an interstitial element to a background one.

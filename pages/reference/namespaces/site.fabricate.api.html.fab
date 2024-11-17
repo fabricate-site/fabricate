@@ -10,9 +10,9 @@
 )
   ) 🔚
 ✳(def doc-ns (find-ns 'site.fabricate.api)) 🔚
-✳(def metadata {:title "Fabricate main API"
+✳(def metadata {:title "API"
                ;; new API, new style
-               :page-style (slurp "docs/css/fabricate.css")}) 🔚
+               }) 🔚
                
 
 ✳= [:div {:class "card"

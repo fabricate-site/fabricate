@@ -4,18 +4,17 @@
    [garden.selectors :refer [root]]
    [garden.stylesheet :as stylesheet]
    [site.fabricate.dev.styles :as styles]
-   [site.fabricate.prototype.check]
    [site.fabricate.prototype.read]
    [site.fabricate.prototype.schema]
-   [site.fabricate.prototype.fsm]
    [site.fabricate.prototype.hiccup])) 🔚
 
 
-✳(def metadata {:title "Fabricate"
-:page-style (garden/css styles/docs)} )🔚
+✳(def metadata {:title "Fabricate"} )🔚
 
-✳= [:div [:h1 {:class "xl-text"} (:title metadata)] [:hr]
-    [:h4 "Form by art and labor"]]🔚
+✳= [:div {:class "main-track"} [:h1 {:style {:font-size "var(--font-big)"}
+}
+        (:title metadata)] [:hr]
+  [:h4 {:style {:font-size "var(--font-medium)"}} "Form by art and labor"]]🔚
 
 Introducing ✳=[:a {:href "https://github.com/fabricate-site/fabricate"} "Fabricate"]🔚, a Clojure library for making static websites, using Clojure.
 
@@ -23,71 +22,73 @@ Fabricate takes a different approach than markdown and notebook-based tools, whi
 
 Rather than deriving the layout from a generic approach that treats "code blocks" and "text" as distinct entities, Fabricate lets you embed the results of any expression right in the text, eschewing markup formats in favor of inline Hiccup elements.
 
-✳=[:div [:h2 "Examples"] [:hr]]🔚
+✳=[:div {:class "main-track"} [:h2 "Examples"] [:hr]]🔚
 
-✳//[:div
+✳//[:div {:class "main-track"}
 
 ✳+=(let [s "output"]
     [:h4 (format "a form evaluated and displayed with its %s" s)]) 🔚
 
 ]//🔚
 
-✳= [:div [:h2 "Documentation"] [:hr]]🔚
-✳= [:div [:h3 "Tutorials"] ]🔚
+✳= [:div {:class "main-track"} [:h2 "Documentation"] [:hr]]🔚
+✳=  [:h3 "Tutorials"] 🔚
 These guides will get you up and running with Fabricate, so you can use it as a writing and creative tool. Hopefully you find them useful.
 
-✳= [:div [:h4 "Tutorial 1: Using Fabricate to add documentation to an existing Clojure project"] ]🔚
+✳=  [:h4 "Tutorial 1: Using Fabricate to add documentation to an existing Clojure project"] 🔚
 This ✳=[:a {:href "./tutorials/fabricate-for-docs.html"} "first tutorial"]🔚 allows you to use Fabricate to document a project or library you've built.
 
-✳= [:div [:h4 "Tutorial 2: Using Fabricate to create a website"] ]🔚
+✳=  [:h4 "Tutorial 2: Using Fabricate to create a website"] 🔚
 🏗️ To be published.
 
 In the second tutorial, you will learn how to publish all the pages you create using Fabricate as a website.
 
-✳= [:div [:h3 {:class "text-l"} "How-to guides"] ]🔚
+✳=  [:h3 "How-to guides"] 🔚
 
-✳=[:div [:h4 "Supporting Fabricate in Emacs"]]🔚
+✳= [:h4 "Supporting Fabricate in Emacs"]🔚
 
 Consult ✳=[:a {:href "/how-to-guides/emacs-setup.html"} "this guide"]🔚 to add support for Fabricate's templates to Emacs.
 
 Further guides (to be published 🏗.)
 
-✳= [:ul [:li "Visualizing data using inline SVGs"]
+✳= [:ul {:class "main-track"} [:li "Visualizing data using inline SVGs"]
 [:li "Syncing your website with a web server"]
 [:li "Publishing your website on Netlify"]
 ]🔚
-✳= [:div [:h3 {:class "text-l"} "Reference"] ]🔚
-✳=[:ul [:li [:a {:href "./reference/template-structure.html"}
+✳= [:h3 {:class "text-l"} "Reference"] 🔚
+✳=[:ul {:class "main-track"}
+ [:li [:a {:href "./reference/template-structure.html"}
 "A Reference To Fabricate's Page Templates"]]]🔚
-✳= [:div [:h3 {:class "text-l"} "Background Information"] ]🔚
-✳=[:ul [:li [:a {:href "./background/finite-schema-machines.html"} "Organizing Computation With Finite Schema Machines"] [:br] "A description of how Fabricate arranges the sequence of transformations to get a HTML page from an input template."]]🔚
+✳=  [:h3  "Background Information"] 🔚
+✳=[:ul {:class "main-track"} [:li [:a {:href "./background/finite-schema-machines.html"} "Organizing Computation With Finite Schema Machines"] [:br] "A description of how Fabricate arranges the sequence of transformations to get a HTML page from an input template."]]🔚
 
 
-✳= [:div [:h2 "Namespaces"] [:hr]]🔚
+✳= [:div {:class "main-track"} [:h2 "Namespaces"] [:hr]]🔚
 
 The namespace descriptions, automatically generated from the namespace forms, introduce the functionality that fabricate assembles to create pages.
 
 ✳(defn ns->hiccup [ns form]
   (let [ns-var (find-ns ns)
         metadata (meta ns-var)]
-    (apply conj form [:h4 [:code [:a {:href (str "/reference/namespaces/" ns ".html")} (str ns)]]]
-           (into [:dl]
+    (apply conj form 
+           [:h4 [:code [:a {:href (str "/reference/namespaces/" ns ".html")} (str ns)]]]
+           [:p  (clojure.string/replace (:doc metadata) (re-pattern "\n\\s+") " ")]
+           #_(into [:dl]
                  (apply concat
                         (for [[k v] (select-keys (meta ns-var) [:doc])]
                           [[:dt [:code (str k)]] [:dd (clojure.string/replace v (re-pattern "\n\\s+") " ")]])))
            [])))🔚
 
-✳= [:div {:class "stack"
-        :style (garden/style {:grid-column "2 / 10"})}
-  (apply conj [:ul ]
-         (map #(ns->hiccup
-                %
-                [:li ])
-              ['site.fabricate.prototype.schema
-               'site.fabricate.prototype.html
-               'site.fabricate.prototype.read
-               'site.fabricate.prototype.read.grammar
-               'site.fabricate.prototype.hiccup
-               'site.fabricate.prototype.fsm
-               ]))]
+✳= 
+(into [:ul {:class "main-track"}]
+      (map #(ns->hiccup
+             %
+             [:li ])
+           ['site.fabricate.api
+            'site.fabricate.prototype.schema
+            'site.fabricate.prototype.html
+            'site.fabricate.prototype.read
+            'site.fabricate.prototype.read.grammar
+            'site.fabricate.prototype.hiccup
+            ]))
 🔚
