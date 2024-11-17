@@ -4,18 +4,12 @@
    [garden.selectors :refer [root]]
    [garden.stylesheet :as stylesheet]
    [site.fabricate.dev.styles :as styles]
+   [site.fabricate.dev.elements :as elements]
    [site.fabricate.prototype.read]
    [site.fabricate.prototype.schema]
    [site.fabricate.prototype.hiccup])) 🔚
-
-
 ✳(def metadata {:title "Fabricate"} )🔚
-
-✳= [:div {:class "main-track"} [:h1 {:style {:font-size "var(--font-big)"}
-}
-        (:title metadata)] [:hr]
-  [:h4 {:style {:font-size "var(--font-medium)"}} "Form by art and labor"]]🔚
-
+✳= elements/header-big 🔚
 Introducing ✳=[:a {:href "https://github.com/fabricate-site/fabricate"} "Fabricate"]🔚, a Clojure library for making static websites, using Clojure.
 
 Fabricate takes a different approach than markdown and notebook-based tools, which frequently assume a one-size fits all approach to displaying code: if there's code in a markdown block, it's included in the output. I made Fabricate so that I could program more of my layout, and so that I could choose when and where to display both Clojure expressions and their results.
@@ -23,9 +17,7 @@ Fabricate takes a different approach than markdown and notebook-based tools, whi
 Rather than deriving the layout from a generic approach that treats "code blocks" and "text" as distinct entities, Fabricate lets you embed the results of any expression right in the text, eschewing markup formats in favor of inline Hiccup elements.
 
 ✳=[:div {:class "main-track"} [:h2 "Examples"] [:hr]]🔚
-
 ✳//[:div {:class "main-track"}
-
 ✳+=(let [s "output"]
     [:h4 (format "a form evaluated and displayed with its %s" s)]) 🔚
 
