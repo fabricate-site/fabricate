@@ -75,7 +75,7 @@ h1, h2, h3, h4, h5, h6 {
     /* grid-template-columns: subgrid; */
 }
 
-h1,h2 {
+h1,h2,h3,h4,h5,h6 {
  margin-top: 0.12em;
  margin-bottom: 0.12em;
 }
@@ -84,7 +84,24 @@ p {
   margin-top: 0em;
   margin-bottom: 0.67em;
   grid-column: 2 / 8;
+  max-width: 55ch;
 }
+
+dd, li {
+    max-width: 55ch;
+}
+
+a {
+    color: var(--color-blue);
+    text-decoration: none;
+}
+
+/* a:after { */
+/*     content: "➜"; */
+/*     vertical-align: super; */
+/*     font-size: 0.65em; */
+/* } */
+
 
 .mono-txt,:where(code, kbd, pre, samp) {
     font-family: CommitMonoV142, monospace;
@@ -357,4 +374,8 @@ footer .footer-namespaces {
 footer .footer-top {
     background: var(--color-gray);
     color: var(--color-sand);
+}
+
+.big-text {
+    font-size: var(--font-big)
 }
