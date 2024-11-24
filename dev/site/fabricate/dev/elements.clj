@@ -16,8 +16,11 @@
      [:a {:class "decor-internal" :href top-id} "Top"]]])
   ([] (footer "#top")))
 
+(def logo-img
+  [:img {:src "/media/fabricate-logo-v1.svg" :class "fabricate-logo"}])
+
 (def header-big
-  [:header {:class "header-big"}
+  [:header {:class "header-big card"}
    [:img {:src "/media/fabricate-logo-v1.svg" :class "fabricate-header-logo"}]
    [:h1 {:class "header-primary"} "Fabricate"]
    [:h3 {:class "header-secondary"} "Form by art and labor"]])

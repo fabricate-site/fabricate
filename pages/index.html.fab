@@ -5,23 +5,86 @@
    [garden.stylesheet :as stylesheet]
    [site.fabricate.dev.styles :as styles]
    [site.fabricate.dev.elements :as elements]
+   [site.fabricate.dev.build.utils :refer [expr->hiccup str->hiccup]]
    [site.fabricate.prototype.read]
    [site.fabricate.prototype.schema]
    [site.fabricate.prototype.hiccup])) 🔚
 ✳(def metadata {:title "Fabricate"} )🔚
-✳= elements/header-big 🔚
+✳= nil #_elements/header-big 🔚
+
+
+✳=
+
+(list [:figure {:style {:grid-column "1 / 3"
+                        :grid-row "span 2"
+                        :margin "0px"}}
+       (assoc-in elements/logo-img [1 :style] {:width "100%" :height "100%"})]
+[:h1 {:style {:grid-column "3 / 8"
+              :text-align "right"
+               :font-size "calc(var(--font-big) * 1.75)"}}
+  "Fabricate"]
+[:div
+ [:h2 {:style {:grid-column "1 / 4"
+               :font-size "calc(var(--font-big) * 0.8)"
+               :margin-bottom "1em"
+               :text-align "right"}} "Form by art and labor"]
+ [:div {:style {:grid-column "4 / -1"
+                :margin-top "1em"
+                :margin-left "1.5em"
+                :font-size "var(--font-medium)"
+                :font-weight "500"
+                :font-family "var(--display-sans)"}
+        }
+   "Simple, flexible website generation with Clojure"
+  [:p [:a {:href "https://github.com/fabricate-site/fabricate"
+           :style {:font-weight "900"}} "GitHub"]]]
+ ]
+
+) 
+🔚
+
+
 Introducing ✳=[:a {:href "https://github.com/fabricate-site/fabricate"} "Fabricate"]🔚, a Clojure library for making static websites, using Clojure.
 
-Fabricate takes a different approach than markdown and notebook-based tools, which frequently assume a one-size fits all approach to displaying code: if there's code in a markdown block, it's included in the output. I made Fabricate so that I could program more of my layout, and so that I could choose when and where to display both Clojure expressions and their results.
+Fabricate gives you something other tools don't: the power to evaluate Clojure code to generate the contents of a page. The "using Clojure" part of that first sentence contains the core idea: Fabricate is built on the idea that you should be able to use Clojure to generate as much (or little) of your website as is necessary. 
 
-Rather than deriving the layout from a generic approach that treats "code blocks" and "text" as distinct entities, Fabricate lets you embed the results of any expression right in the text, eschewing markup formats in favor of inline Hiccup elements.
+What does that look like?
 
-✳=[:div {:class "main-track"} [:h2 "Examples"] [:hr]]🔚
+
+✳=[:div {:class "subgrid"} [:h2 "Examples"] [:hr]]🔚
 ✳//[:div {:class "main-track"}
 ✳+=(let [s "output"]
-    [:h4 (format "a form evaluated and displayed with its %s" s)]) 🔚
-
+ (list [:hr]
+       [:strong (format "a form evaluated and displayed with its %s" s)])) 🔚
 ]//🔚
+Fabricate gives you a template that allows you to mix regular text and Clojure expressions. Hiccup forms in the output of those expressions become HTML elements when Fabricate generates the page.
+
+Fabricate also gives you an API that can generate a website using 3 core functions.
+✳=(list
+ [:h2 {:style {:grid-column "1 / 3"
+               
+               :text-align "right"}} "A simple API"]
+ [:pre {:class "code-big"
+             :style {:grid-column "4 / -1"
+                     :font-weight "600"
+                     :margin-bottom "0.5em"
+                     :font-size "calc(var(--font-big) * 0.45)"
+                     :color "var(--color-darkbrown) !important"}}
+       (expr->hiccup '(-> {} api/plan! api/assemble api/construct!))
+       ]) 🔚
+This API, while straightforward enough to quickly get started with, does not constrain what you can do with Fabricate. You can extend Fabricate to new markup formats or other methods of generating pages.
+
+✳= [:div {:style {:margin-top "1.5em"}} [:figure {:style {:grid-column "1 / 4"
+                         :margin-right "1em"}}
+        [:blockquote "Simple things should be simple. Complex things should be possible."]
+        [:figcaption {:style {:text-align "right"}} "Alan Kay"]]
+[:pre {:style {:grid-column "4 / -1"}} 
+ (list
+  (str->hiccup "(require '[my-generation-code :refer [generate]])")
+  [:br] [:br]
+  (expr->hiccup '(defmethod api/build [:my/format :hiccup]
+                       [entry options]
+                       (generate entry))))] ]🔚
 
 ✳= [:div {:class "main-track"} [:h2 "Documentation"] [:hr]]🔚
 ✳=  [:h3 "Tutorials"] 🔚
@@ -75,7 +138,7 @@ The namespace descriptions, automatically generated from the namespace forms, in
 (into [:ul {:class "main-track"}]
       (map #(ns->hiccup
              %
-             [:li ])
+             [:li {:class "listed-ns"} ])
            ['site.fabricate.api
             'site.fabricate.prototype.schema
             'site.fabricate.prototype.html

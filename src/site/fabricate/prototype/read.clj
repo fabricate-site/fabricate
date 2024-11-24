@@ -175,7 +175,8 @@
                     (adorn/clj->hiccup expr-src)]]]]
         display (list [:pre
                        [:code {:class "language-clojure"}
-                        (adorn/clj->hiccup (or exec expr))]]
+                        ;; TODO: make this configurable via multimethod
+                        (adorn/clj->hiccup (or exec expr-src))]]
                       result)
         :else   result))
 
