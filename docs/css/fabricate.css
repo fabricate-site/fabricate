@@ -36,7 +36,7 @@ this stylesheet.
     --color-gray:  #656565;
     --color-blue: #3C506F;
     --color-yellow: #AFA840;
-    --color-darkgreen: 505D3B;
+    --color-darkgreen: #505D3B;
     --color-orange: #f96500;
     --color-burntorange: #632300;
     --display-sans: 'Lapidar 03', sans-serif;
@@ -74,6 +74,26 @@ h1, h2, h3, h4, h5, h6 {
     /* display: grid; */
     /* grid-template-columns: subgrid; */
 }
+.subgrid {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: subgrid;
+}
+
+/* by default, auto-subgrid certain direct descendants of the main article */
+article>div:not(.main-track, .subgrid) {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: subgrid;
+}
+
+article>section:not(.main-track, .subgrid) {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: subgrid;
+}
+
+
 
 h1,h2,h3,h4,h5,h6 {
  margin-top: 0.12em;
@@ -129,18 +149,20 @@ h1 {
   /* font-size: 2em; */
 }
 
-.language-clojure.keyword {
+:not(.code-big) .language-clojure.keyword {
     color: var(--color-burntorange);
 }
-.language-clojure.symbol {
+:not(.code-big) .language-clojure.symbol {
     color: var(--color-darkgreen);
 }
 
 
 p:empty {
     display: none;
+    margin: 0em;
+    padding: 0em;
 }
-p :-moz-only-whitespace {
+p:-moz-only-whitespace {
     display: none;
 }
 
@@ -314,6 +336,19 @@ footer {
     padding-left: 0.25em;
 }
 
+article figure {
+    margin-top: 0em;
+    margin-bottom: 0em;
+    margin-right: 0.5em;
+    margin-left: 1em;
+}
+article blockquote {
+    margin-top: 0em;
+    margin-bottom: 0.5em;
+    margin-right: 0.5em;
+}
+
+
 
 a.decor-internal {
     text-decoration: none;
@@ -417,25 +452,29 @@ footer .footer-top {
 }
 
 .header-big {
-    grid-column: 1 / -1;
+    grid-column: 2 / 8;
     display: grid;
     grid-template-columns: subgrid;
+    outline-color: var(--color-blue);
+    background: var(--color-blue);
+    color: var(--color-sand);
 }
 
 .header-big .fabricate-header-logo {
-    grid-column: 2 / 3;
+    grid-column: 1 / 2;
     grid-row: span 2;
     height: 100%;
+    background: var(--color-sand);
 
 }
 
 .header-big .header-primary {
-    grid-column: 3 / 8;
+    grid-column: 2 / 7;
     font-size: var(--font-big);
     margin: 0;
     line-height: 1em;
 }
 .header-big .header-secondary {
-    grid-column: 3 / 8;
+    grid-column: 2 / 7;
     font-size: calc(var(--font-medium) * 1.25);
 }
