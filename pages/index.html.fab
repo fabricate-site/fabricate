@@ -27,7 +27,8 @@
  [:h2 {:style {:grid-column "1 / 4"
                :font-size "calc(var(--font-big) * 0.8)"
                :margin-bottom "1em"
-               :text-align "right"}} "Form by art and labor"]
+               :text-align "right"}} 
+  [:a {:href "https://www.websters1913.com/words/Fabricate"} "“Form by art and labor”"]]
  [:div {:style {:grid-column "4 / -1"
                 :margin-top "1em"
                 :margin-left "1.5em"
@@ -46,7 +47,7 @@
 
 Introducing ✳=[:a {:href "https://github.com/fabricate-site/fabricate"} "Fabricate"]🔚, a Clojure library for making static websites, using Clojure.
 
-Fabricate gives you something other tools don't: the power to evaluate Clojure code to generate the contents of a page. The "using Clojure" part of that first sentence contains the core idea: Fabricate is built on the idea that you should be able to use Clojure to generate as much (or little) of your website as is necessary. 
+Fabricate gives you something other tools don't: the power to evaluate Clojure code to generate the contents of a page. The “using Clojure” part of that first sentence contains the core idea: Fabricate is built on the idea that you should be able to use Clojure to generate as much (or little) of your website as is necessary. 
 
 What does that look like?
 
@@ -57,7 +58,7 @@ What does that look like?
  (list [:hr]
        [:strong (format "a form evaluated and displayed with its %s" s)])) 🔚
 ]//🔚
-Fabricate gives you a template that allows you to mix regular text and Clojure expressions. Hiccup forms in the output of those expressions become HTML elements when Fabricate generates the page.
+Fabricate gives you a template that allows you to mix regular text and Clojure expressions. Hiccup forms returned by those expressions become HTML elements when Fabricate generates the page.
 
 Fabricate also gives you an API that can generate a website using 3 core functions.
 ✳=(list
@@ -74,10 +75,14 @@ Fabricate also gives you an API that can generate a website using 3 core functio
        ]) 🔚
 This API, while straightforward enough to quickly get started with, does not constrain what you can do with Fabricate. You can extend Fabricate to new markup formats or other methods of generating pages.
 
-✳= [:div {:style {:margin-top "1.5em"}} [:figure {:style {:grid-column "1 / 4"
-                         :margin-right "1em"}}
-        [:blockquote "Simple things should be simple. Complex things should be possible."]
-        [:figcaption {:style {:text-align "right"}} "Alan Kay"]]
+✳= [:div {:style {:margin-top "1.5em"}} [:figure 
+   {:style {:grid-column "1 / 4"
+            :font-family "var(--display-sans)"
+            :font-size "1.2em"
+            :margin-right "1em"}}
+        [:blockquote {:style {:font-weight "900"}} "Simple things should be simple. Complex things should be possible."]
+        [:figcaption {:style {:text-align "left"
+                              :margin-left "1em"}} "Alan Kay"]]
 [:pre {:style {:grid-column "4 / -1"}} 
  (list
   (str->hiccup "(require '[my-generation-code :refer [generate]])")
