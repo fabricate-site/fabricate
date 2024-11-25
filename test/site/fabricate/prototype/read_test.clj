@@ -91,14 +91,14 @@
         "(let [s \"output\"]\n    [:code (format \"a form evaluated and displayed with its %s\" s)]) "]
        [:txt "\n"]]
       (->
-       "✳//[:div
+        "✳//[:div
 
 ✳+=(let [s \"output\"]
     [:code (format \"a form evaluated and displayed with its %s\" s)]) 🔚
 ]//🔚"
-       template
-       second
-       extended-form->form)))
+        template
+        second
+        extended-form->form)))
     (t/is (-> "✳=(+ 2 3)🔚"
               read-template
               second
@@ -160,7 +160,7 @@
       (t/is
        (= (list [:pre
                  [:code {:class "language-clojure"}
-                  (adorn/clj->hiccup '(+ 4 5))]]
+                  (adorn/clj->hiccup "(+ 4 5)")]]
                 9)
           (-> "✳+=(+ 4 5)🔚"
               parse
@@ -177,22 +177,22 @@
                [:dd '("Line " [:strong 1] ", " "Columns " [:strong 1 "-" 12])]]
               [:details [:summary "Source expression"]
                [:pre [:code "((+ 2 3)"]]]]))
-      (t/is
-       (=
-        [:div {:class "fabricate-error"} [:h6 "Error"]
-         [:dl [:dt "Error type"]
-          [:dd {:class "fabricate-error-type"}
-           [:code "clojure.lang.ExceptionInfo"]] [:dt "Error message"]
-          [:dd {:class "fabricate-error-msg"}
-           [:code "Unexpected EOF. [at line 1, column 9]"]] [:dt "Error phase"]
-          [:dd {:class "fabricate-error-phase"} [:code ""]] [:dt "Location"]
-          [:dd {:class "fabricate-error-location"}
-           '("Line " [:strong 1] ", " "Columns " [:strong 1 "-" 12])]]
-         [:details [:summary "Source expression"]
-          [:pre
-           [:code {:class "language-clojure fabricate-error-src"} "((+ 2 3)"]]]]
-        (eval-parsed-expr (first (parse "✳((+ 2 3)🔚")) true))
-       "Expression parsing errors should be surfaced in the output")
+      (t/is (= [:div {:class "fabricate-error"} [:h6 "Error"]
+                [:dl {:class "fabricate-error-info"} [:dt "Error type"]
+                 [:dd {:class "fabricate-error-type"}
+                  [:code "clojure.lang.ExceptionInfo"]] [:dt "Error message"]
+                 [:dd {:class "fabricate-error-msg"}
+                  [:code "Unexpected EOF. [at line 1, column 9]"]]
+                 [:dt "Error phase"]
+                 [:dd {:class "fabricate-error-phase"} [:code ""]]
+                 [:dt "Location"]
+                 [:dd {:class "fabricate-error-location"}
+                  '("Line " [:strong 1] ", " "Columns " [:strong 1 "-" 12])]]
+                [:details [:summary "Source expression"]
+                 [:pre {:class "fabricate-error-src"}
+                  [:code {:class "language-clojure"} "((+ 2 3)"]]]]
+               (eval-parsed-expr (first (parse "✳((+ 2 3)🔚")) true))
+            "Expression parsing errors should be surfaced in the output")
       (t/is (not (nil? (:error (eval-parsed-expr (first (parse "✳=((+ 2 3)🔚"))
                                                  false))))))
     (t/testing ": multiple exprs"
@@ -238,10 +238,10 @@
             "https://upload.wikimedia.org/wikipedia/commons/9/90/Pterodroma_mollis_light_morph_-_SE_Tasmania_2019.jpg"}]
           [:figcaption "soft-plumaged petrel"]]]
         (->
-         "✳=[:figure [:img {:src \"https://upload.wikimedia.org/wikipedia/commons/9/90/Pterodroma_mollis_light_morph_-_SE_Tasmania_2019.jpg\"} ]
+          "✳=[:figure [:img {:src \"https://upload.wikimedia.org/wikipedia/commons/9/90/Pterodroma_mollis_light_morph_-_SE_Tasmania_2019.jpg\"} ]
                 [:figcaption \"soft-plumaged petrel\"]]🔚"
-         parse
-         eval-all))
+          parse
+          eval-all))
        "evaluation should not remove content from forms")
       (let [ex-file (-> "README.md.fab"
                         slurp

@@ -154,25 +154,41 @@
              [:= [:h6 "Error"]] [:schema [:cat [:= :dl] [:* :any]]]
              [:schema [:cat [:= :details] [:* :any]]]]))
 
+;; TODO: this probably needs to be made more robust
+(defn read-error?
+  {:malli/schema [:=> [:cat parsed-expr-schema] :boolean]}
+  [error-form]
+  (= "Unexpected EOF." (get-in error-form [:error :data :msg])))
+
+;; TODO: should this be a multimethod?
+(defn error->hiccup
+  {:malli/schema [:=> [:cat parsed-expr-schema] error-form-schema]}
+  [{:keys [expr-src exec expr error result display] :as parsed-expr}]
+  [:div {:class "fabricate-error"} [:h6 "Error"]
+   [:dl {:class "fabricate-error-info"} [:dt "Error type"]
+    [:dd {:class "fabricate-error-type"} [:code (str (:type error))]]
+    [:dt "Error message"]
+    [:dd {:class "fabricate-error-msg"} [:code (str (:cause error))]]
+    [:dt "Error phase"]
+    [:dd {:class "fabricate-error-phase"} [:code (str (:phase error))]]
+    [:dt "Location"]
+    [:dd {:class "fabricate-error-location"} (lines->msg (meta parsed-expr))]]
+   [:details [:summary "Source expression"]
+    [:pre {:class "fabricate-error-src"}
+     [:code {:class "language-clojure"}
+      (if (read-error? parsed-expr) expr-src (adorn/clj->hiccup expr-src))]]]])
+
+(comment
+  (read-error? (first (parse "✳((+ 2 3)🔚")))
+  (adorn/form->hiccup "((+ 3 4)"))
+
+;; TODO: should this be a multimethod?
 (defn form->hiccup
   "If the form has no errors, return its results.
   Otherwise, create a hiccup form describing the error."
   {:malli/schema [:=> [:cat parsed-expr-schema] [:or error-form-schema :any]]}
   [{:keys [expr-src exec expr error result display] :as parsed-expr}]
-  (cond error   [:div {:class "fabricate-error"} [:h6 "Error"]
-                 [:dl {:class "fabricate-error-info"} [:dt "Error type"]
-                  [:dd {:class "fabricate-error-type"}
-                   [:code (str (:type error))]] [:dt "Error message"]
-                  [:dd {:class "fabricate-error-msg"}
-                   [:code (str (:cause error))]] [:dt "Error phase"]
-                  [:dd {:class "fabricate-error-phase"}
-                   [:code (str (:phase error))]] [:dt "Location"]
-                  [:dd {:class "fabricate-error-location"}
-                   (lines->msg (meta parsed-expr))]]
-                 [:details [:summary "Source expression"]
-                  [:pre {:class "fabricate-error-src"}
-                   [:code {:class "language-clojure"}
-                    (adorn/clj->hiccup expr-src)]]]]
+  (cond error   (error->hiccup parsed-expr)
         display (list [:pre
                        [:code {:class "language-clojure"}
                         ;; TODO: make this configurable via multimethod
