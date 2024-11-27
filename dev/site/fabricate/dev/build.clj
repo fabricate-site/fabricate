@@ -21,13 +21,6 @@
             [http.server :as server]))
 
 
-(defn include-form
-  "Return the form in the file matching the predicate as a rewrite-clj node."
-  {:malli/schema [:=> [:cat :string [:fn fn?]] :any]}
-  [src-file pred]
-  (let [fzip (z/of-file src-file)]
-    (adorn/clj->hiccup (z/node (z/find-next-depth-first fzip
-                                                        #(pred (z/sexpr %)))))))
 
 
 (defn simple-expr
@@ -265,5 +258,9 @@
 
 
 (comment
+  (names)
+  (str/split (str (symbol :site.fabricate.document/data)) #"\.")
+  (name :abc/xyz)
+  clojure.string/split
   (run! (fn [[_ v]] (clojure.pprint/pprint [v (:doc (meta v))]))
         (ns-publics (find-ns 'site.fabricate.api))))
