@@ -347,20 +347,33 @@ article blockquote {
     margin-bottom: 0.5em;
     margin-right: 0.5em;
     margin-left: 1em;
+    max-width: 50ch;
 }
 
+
+
 blockquote:before {
-    content: "“"
+    content: "“";
 }
 blockquote:after {
-    content: "”"
+    content: "”";
+}
+
+article>ul {
+    grid-column: 2 / 8;
+}
+
+article>figure {
+    grid-column: 2 / 8;
 }
 
 article>dl {
     display: grid;
     grid-template-columns: subgrid;
     grid-column: 1 / -1;
+    grid-row-gap: var(--grid-gap-x);
 }
+
 dl dt {
     grid-column: 1 / 3;
     font-weight: 800;
@@ -370,6 +383,9 @@ dl dd {
     margin-left: 0em;
 }
 
+dd p {
+    margin-bottom: 0em;
+}
 
 
 

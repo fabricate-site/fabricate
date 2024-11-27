@@ -1,9 +1,7 @@
 ✳(ns site.fabricate.docs.reference.namespaces.read
      (:require [site.fabricate.prototype.read :as read]
                [site.fabricate.adorn :as adorn]
-               [malli.core :as m]
-               [garden.core :as garden]
-               [site.fabricate.dev.styles :as styles]))🔚
+               [malli.core :as m]))🔚
 
 ✳(def metadata {:title "site.fabricate.prototype.read Namespace"})🔚
 ✳(def doc-ns (find-ns 'site.fabricate.prototype.read))🔚
