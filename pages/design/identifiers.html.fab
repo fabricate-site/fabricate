@@ -1,0 +1,103 @@
+✳(ns site.fabricate.docs.design.identifiers)🔚
+
+
+✳(def metadata {:title "Design doc: identifiers"})🔚
+✳= [:h1 {:class "big-text"} (:title metadata)]🔚
+
+✳= [:span {:class "medium-text"
+         } [:strong "Status:"] " Pre-prototype design doc. Not yet ready for inclusion in Fabricate proper - just clarifying concepts for the purposes of writing functions necessary to generate Fabricate's own docs. Code that implements these ideas may be spun out into a separate library intended to be used with Fabricate."]🔚
+
+✳= [:h2 "What makes a unique identifier?"]🔚
+
+
+✳= [:ul [:li "For a HTML element?"] [:li "For a term with a specific meaning in the context of a project?"] [:li "For a Fabricate entry?"]]🔚
+
+The HTML5 specification only states that:
+✳= [:figure 
+[:blockquote
+"the id attribute value must be unique amongst all the IDs in the element's
+tree and must contain at least one character. The value must not contain any
+ASCII whitespace."]
+[:figcaption [:a {:href "https://html.spec.whatwg.org/multipage/dom.html#the-id-attribute"} "WHATWG HTML Living Standard (2024-11-26)"]]
+]🔚
+
+EDN's specification of symbols is:
+
+
+✳= [:figure [:blockquote
+           [:p "Symbols are used to represent identifiers, and should map to something other than strings, if possible."]
+
+           [:p "Symbols begin with a non-numeric character and can contain alphanumeric characters and " [:strong ". * + ! - _ ? $ % & = < >"] ". If -, + or . are the first character, the second character (if any) must be non-numeric. Additionally, : # are allowed as constituent characters in symbols other than as the first character."]
+
+           [:p "/ has special meaning in symbols. It can be used once only in the middle of a symbol to separate the prefix (often a namespace) from the name, e.g. my-namespace/foo. / by itself is a legal symbol, but otherwise neither the prefix nor the name part can be empty when the symbol contains /. "]
+
+           [:p "If a symbol has a prefix and /, the following name component should follow the first-character restrictions for symbols as a whole. This is to avoid ambiguity in reading contexts where prefixes might be presumed as implicitly included namespaces and elided thereafter."]
+]
+  [:figcaption [:a {:href "https://github.com/edn-format/edn#symbols"}
+                "EDN format: symbols"]]
+]🔚
+
+
+This is a strict subset of the HTML rules for identifiers. Obeying the rules
+for Clojure symbols thus automatically produces valid HTML ID values.
+
+The rules for keywords are as follows:
+
+✳=
+[:figure [:blockquote
+          "Keywords are identifiers that typically designate themselves. They are
+semantically akin to enumeration values. Keywords follow the rules of
+symbols, except they can (and must) begin with :, e.g. :fred or :my/fred. If
+the target platform does not have a keyword type distinct from a symbol
+type, the same type can be used without conflict, since the mandatory leading : of
+keywords is disallowed for symbols. Per the symbol rules above, :/ and
+:/anything are not legal keywords. A keyword cannot begin with ::"
+           
+]
+  [:figcaption [:a {:href "https://github.com/edn-format/edn#keywords"}
+                "EDN format: keywords"]]
+]
+ 🔚
+
+Obeying these rules will also produce valid HTML IDs.
+
+
+This makes a fully-qualified symbol, or a keyword in a defined namespace, a
+very effective globally-unique
+identifier for an element in a page, a key in a lookup table, a name for
+an entry, or anything else.
+
+
+✳= [:h2 "Motivating questions and use cases"]🔚
+
+The original question that motivated detailed consideration of "identifiers" in the context of Fabricate was symbol and keyword resolution in docstrings. cljdoc, an important piece of prior art, resolves symbols and namespaces to produce links for the pages generated from docstrings.
+
+The general idea is that if you put a fully-qualified keyword or symbol in double brackets in a docstring, that symbol or keyword can be resolved and thus linked to when the docstring is used to generate the contents of a page. That implies that the symbol's identifier establishes a "canonical location" for where to look that symbol up - in this case, a mapping from a symbol or keyword to a URL.
+
+Looking things up by name:
+✳= [:ul [:li [:strong "Symbols:"] " A link to the documentation for the var with that name"]
+[:li [:strong "Vars:"] " A link to the documentation for the var with that name"]
+ [:li [:strong "Keywords:"] " See above - keywords can't carry metadata and they \"refer to themselves\", which means that adding documentation for a keyword is an antipattern.
+However, within the context of a Clojure program, a keyword can designate a spec. Equivalently, a keyword can also name an entry in a Malli registry.
+"]
+[:li [:strong "Terms: "] "Fabricate has lots of words with special meanings. It would be good to call those out, and link to their definitions, in addition to symbols, vars, and other Clojure values." ]
+
+ ]🔚
+
+"Term" is a more encompassing concept than "keyword". A term could have a keyword representation, or it might not. A term can have more than one word. On that basis, it should be assumed that a term is unique to a specific project. This means, for example, distinguishing "source location" as a term from "page location".
+
+
+✳= [:h2 "Plaintext/Markdown Notation"]🔚
+
+For simplicity's sake I will largely adapt the Clojure notation for these things, leaving unadorned text to refer to key terms, as in an ordinary ✳= [:a {:href "https://en.wikipedia.org/wiki/Help:Link"} "Wikilink"]🔚. 
+
+Even though symbols don't need to have a leading ' character, it will be useful to unambiguously distinguish them from ordinary text, which will connote terms.
+
+✳= [:dl {:class "main-track"}
+  [:dt "Term"] [:dd [:code "[[Source Location]]"]]
+  [:dt "Keyword"] [:dd [:code "[[:site.fabricate.api/entry]]"]]
+  [:dt "Symbol"] [:dd [:code "[['site.fabricate.api/plan!]]"]]
+  [:dt "Var"] [:dd [:code "[[#'site.fabricate.api/plan!]]"]]
+  ]🔚
+
+Doing things this way allows me to rely on the Clojure reader for the contents of double-bracket links.
