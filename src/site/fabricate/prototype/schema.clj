@@ -22,7 +22,8 @@
   "Returns true if the given form is a valid malli schema"
   {:malli/schema (m/schema [:=> [:cat :any] :boolean])}
   [form]
-  (try (do (m/schema form) true) (catch Exception e false)))
+  (or (m/schema? form)
+      (try (do (m/schema form) true) (catch Exception e false))))
 
 (defn register!
   "Add the `schema` specified by the `type` keyword to the global registry.
