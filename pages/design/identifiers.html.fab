@@ -70,7 +70,7 @@ an entry, or anything else.
 
 ✳= [:h2 "Motivating questions and use cases"]🔚
 
-The original question that motivated detailed consideration of "identifiers" in the context of Fabricate was symbol and keyword resolution in docstrings. cljdoc, an important piece of prior art, resolves symbols and namespaces to produce links for the pages generated from docstrings.
+The original question that motivated detailed consideration of "identifiers" in the context of Fabricate was symbol and keyword resolution in docstrings. cljdoc, an important piece of prior art, resolves symbols and namespaces to produce links for the pages generated from docstrings, following the convention established by Martin Klepsch, which he described in ✳[:a {:href "https://www.martinklepsch.org/posts/writing-awesome-docstrings.html"} "4 Small Steps Towards Awesome Clojure Docstrings"]🔚 
 
 The general idea is that if you put a fully-qualified keyword or symbol in double brackets in a docstring, that symbol or keyword can be resolved and thus linked to when the docstring is used to generate the contents of a page. That implies that the symbol's identifier establishes a "canonical location" for where to look that symbol up - in this case, a mapping from a symbol or keyword to a URL.
 
@@ -93,11 +93,23 @@ For simplicity's sake I will largely adapt the Clojure notation for these things
 
 Even though symbols don't need to have a leading ' character, it will be useful to unambiguously distinguish them from ordinary text, which will connote terms.
 
+
+
 ✳= [:dl {:class "main-track"}
   [:dt "Term"] [:dd [:code "[[Source Location]]"]]
   [:dt "Keyword"] [:dd [:code "[[:site.fabricate.api/entry]]"]]
   [:dt "Symbol"] [:dd [:code "[['site.fabricate.api/plan!]]"]]
   [:dt "Var"] [:dd [:code "[[#'site.fabricate.api/plan!]]"]]
+  [:dt "Argument"] [:dd [:code "`fn-argument`"]]
   ]🔚
 
-Doing things this way allows me to rely on the Clojure reader for the contents of double-bracket links.
+These differ from Klepsch's recommendations in that double-bracket links are not assumed to be symbols by default. Doing things this way allows me to link to ordinary words, and rely on the Clojure reader for other contents of double-bracket links. 
+
+✳= [:h3 "What I will do differently"]🔚
+
+I will not follow recommendations 3 and 4 from "4 Small Steps Towards Awesome Clojure Docstrings". I strongly believe that data structures are always to be preferred to strings. I will not use strings to denote important code examples or complex data structures like tables. Instead, I will rely on the approach of fully embracing metadata for this purpose, the way  ✳= [:code [:a {:href "https://gitlab.com/glossa/metazoa"} "metazoa"]]🔚 does.
+
+✳= [:h2 "Canonicalization"]🔚
+
+Symbols and vars are treated differently according to the above parse table. What if a symbol resolves to a var?
+
