@@ -1,4 +1,6 @@
-✳(ns site.fabricate.docs.design.identifiers)🔚
+✳(ns site.fabricate.docs.design.identifiers
+  (:require [cybermonday.ir :as md-ir]
+            [site.fabricate.dev.build.utils :as build-utils]))🔚
 
 
 ✳(def metadata {:title "Design doc: identifiers"})🔚
@@ -109,7 +111,26 @@ These differ from Klepsch's recommendations in that double-bracket links are not
 
 I will not follow recommendations 3 and 4 from "4 Small Steps Towards Awesome Clojure Docstrings". I strongly believe that data structures are always to be preferred to strings. I will not use strings to denote important code examples or complex data structures like tables. Instead, I will rely on the approach of fully embracing metadata for this purpose, the way  ✳= [:code [:a {:href "https://gitlab.com/glossa/metazoa"} "metazoa"]]🔚 does.
 
-✳= [:h2 "Canonicalization"]🔚
+
+✳= [:h3 "Detour/interlude: aligning convention with cybermonday"]🔚
+Right now, the ✳= [:a {:href "https://github.com/kiranshila/cybermonday"} "markdown parser"]🔚 I use does not offer support for the Flexmark extension that enables wikilink-style markdown links. Concretely, here's what it ends up looking like if I attempt to use double brackets:
+✳+= 
+(let [result (md-ir/md-to-ir "Return the data with ...something, after calling [[my-ns/fn]] on it")]
+  [:pre [:code {:class "language-clojure"} (build-utils/expr->hiccup result)]])
+🔚
+This means lots of pesky floating brackets in the text, which I can avoid if I use single brackets and just use a custom function to process ✳=[:code ":markdown/link-ref"]🔚 elements For the time being, I should align my own notation to that used by the tools I use (cybermonday) and don't worry for now about the ones I don't (cljdoc). However, some editors work better with markdown docstrings, so I perhaps should eventually support that markdown convention.
+
+
+✳= [:h2 "Extending flexmark"]🔚
+
+The structure of cybermonday is simple enough that I can replicate its basic parsing functions while extending them to new types.
+
+One example of the wikilink extension in use is in ✳= [:a {:href "https://github.com/lread/cljdoc/blob/aa596e613d442dd429719b1c23dcbcf87ff0d4b3/src/cljdoc/render/rich_text.clj#L56"} [:code "cljdoc"]]🔚, but fortunately I don't have to reify a bunch of Flexmark classes to make use of the wikilink extension because I'm not relying upon the Flexmark renderer in order to generate HTML.
+
+Instead, I can just grab the contents from the ✳=  [:code "WikiLink/WikiNode"]🔚 fields and work with that directly. I think.
+
+✳= [:h2 "Standardization"]🔚
 
 Symbols and vars are treated differently according to the above parse table. What if a symbol resolves to a var?
+
 
