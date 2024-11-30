@@ -1,0 +1,43 @@
+✳(ns site.fabricate.docs.design.markdown
+  (:require [site.fabricate.dev.build.utils :as build-utils]
+            [cybermonday.ir :as md-ir]
+            [site.fabricate.dev.source.markdown :as md]))🔚
+
+✳(def metadata {:title "Design doc: markdown"})🔚
+✳= [:h1 {:class "big-text"} (:title metadata)]🔚
+
+Markdown appears in multiple contexts. Docstrings in Clojure code use it. Sources for documents can use it.
+
+✳= [:h2 "Fitting the puzzle pieces together"]🔚
+
+Thinking about the steps a markdown string goes through (using the current stack of libraries) before it becomes a HTML page will help think about where to perform operations.
+
+✳= [:ol {:class "main-track"}
+[:li "Markdown string"]
+  [:li "Cybermonday/Flexmark AST" [:br] [:em [:code "api/assemble"] " calls " [:code "md/md->hiccup"]]]
+[:li [:strong "Cybermonday IR"]
+ [:ol [:li "Can use lowering functions to perform transformations on markdown elements"]]]
+  [:li [:strong "Chassis Hiccup"] [:br]
+   [:em [:code "api/construct!"] "  calls " [:code "c/html"]]
+   [:ol [:li "Can evaluate " [:code "IDeref"] " and zero-arity " [:code "Fn"] " for dynamic page content"]
+  [:li "Can use lookup on custom elements that have namespaced keywords - like those returned by Cybermonday's IR"]]]
+[:li "HTML5 string"]
+[:li "HTML5 file"]
+
+]🔚
+
+✳= [:h2 "Extending cybermonday with flexmark extensions"]🔚
+
+By default, the ✳= [:a {:href "https://github.com/kiranshila/cybermonday"} "markdown parser"]🔚 I use does not offer support for the Flexmark extension that enables wikilink-style markdown links. Concretely, here's what it ends up looking like if I attempt to use double brackets "out of the box":
+✳+= 
+(let [result (md-ir/md-to-ir "Return the data with ...something, after calling [[my-ns/fn]] on it")]
+  [:pre [:code {:class "language-clojure"} (build-utils/expr->hiccup result)]])
+🔚
+This means lots of pesky floating brackets in the text, which I can avoid if I use single brackets and just use a custom function to process ✳=[:code ":markdown/link-ref"]🔚 elements For the time being, I should align my own notation to that used by the tools I use (cybermonday) and don't worry for now about the ones I don't (cljdoc). However, some editors work better with markdown docstrings, so I perhaps should eventually support that markdown convention.
+
+However, the structure of cybermonday is simple enough that I can replicate its basic parsing functions while extending them to new types.
+
+One example of the wikilink extension in use is in ✳= [:a {:href "https://github.com/lread/cljdoc/blob/aa596e613d442dd429719b1c23dcbcf87ff0d4b3/src/cljdoc/render/rich_text.clj#L56"} [:code "cljdoc"]]🔚, but fortunately I don't have to reify a bunch of Flexmark classes to make use of the wikilink extension because I'm not relying upon the Flexmark renderer in order to generate HTML.
+
+Instead, I can just grab the contents from the ✳= [:code "WikiLink/WikiNode"]🔚 fields and work with that directly, which is what the implementation in the ✳= [:code "site.fabricate.dev.source.markdown"]🔚 does. 
+
