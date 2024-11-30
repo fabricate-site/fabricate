@@ -13,7 +13,7 @@
            [java.time ZonedDateTime Instant ZoneId]))
 
 
-(def definitions
+(def glossary
   "Key terms used by Fabricate."
   [{:doc  "A source file used by Fabricate. May be a file, or a URL."
     :term :site.fabricate.source/location
@@ -99,7 +99,7 @@
     :type :namespace}])
 
 ;; register schema components
-(doseq [{:keys [term doc] :as d} definitions]
+(doseq [{:keys [term doc] :as d} glossary]
   (when-not (= :site.fabricate.api/entry term)
     (s/register! term (mu/update-properties (:type d) assoc :doc doc))))
 

@@ -1,0 +1,52 @@
+
+✳(ns site.fabricate.docs.reference.glossary
+     (:require [site.fabricate.dev.build.utils :as utils]
+               [cybermonday.core :as md]
+               [site.fabricate.api :as api]
+               [site.fabricate.dev.code :as code]
+               [clojure.string :as str]))🔚
+
+✳(def metadata {:title "Glossary"
+               :subtitle "Key terms used by Fabricate"})🔚
+
+✳=[:header {:class "card"
+          :style {:background "var(--color-blue)"
+                  :outline-color "var(--color-blue)"}} 
+ [:h1 {:style {:font-size "var(--font-big)"
+               :color "var(--color-sand)"
+               :grid-column "1 / -1"}}
+  (:title metadata)]
+ [:h2 {:style {:background "var(--color-sand)"
+               :color "var(--color-blue)"
+               :grid-column "1 / -1"}} (:subtitle metadata)]]🔚
+
+
+✳(defn sub-namespace [kw]
+  (let [components (str/split (str (namespace kw)) #"\.")
+        kw-name (name kw)]
+    (keyword (nth (take-last 1 components) 0) kw-name)))🔚
+
+
+✳=[:dl {:class "subgrid"}
+(for [{:keys [term doc type]} api/glossary]
+  (list [:dt {:style {:grid-column "2 / span 2"}} [:code (sub-namespace term)]] [:dd {:style {:grid-column "span 5"}} (md/parse-body doc)]))]🔚
+
+
+✳= [:code {:class "language-clojure symbol"
+         :data-clojure-symbol "site.fabricate.api/plan!"
+         }
+  "site.fabricate.api/plan!"] 🔚
+
+
+✳= [:code {:class "language-clojure symbol"
+         :data-clojure-symbol "site.fabricate.api/assemble"
+         :id (code/css-escape "site.fabricate.api/assemble")
+         }
+  "site.fabricate.api/assemble"] 🔚
+
+
+✳= [:code {:class "language-clojure symbol"
+         :data-clojure-symbol "site.fabricate.api/assemble"
+         :id "site.fabricate.api/assemble"
+         }
+  "site.fabricate.api/assemble"] 🔚
