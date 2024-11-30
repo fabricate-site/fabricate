@@ -125,3 +125,11 @@ Standardization should be all done in one place, by the same function, regardles
 Or should the produce step do this? On the one hand, I like the idea of just letting Chassis do the work, on the assumption that all the necessary structured content already exists by the time the produce step comes around. On the other, I like the idea of having pages be "just data" with discrete (immutable) values by the end of the assemble step.
 
 I could just postwalk the hiccup myself and perform the same dereferencing/evaluation that chassis does in an "eager" rather than "lazy" fashion.
+
+✳= [:h2 "Resolution"]🔚
+
+Remember: you don't need to ensure an anchor/id in a page exists prior to generating the link that targets that anchor. The reference to an identifier can just produce a link, and then the ✳= [:em "page"]🔚 for that link can perform the necessary lookup for that term.
+
+But how does that page know about all the references/identifiers that appear across all other pages? Some kind of global registry may need to exist in order to do this correctly.
+
+One possible way: data attributes. ✳= [:code "data-term=clojure.core/str"]🔚 conveys important information and could be parsed out of a Hiccup structure. This is simple and effective. 
