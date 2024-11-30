@@ -3,7 +3,8 @@
   (:require [cybermonday.ir :as md-ir]
             [cybermonday.utils :as cm-utils]
             [cybermonday.parser :as md-parser]
-            [cybermonday.core :as md])
+            [cybermonday.core :as md]
+            [cybermonday.lowering :as md-lower])
   (:import [com.vladsch.flexmark.parser Parser]
            [com.vladsch.flexmark.util.data MutableDataSet]
            [com.vladsch.flexmark.ext.tables TablesExtension TableBlock TableHead
@@ -50,7 +51,12 @@
   [ast source]
   (md-ir/process-inline-html (md-parser/to-hiccup ast source)))
 
-(defn md->hiccup [md-text] (ast->hiccup (flexmark-parse md-text) md-text))
+(defn md->hiccup
+  ([md-text opts]
+   (-> (ast->hiccup (flexmark-parse md-text) md-text)
+       (md-lower/to-html-hiccup opts)
+       (cm-utils/cleanup)))
+  ([md-text] (md->hiccup md-text {})))
 
 (comment
   (->> (clojure.reflect/reflect com.vladsch.flexmark.ext.wikilink.WikiNode)
