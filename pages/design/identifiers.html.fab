@@ -133,3 +133,5 @@ Remember: you don't need to ensure an anchor/id in a page exists prior to genera
 But how does that page know about all the references/identifiers that appear across all other pages? Some kind of global registry may need to exist in order to do this correctly.
 
 One possible way: data attributes. ✳= [:code "data-term=clojure.core/str"]🔚 conveys important information and could be parsed out of a Hiccup structure. This is simple and effective. 
+
+But what about identifiers for non-fabricate things? Like a function from clojure.core?
