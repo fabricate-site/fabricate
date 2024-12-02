@@ -126,7 +126,7 @@ Or should the produce step do this? On the one hand, I like the idea of just let
 
 I could just postwalk the hiccup myself and perform the same dereferencing/evaluation that chassis does in an "eager" rather than "lazy" fashion.
 
-✳= [:h2 "Resolution"]🔚
+✳= [:h2 "Resolution/specification"]🔚
 
 Remember: you don't need to ensure an anchor/id in a page exists prior to generating the link that targets that anchor. The reference to an identifier can just produce a link, and then the ✳= [:em "page"]🔚 for that link can perform the necessary lookup for that term.
 
@@ -135,3 +135,5 @@ But how does that page know about all the references/identifiers that appear acr
 One possible way: data attributes. ✳= [:code "data-term=clojure.core/str"]🔚 conveys important information and could be parsed out of a Hiccup structure. This is simple and effective. 
 
 But what about identifiers for non-fabricate things? Like a function from clojure.core?
+
+The general idea: use information available at runtime if it's there, but don't "go looking for it" somewhere else. Namespace and symbol metadata can carry information that can be resolved, but defaults should be supplied.
