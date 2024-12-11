@@ -76,11 +76,15 @@
   #{:ins :del :object})
 
 (def external-link-pattern
+  "Regex pattern for external URLs."
   (re-pattern "https?://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]"))
 (def internal-link-pattern
+  "Regex pattern for internal URLs."
   (re-pattern "/[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]"))
 
-(def url [:or [:re external-link-pattern] [:re internal-link-pattern]])
+(def url
+  "Malli schema for URLs."
+  [:or [:re external-link-pattern] [:re internal-link-pattern]])
 
 (def global-attributes
   "MDN list of global HTML attributes as malli schema"
@@ -91,9 +95,12 @@
     [:itemscope :boolean] [:itemtype [:re external-link-pattern]]
     [:lang [:enum "en"]] [:tabindex :int] [:title :string] [:part :string]]))
 
-(def atomic-element [:or :boolean :double :int :string :nil])
+(def atomic-element
+  "Malli schema representing atomic HTML/Hiccup elements"
+  (m/schema [:or :boolean :double :int :string :nil]))
 
 (def ^{:malli/schema [:=> [:cat :any] :boolean]} atomic-element?
+  "Returns true if the given value is an atomic HTML/Hiccup element"
   (m/validator atomic-element))
 
 (defn- ->hiccup-schema
@@ -110,6 +117,7 @@
    (->hiccup-schema tag attr-schema content-schema {})))
 
 (defn ns-kw
+  "Convert the given keyword to a namespaced version, using the current ns if not provided."
   {:malli/schema [:=>
                   [:cat [:? [:fn #(.isInstance clojure.lang.Namespace %)]]
                    :keyword] :keyword]}
@@ -612,18 +620,27 @@
                  [:schema [:ref ::heading-content]]
                  [:schema [:ref ::phrasing-content]]]}} ::html]))
 
-(def element (m/schema (schema/subschema html ::element)))
+;; TODO: figure out how to register all of these schemas/subschemas
+;; in the global registry specified by the site.fabricate.prototype.schema ns
+(def element
+  "Malli schema for HTML elements."
+  (m/schema (schema/subschema html ::element)))
 
-(def ^{:malli/schema [:=> [:cat :any] :boolean]} element? (m/validator element))
+(def ^{:malli/schema [:=> [:cat :any] :boolean]} element?
+  "Returns true if the given value is a HTML element."
+  (m/validator element))
 
 (def ^{:malli/schema [:=> [:cat :any] [:or :map [:= :malli.core/invalid]]]}
      parse-element
+  "Parse the given value as a HTML element."
   (m/parser element))
 
 (def ^{:malli/schema [:=> [:cat :any] [:or :map :nil]]} explain-element
+  "Explain why the given value is not a HTML element."
   (m/explainer element))
 
 (def element-flat
+  "Simplified schema for HTML elements that does not distinguish between flow, phrasing, heading, or metadata content."
   (let [elems (->> (dissoc (get (m/properties html) :registry)
                     ::flow-content
                     ::heading-content
@@ -642,48 +659,60 @@
                      (seq elems)))))
 
 (def ^{:malli/schema [:=> [:cat :any] [:or :map :nil]]} element-flat-explainer
+  "Explain why the given value does not match the schema for flat HTML content."
   (m/explainer element-flat))
 (def ^{:malli/schema [:=> [:cat :any] [:or :map [:= :malli.core/invalid]]]}
      parse-element-flat
+  "Parse the given value according to the schema for flat HTML content."
   (m/parser element-flat))
 
 (def element-validators
+  "Map with tags (keys) and predicates (values) that check if a value is a HTML element of the given type."
   (let [kws (filter keyword? (keys (get (m/properties html) :registry)))]
     (into {:atomic-element (m/validator atomic-element)}
           (map (fn [t] [t (m/validator (schema/subschema html (ns-kw t)))])
                kws))))
 
 (def element-explainers
+  "Map with tags (keys) and functions (values) that explain why a value does not match the schema for the HTML element of the given type."
   (let [kws (filter keyword? (keys (get (m/properties html) :registry)))]
     (into {:atomic-element (m/explainer atomic-element)}
           (map (fn [t] [t (m/explainer (schema/subschema html (ns-kw t)))])
                kws))))
 
 (def element-parsers
+  "Map with tags (keys) and functions (values) that parse a HTML element of the specific type."
   (let [kws (filter keyword? (keys (get (m/properties html) :registry)))]
     (into {:atomic-element (m/parser atomic-element)}
           (map (fn [t] [t (m/parser (schema/subschema html (ns-kw t)))]) kws))))
+
+;; TODO: make this function actually work
 
 ;; "content is palpable when it's neither empty or hidden;
 ;; it is content that is rendered and is substantive.
 ;; Elements whose model is flow content or phrasing content
 ;; should have at least one node which is palpable."
 (defn palpable?
+  "Returns true if the node is visible."
   {:malli/schema [:=> [:cat :any] :boolean]}
   [c]
   (some? (some #(m/validate atomic-element %)
                (tree-seq #(and (vector? %) (keyword? (first %))) rest c))))
 
 (def ^{:malli/schema [:=> [:cat :any] :boolean]} phrasing?
+  "Returns true if the element is HTML phrasing content."
   (m/validator (schema/subschema html ::phrasing-content)))
 
 (def ^{:malli/schema [:=> [:cat :any] :boolean]} heading?
+  "Returns true if the element is HTML heading content."
   (m/validator (schema/subschema html ::heading-content)))
 
 (def ^{:malli/schema [:=> [:cat :any] :boolean]} flow?
+  "Returns true if the element is HTML flow content."
   (m/validator (schema/subschema html ::flow-content)))
 
 (defn validate-element
+  "Attempt to validate the element based on its tag, or the keyword in the first position of the vector."
   {:malli/schema [:=> [:cat :any] :boolean]}
   [elem]
   (if (and (vector? elem) (keyword? (first elem)))
@@ -709,6 +738,7 @@
       (when schema (last (flatten (last (m/form schema))))))))
 
 (def tag-contents
+  "Map with permitted contents across all tags."
   (->>
     (concat phrasing-tags flow-tags heading-tags sectioning-tags metadata-tags)
     (map (fn [t] [t (permitted-contents t)]))

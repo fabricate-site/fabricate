@@ -140,6 +140,9 @@
   collect-dispatch)
 
 (def site-schema
+  "Malli schema describing the contents of a Fabricate site.
+
+A site is the primary map passed between the 3 core API functions: plan!, assemble, and construct!"
   (m/schema [:map [:site.fabricate.api/entries [:* entry-schema]]
              [:site.fabricate.api/options :map]]))
 

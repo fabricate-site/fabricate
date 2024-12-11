@@ -1,34 +1,25 @@
 (ns site.fabricate.prototype.check
-  (:require [clojure.java.io :as io])
+  "Namespace to check output HTML against validator.nu HTML tests."
+  (:require [clojure.java.io :as io]
+            [babashka.fs :as fs])
   (:import [nu.validator.validation SimpleDocumentValidator]
            [nu.validator.messages TextMessageEmitter MessageEmitterAdapter]
            [nu.validator.source SourceCode]
            [nu.validator.xml SystemErrErrorHandler]))
 
-(def sax-error (SystemErrErrorHandler.))
-
 (def validator
-  (let [v (SimpleDocumentValidator.)]
+  "Default HTML Validator object."
+  (let [v         (SimpleDocumentValidator.)
+        sys-error (SystemErrErrorHandler.)]
     (doto v
-      (.setUpMainSchema "http://s.validator.nu/html5-rdfalite.rnc" sax-error)
-      (.setUpValidatorAndParsers sax-error true false))))
+      (.setUpMainSchema "http://s.validator.nu/html5-rdfalite.rnc" sys-error)
+      (.setUpValidatorAndParsers sys-error true false))))
 
 (defn html
+  "Test the given directories and files"
   [{:keys [dirs files]}]
   (let [all-files (->> dirs
-                       (map #(file-seq (io/file %)))
-                       flatten
-                       (concat (map io/file files))
-                       (filter #(.endsWith (.toString %) ".html")))]
+                       (mapcat #(fs/glob % "**.html"))
+                       (map fs/file)
+                       (into (map fs/file files)))]
     (doseq [f all-files] (.checkHtmlFile validator f true))))
-
-(comment
-  (.exists (io/file "/home/andrew/repos_main/fabricate/docs/index.html"))
-  (.checkHtmlFile validator
-                  (io/file "/home/andrew/repos_main/fabricate/docs/index.html")
-                  false)
-  (.checkHtmlFile validator
-                  (io/file
-                   "/home/andrew/repos_main/fabricate/docs/fabricate.html")
-                  false)
-  (html {:dirs ["docs/"]}))

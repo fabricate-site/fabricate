@@ -36,6 +36,7 @@
     [:file {:optional true :doc "The source file of the expression"} :string]]))
 
 (def ^{:malli/schema [:=> [:cat :any] :boolean]} fabricate-expr?
+  "Returns true if the given value matches the schema for parsed Fabricate expressions."
   (m/validator parsed-expr-schema))
 
 (def evaluated-expr-schema
@@ -84,13 +85,13 @@
                               '()
                               (map (fn [e] {:expr-src (str e) :expr e})
                                    (read-str (str open front-matter close))))]
-    (with-meta
-      (cond (= delims "[]") (apply conj [] (concat parsed-front-matter forms))
-            (= delims "()") (concat () parsed-front-matter forms))
-      (meta ext-form))))
+    (with-meta (cond (= delims "[]") (into []
+                                           (concat parsed-front-matter forms))
+                     (= delims "()") (concat () parsed-front-matter forms))
+               (meta ext-form))))
 
 (def parsed-schema
-  "Malli schema describing the elements of a fabricate template after it has been parsed by the Instaparse grammar"
+  "Malli schema describing the elements of a fabricate template after it has been parsed by the Instaparse grammar."
   (m/schema
    [:schema
     {:registry {::txt  [:tuple {:encode/get {:leave second}} [:= :txt] :string]
@@ -156,12 +157,14 @@
 
 ;; TODO: this probably needs to be made more robust
 (defn read-error?
+  "Returns true if the given expression failed to read into a valid Clojure form."
   {:malli/schema [:=> [:cat parsed-expr-schema] :boolean]}
   [error-form]
   (= "Unexpected EOF." (get-in error-form [:error :data :msg])))
 
 ;; TODO: should this be a multimethod?
 (defn error->hiccup
+  "Return a Hiccup form with context for the error."
   {:malli/schema [:=> [:cat parsed-expr-schema] error-form-schema]}
   [{:keys [expr-src exec expr error result display] :as parsed-expr}]
   [:div {:class "fabricate-error"} [:h6 "Error"]

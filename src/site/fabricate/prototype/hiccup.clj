@@ -133,6 +133,7 @@
   ([form] (parse-paragraphs form {})))
 
 (defn ->meta
+  "Convert the given key/value pair to a Hiccup/HTML metadata element."
   {:malli/schema [:=> [:cat [:schema [:cat :any :any]]] [:cat [:= :meta] :map]]}
   [[k v]]
   (let [attrs (if (map? v) v {:content v})]
@@ -140,6 +141,7 @@
 
 
 (def default-metadata-map
+  "Default metadata for Fabricate HTML pages."
   {:title       "Fabricate"
    :description "Fabricate: static website generation for Clojure"
    "viewport"   "width=device-width, initial-scale=1.0"
@@ -148,6 +150,7 @@
    :site-title  "Fabricate"})
 
 (def default-metadata
+  "Additional default metadata for Fabricate HTML pages."
   (list [:meta {:charset "utf-8"}]
         [:meta {:http-equiv "X-UA-Compatible" :content "IE=edge"}]))
 

@@ -1,5 +1,5 @@
 (ns site.fabricate.prototype.schema
-  "Utility namespace for working with malli schemas."
+  "Utility namespace for working with malli schemas, including a default registry and predicates used across Fabricate's implementation."
   {:reference "https://github.com/metosin/malli"}
   (:require [malli.core :as m]
             [malli.util :as mu]
@@ -9,7 +9,7 @@
             [babashka.fs :as fs]))
 
 
-(def registry (atom {}))
+(def registry "Global registry for Fabricate's Malli schemas." (atom {}))
 
 (mr/set-default-registry! (mr/composite-registry (m/default-schemas)
                                                  (mt/schemas)
@@ -19,7 +19,7 @@
 
 
 (defn malli?
-  "Returns true if the given form is a valid malli schema"
+  "Returns true if the given form is a valid malli schema."
   {:malli/schema (m/schema [:=> [:cat :any] :boolean])}
   [form]
   (or (m/schema? form)
@@ -34,6 +34,7 @@
   (swap! registry assoc type schema))
 
 (defn file?
+  "Returns true if the given value is a type that represents a file."
   {:malli/schema [:=> [:cat :any] :boolean]}
   [v]
   (or (instance? java.io.File v) (instance? java.nio.file.Path v)))
@@ -41,6 +42,7 @@
 (register! :file [:fn file?])
 
 (defn ns?
+  "Returns true if the given value is a Namespace or is a symbol that names a namespace."
   {:malli/schema [:=> [:cat :any] :boolean]}
   [v]
   (or (instance? clojure.lang.Namespace v) (some? find-ns v)))
@@ -73,11 +75,11 @@
     (m/schema [:schema props new-ref])))
 
 (def regex
-  "Malli schema for regular expressions"
+  "Malli schema for regular expressions."
   (m/schema [:fn #(instance? java.util.regex.Pattern %)]))
 
 (defn ns-form?
-  "Returns true if the given form is a valid Clojure (ns ...) special form"
+  "Returns true if the given form is a valid Clojure (ns ...) special form."
   {:malli/schema (m/schema [:=> [:cat :any] :boolean])}
   [form]
   (let [form
@@ -92,7 +94,7 @@
 
 (defn unify
   "A lighter-weight version of malli's own unify/merge that's
-  more compatible with number-based indexing/item access"
+  more compatible with number-based indexing/item access."
   {:malli/schema (m/schema [:=> [:cat [:* [:fn malli?]]] [:fn malli?]])}
   [schemas]
   (m/into-schema :orn {} (map-indexed vector schemas)))
@@ -106,4 +108,5 @@
                 [:data {:optional true} :any]]]] [:trace [:vector :any]]]))
 
 (def ^{:malli/schema [:=> [:cat :any] :boolean]} throwable-map?
+  "Returns true if the given map matches the type returned by Throwable->map."
   (m/validator throwable-map-schema))

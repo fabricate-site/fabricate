@@ -2,7 +2,7 @@
   (:require [clojure.test :as t]
             [babashka.fs :as fs]
             [malli.core :as m]
-            [site.fabricate.prototype.document.clojure :as clj]))
+            [site.fabricate.prototype.source.clojure :as clj]))
 
 (def valid-form-map? (m/validator clj/form-map-schema))
 

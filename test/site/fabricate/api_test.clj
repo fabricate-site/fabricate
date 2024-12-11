@@ -4,6 +4,11 @@
             ;; refer the dev ns to ensure multimethods have impls
             [site.fabricate.dev.build]
             [site.fabricate.prototype.test-utils :refer [with-instrumentation]]
+            [site.fabricate.prototype.read]
+            [site.fabricate.prototype.html]
+            [site.fabricate.prototype.hiccup]
+            [site.fabricate.prototype.check]
+            [site.fabricate.prototype.source.clojure]
             [malli.core :as m]
             [malli.util :as mu]
             [babashka.fs :as fs]))
@@ -250,3 +255,31 @@
     (t/testing (str v)
       (let [var-schema (:malli/schema (meta v))]
         (t/is (mu/equals schema var-schema) "API contract must be stable.")))))
+
+(defn test-namespace
+  [nmspc]
+  (let [ns-str  (str nmspc)
+        publics (ns-publics nmspc)]
+    (t/testing ns-str
+      (let [ns-meta (meta nmspc)]
+        (t/is (string? (:doc ns-meta)) "Namespace should be documented")
+        (doseq [[sym v] publics]
+          (let [v-meta (meta v)]
+            (t/is (string? (:doc v-meta)) (str v " should be documented"))))))))
+
+(t/deftest documentation
+  (t/testing "documentation across APIs:"
+    (->> (all-ns)
+         (filter (fn [nmspc]
+                   (let [ns-str (str nmspc)]
+                     (and (re-find #"^site\.fabricate" ns-str)
+                          (not (re-find #"^site\.fabricate\.adorn" ns-str))
+                          (not (re-find #"^site\.fabricate\.dev" ns-str))
+                          (not (re-find #"^site\.fabricate.*test" ns-str))
+                          (not (re-find #"^site\.fabricate.*docs" ns-str))
+                          (not (re-find #"^site\.fabricate.*time" ns-str))))))
+         (run! test-namespace))))
+
+(comment
+  (meta (find-ns 'site.fabricate.api))
+  (ns-publics (find-ns 'site.fabricate.prototype.schema)))
