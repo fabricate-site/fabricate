@@ -9,3 +9,8 @@
       (t/testing (str term)
         (t/is (map? (refs/specify term))
               "Basic term types should be specifiable")))))
+
+(comment
+  (mapv refs/specify
+        [#'site.fabricate.api/plan! 'site.fabricate.api/construct! :basic-kw
+         :site.fabricate.source/location]))

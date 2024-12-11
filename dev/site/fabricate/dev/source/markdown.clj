@@ -39,11 +39,21 @@
 
 (def node-tags "Extended mapping from Flexmark AST node to Hiccup tag" ())
 
+;; TODO: figure out how to standardize and normalize this output
+;; so it works with the rest of Cybermonday
+(defn wikilink->map
+  "Convert the Wikilink object to a Clojure map"
+  [^WikiLink link]
+  {:link     (str (.getLink link))
+   :page-ref (str (.getPageRef link))
+   ;; the text field is non-nil only when there's a bracket alias
+   :text     (str (.getText link))})
+
 (extend-protocol md-parser/HiccupRepresentable
  WikiLink
    (to-hiccup [this source]
      (cm-utils/make-hiccup-node :markdown/wikilink
-                                {:reference source}
+                                (wikilink->map this)
                                 (md-parser/map-children-to-hiccup this
                                                                   source))))
 
@@ -60,6 +70,10 @@
 
 (comment
   (->> (clojure.reflect/reflect com.vladsch.flexmark.ext.wikilink.WikiNode)
+       :members
+       (mapv #(dissoc % :exception-types :declaring-class))
+       clojure.pprint/print-table)
+  (->> (clojure.reflect/reflect WikiLink)
        :members
        (mapv #(dissoc % :exception-types :declaring-class))
        clojure.pprint/print-table)

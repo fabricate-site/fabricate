@@ -72,7 +72,7 @@
                            (if sym-ns
                              (str "/reference/namespaces/" sym-ns
                                   ".html#" (name term))
-                             (str @glossary-path term)))}))
+                             (str @glossary-path "#" term)))}))
 
 (defmethod specify clojure.lang.Var
   [term]
@@ -94,7 +94,7 @@
    :link       (if-let [kw-ns (namespace term)]
                  (str "/reference/namespaces/" kw-ns
                       ".html#" (keyword (name term)))
-                 (str @glossary-path term))})
+                 (str @glossary-path "#" term))})
 
 (comment
   (specify #'site.fabricate.api/plan!)
