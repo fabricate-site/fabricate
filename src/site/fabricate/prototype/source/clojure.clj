@@ -1,4 +1,4 @@
-(ns site.fabricate.prototype.document.clojure
+(ns site.fabricate.prototype.source.clojure
   "Fabricate namespace defining methods for turning Clojure namespaces into Hiccup documents"
   (:require [hiccup2.core :as hiccup]
             [rewrite-clj.parser :as parser]
@@ -23,6 +23,7 @@
 ;; server-side syntax highlighting
 
 (def form-map-schema
+  "Schema describing a simplified way of storing Clojure forms and their potential results."
   (m/schema [:map
              [:clojure/source
               {:description "Source of the expression as a string"} :string]
@@ -36,6 +37,7 @@
               {:description "Results of evaluation" :optional true} :any]]))
 
 (defn node->map
+  "Convert the given rewrite-clj node into a form map."
   [n m]
   (let [src-info (reduce-kv (fn [mm k v]
                               (assoc mm (keyword "clojure.source" (name k)) v))

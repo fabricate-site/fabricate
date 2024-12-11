@@ -1,4 +1,4 @@
-(ns site.fabricate.prototype.document.clojure-test
+(ns site.fabricate.prototype.source.clojure-test
   (:require [clojure.test :as t]
             [babashka.fs :as fs]
             [malli.core :as m]
