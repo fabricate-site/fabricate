@@ -92,9 +92,10 @@ text
 
 (t/deftest pages
   (t/testing "ambiguity"
-    (doseq [f ["./pages/background/finite-schema-machines.html.fab"
-               "./pages/fab.html.fab" "./pages/index.html.fab"
-               "./README.md.fab"]]
+    (doseq
+      [f
+       ["https://raw.githubusercontent.com/fabricate-site/manual/ae660ad598f0c3d01beb6250789db8cc5a54a69a/docs/background/finite-schema-machines.html.fab"
+        "https://raw.githubusercontent.com/fabricate-site/manual/ae660ad598f0c3d01beb6250789db8cc5a54a69a/docs/background/finite-schema-machines.html.fab"]]
       (let [c (slurp f)]
         (t/testing (str "in input file: " f)
           (t/is (not (insta/failure? (template c)))
