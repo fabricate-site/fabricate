@@ -20,8 +20,7 @@
     :type [:or :string [:fn fs/exists?]]}
    {:doc
     "The source from which input entries are derived. collect dispatches on ::source"
-    ;; TODO: rename this to align with new namespace convention
-    :term :site.fabricate.entry/source
+    :term :site.fabricate.api/source
     :type :any}
    {:doc
     "A map representing a component of a page before, during, and after the assemble and produce operations. One source may produce multiple entries."
@@ -30,7 +29,7 @@
    {:doc  "The file where a page was published."
     :term :site.fabricate.page/output
     :type [:fn fs/exists?]}
-   {:doc  "EDN data structure with the contents of a document."
+   {:doc  "Clojure value with the contents of a document."
     :term :site.fabricate.document/data
     :type :any}
    {:doc
@@ -108,7 +107,7 @@
   "Malli schema describing entries."
   (mu/required-keys
    (mu/optional-keys
-    (m/schema [:map :site.fabricate.entry/source :site.fabricate.source/location
+    (m/schema [:map :site.fabricate.api/source :site.fabricate.source/location
                :site.fabricate.page/output :site.fabricate.document/data
                :site.fabricate.document/format :site.fabricate.source/format
                :site.fabricate.page/format :site.fabricate.page/uri
