@@ -121,14 +121,14 @@
                :site.fabricate.page/modified-time :site.fabricate.page/tags
                :site.fabricate.entry/id :site.fabricate.entry/namespace]))
    ;; entries ultimately have to come from somewhere.
-   [:site.fabricate.entry/source :site.fabricate.source/location
+   [:site.fabricate.api/source :site.fabricate.source/location
     :site.fabricate.source/format]))
 
 
 (defn collect-dispatch
   "Equivalent to a multi-arg version of `clojure.core/identity` for a source."
-  {:malli/schema (m/schema [:=> [:cat :site.fabricate.entry/source :map]
-                            :site.fabricate.entry/source])
+  {:malli/schema (m/schema [:=> [:cat :site.fabricate.api/source :map]
+                            :site.fabricate.api/source])
    :private      true}
   [src options]
   src)
@@ -143,7 +143,7 @@
 
 A site is the primary map passed between the 3 core API functions: plan!, assemble, and construct!"
   (m/schema [:map [:site.fabricate.api/entries [:* entry-schema]]
-             [:site.fabricate.api/options [:map-of :any :any]]]))
+             [:site.fabricate.api/options :map]]))
 
 (def site-fn-schema
   "Function schema for functions that operate on a site"

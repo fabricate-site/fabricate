@@ -14,7 +14,7 @@
                        org.clojure/test.check {:mvn/version "1.1.1"}
                        site.fabricate/manual
                        {:git/url "https://github.com/fabricate-site/manual.git"
-                        :sha     "67e02b757d06d90761978f5e37504ff900778b83"}}
+                        :sha     "0285311b5517b806dca43360235bc0fff4970728"}}
                       :extra-paths ["test"]}
            :validate {:exec-args {:dirs ["docs/"]}
                       :exec-fn   site.fabricate.prototype.check/html}}

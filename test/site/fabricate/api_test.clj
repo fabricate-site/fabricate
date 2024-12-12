@@ -72,7 +72,7 @@
 
 (def api-contracts
   (let [entry-schema
-        [:map [:site.fabricate.entry/source :site.fabricate.entry/source]
+        [:map [:site.fabricate.api/source :site.fabricate.api/source]
          [:site.fabricate.source/location :site.fabricate.source/location]
          [:site.fabricate.page/output {:optional true}
           :site.fabricate.page/output]
@@ -127,8 +127,7 @@
               [:map
                [:site.fabricate.api/entries
                 [:*
-                 [:map
-                  [:site.fabricate.entry/source :site.fabricate.entry/source]
+                 [:map [:site.fabricate.api/source :site.fabricate.api/source]
                   [:site.fabricate.source/location
                    :site.fabricate.source/location]
                   [:site.fabricate.page/output {:optional true}
@@ -178,8 +177,7 @@
              [:map
               [:site.fabricate.api/entries
                [:*
-                [:map
-                 [:site.fabricate.entry/source :site.fabricate.entry/source]
+                [:map [:site.fabricate.api/source :site.fabricate.api/source]
                  [:site.fabricate.source/location
                   :site.fabricate.source/location]
                  [:site.fabricate.page/output {:optional true}
@@ -226,8 +224,8 @@
                   :site.fabricate.entry/namespace]]]]
               [:site.fabricate.api/options :map]]]]}}
          :site.fabricate.api/site-fn]]
-    {#'api/collect    (m/schema [:=> [:cat :site.fabricate.entry/source :map]
-                                 :site.fabricate.entry/source])
+    {#'api/collect    (m/schema [:=> [:cat :site.fabricate.api/source :map]
+                                 :site.fabricate.api/source])
      #'api/plan!      site-fn-schema
      #'api/build      (m/schema [:=> [:cat entry-schema :map]
                                  [:tuple :site.fabricate.source/format
