@@ -16,13 +16,14 @@
                        site.fabricate/manual
                        {:git/url "https://github.com/fabricate-site/manual.git"
                         :sha     "0285311b5517b806dca43360235bc0fff4970728"}}
-                      :extra-paths ["test"]}
+                      :extra-paths ["test"]
+                      :resource-paths ["test-resources"]}
            :validate {:exec-args {:dirs ["docs/"]}
                       :exec-fn   site.fabricate.prototype.check/html}}
  :deps    {babashka/fs             {:mvn/version "0.2.12"}
            hiccup/hiccup           {:mvn/version "2.0.0-RC2"}
            instaparse/instaparse   {:mvn/version "1.4.12"}
-           metosin/malli           {:mvn/version "0.13.0"}
+           metosin/malli           {:mvn/version "0.17.0"}
            nasus/nasus             {:git/url
                                     "https://github.com/kachayev/nasus/"
                                     :sha
