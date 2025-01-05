@@ -47,3 +47,7 @@
 ;; tagged literals
 (let [timestamp #inst "2025-01-01T00:00:00.000-00:00"]
   [:div "happy new year - the time is " (str timestamp)])
+
+;; read-eval
+
+#=(mapv inc [3 8 2 5])

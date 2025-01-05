@@ -138,8 +138,8 @@
 
 (defn- parse-fallback
   [str opts]
-  (e/parse-string str
-                  (merge {:read-cond :allow :features #{:clj} :all true} opts)))
+  (binding [*read-eval* false]
+    (read-string {:read-cond :allow :features #{:clj}} str)))
 
 (defn eval-form
   "Evaluate the Clojure form contained in the given map."
@@ -205,8 +205,3 @@
   (kindly/consider)
   (kin)
   (file->forms *file*))
-
-
-;; implementation working notes
-
-;; metadata nodes - tricky as usual. reasonable strategy to normalize them
