@@ -142,6 +142,8 @@
                   (merge {:read-cond :allow :features #{:clj} :all true} opts)))
 
 (defn eval-form
+  "Evaluate the Clojure form contained in the given map."
+  {:malli/schema (m/schema [:-> form-map-schema form-map-schema])}
   [{clojure-form :clojure/form
     clj-ns       :clojure/namespace
     clj-str      :clojure/source
