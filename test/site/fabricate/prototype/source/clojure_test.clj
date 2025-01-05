@@ -4,7 +4,11 @@
             [rewrite-clj.parser :as parser]
             [rewrite-clj.node :as node]
             [babashka.fs :as fs]
-            [malli.core :as m]
+            [edamame.core :as e]
+            [clojure.tools.reader :as reader]
+            [matcher-combinators.test]
+            [matcher-combinators.matchers :as m]
+            [malli.core :as malli]
             [malli.error :as me]
             [site.fabricate.prototype.source.clojure :as clj]))
 
@@ -34,15 +38,16 @@
      "Nil/non-metadata nodes should throw an error when conversion is attempted")))
 
 (t/deftest parsing
-  (let [valid-form-map? (m/validator clj/form-map-schema)
-        form-explainer  (m/explainer clj/form-map-schema)]
+  (let [valid-form-map? (malli/validator clj/form-map-schema)
+        form-explainer  (malli/explainer clj/form-map-schema)]
     (t/testing "parsing file into sequence of forms with rewrite-clj"
       (doseq [src-file (fs/glob "." "**.clj")]
         (t/testing (str "\n" src-file)
-          (let [forms      (clj/file->forms (fs/file src-file))
+          (let [forms      (:clojure/forms (clj/file->forms (fs/file src-file)))
                 all-valid? (every? valid-form-map? forms)]
             (when-not all-valid?
               (doseq [invalid-form (filter #(not (valid-form-map? %)) forms)]
+                (println (dissoc (form-explainer invalid-form) :schema))
                 (println (me/humanize (form-explainer invalid-form)))))
             (t/is all-valid? "Each parsed form should be valid.")))))))
 
@@ -63,21 +68,29 @@
                                 clj/file->forms
                                 clj/eval-forms)]
       (t/is (map? evaluated-results))
-      (doseq [{clj-form :clojure/form :as result-form} (:clojure/forms
-                                                        evaluated-results)]
-        (t/testing result-form
-          (t/is
-           ;; can't use some? here because a form and result can be nil!
-           (or (and (contains? result-form :clojure/form)
-                    (contains? result-form :clojure/result))
-               (contains? result-form :clojure/comment)
-               (contains? result-form :clojure/newlines)
-               (contains? result-form :clojure/whitespace)
-               (= {:severity :trivial :context "testing"}
-                  (get-in result-form [:clojure/error :data])))))))))
+      (t/testing "result forms"
+        (doseq [{clj-form :clojure/form :as result-form} (:clojure/forms
+                                                          evaluated-results)]
+          (t/is (match? (m/any-of {:clojure/form      any?
+                                   :clojure/result    any?
+                                   :clojure/namespace 'site.fabricate.example}
+                                  {:clojure/comment   string?
+                                   :clojure/namespace 'site.fabricate.example}
+                                  {:clojure/newlines  string?
+                                   :clojure/namespace 'site.fabricate.example}
+                                  {:clojure/whitespace string?
+                                   :clojure/namespace  'site.fabricate.example}
+                                  {:clojure/error {:data {:severity :trivial
+                                                          :context "testing"}}})
+                        result-form))))))
+  ;; eventually a test matrix for large files could be useful as a
+  ;; regression test failsafe - not necessary for now.
+  #_(t/testing "large namespace"))
+
 
 
 (comment
-  (io/resource "site/fabricate/example.clj")
-  clojure.java.io/do-copy
-  print-dup)
+  (require '[edamame.core :as e])
+  (require '[matcher-combinators.standalone :as match])
+  (match/match (m/any-of {:a int?} {:x string?}) {:a 1})
+  (match/match (m/any-of {:a int?} {:x string?}) {:x "test"}))

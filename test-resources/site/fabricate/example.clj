@@ -27,3 +27,23 @@
 ;; (unless "strict" mode is enabled)
 
 (kind/fragment (kind/hiccup [:div "fragment 1"]) (kind/md "fragment 2"))
+
+;; macro example
+(defmacro unless [pred a b] `(if (not ~pred) ~a ~b))
+
+;; TODO: add:
+; - reader conditional
+; - syntax quote
+
+; from Janet Carr's blog post:
+; https://blog.janetacarr.com/a-primer-on-clojure-macros/
+
+(def x 5)
+(def lst '(a b c))
+`(fred x ~x lst ~@lst 7 8 :nine)
+
+#?(:clj (kind/hiccup [:div "fragment inside reader conditionals"]))
+
+;; tagged literals
+(let [timestamp #inst "2025-01-01T00:00:00.000-00:00"]
+  [:div "happy new year - the time is " (str timestamp)])

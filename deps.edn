@@ -12,6 +12,7 @@
                        com.brunobonacci/mulog {:mvn/version "0.9.0"}
                        com.gfredericks/test.chuck {:mvn/version "0.2.14"}
                        nu.validator/validator {:mvn/version "20.7.2"}
+                       nubank/matcher-combinators {:mvn/version "3.9.1"}
                        org.clojure/test.check {:mvn/version "1.1.1"}
                        site.fabricate/manual
                        {:git/url "https://github.com/fabricate-site/manual.git"

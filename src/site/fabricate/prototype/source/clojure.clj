@@ -6,6 +6,8 @@
             [rewrite-clj.zip :as zip]
             [malli.core :as m]
             [babashka.fs :as fs]
+            [clojure.tools.reader :as reader]
+            [edamame.core :as e]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [scicloj.kindly.v4.api :as kindly]
@@ -39,6 +41,10 @@
     [:clojure/result {:description "Results of evaluation" :optional true} :any]
     [:clojure/comment {:description "Clojure comment as string" :optional true}
      :string]
+    [:clojure/namespace
+     {:description
+      "Primary/initial namespace of the file the form originates form"
+      :optional true} :symbol]
     [:text
      {:description "Clojure comment text, without leading semicolon"
       :optional    true} :string]]))
@@ -65,6 +71,7 @@
                  :comment    {:clojure/comment (str n) :text ""}
                  :newline    {:clojure/newlines (str n) :line-count 0}
                  :whitespace {:clojure/whitespace (str n)}
+                 :uneval     {:clojure/uneval (str n)}
                  :meta       (let [meta-node (first (:children n))
                                    base-node (peek (:children n))]
                                (assoc (normalize-node base-node)
@@ -91,24 +98,89 @@
                             (meta n))]
     (merge src-info (normalize-node n))))
 
+(defn get-ns
+  "Get the namespace symbol from a given node. Returns the first namespace."
+  [node]
+  (let [ns-loc (zip/find-value (zip/of-node node) zip/next 'ns)]
+    (zip/sexpr (zip/next ns-loc))))
+
+(comment
+  (m/validate :symbol
+              (get-ns (parser/parse-file-all
+                       "test-resources/site/fabricate/example.clj"))))
+
 (defn file->forms
   "Generate a sequence of Clojure form maps from the input file."
-  {:malli/schema (m/schema [:=> [:cat [:fn fs/exists?]] [:* form-map-schema]])}
+  {:malli/schema (m/schema [:=> [:cat [:fn fs/exists?]]
+                            [:map [:clojure/forms [:* form-map-schema]]]])}
   [clj-file]
-  (let [parsed (parser/parse-file-all clj-file)]
-    (mapv #(node->map % {:input/file clj-file}) (:children parsed))))
+  (let [parsed (parser/parse-file-all clj-file)
+        nmspc  (get-ns parsed)]
+    {:clojure/forms     (mapv #(node->map %
+                                          {:input/file        clj-file
+                                           :clojure/namespace nmspc})
+                              (:children parsed))
+     :clojure/namespace nmspc
+     :input/file        clj-file}))
+
+;; think about refactoring these
+(defn string->forms
+  "Generate a sequence of Clojure form maps from the input string."
+  {:malli/schema (m/schema [:-> :string
+                            [:map [:clojure/forms [:* form-map-schema]]]])}
+  [clj-str]
+  (let [parsed (parser/parse-string-all clj-str)
+        nmspc  (get-ns parsed)]
+    {:clojure/forms     (mapv #(node->map % {:clojure/namespace nmspc})
+                              (:children parsed))
+     :clojure/namespace nmspc
+     :input/string      clj-str}))
+
+(defn- parse-fallback
+  [str opts]
+  (e/parse-string str
+                  (merge {:read-cond :allow :features #{:clj} :all true} opts)))
 
 (defn eval-form
-  [{clojure-form :clojure/form :as unevaluated-form}]
+  [{clojure-form :clojure/form
+    clj-ns       :clojure/namespace
+    clj-str      :clojure/source
+    :as          unevaluated-form}]
   (if clojure-form
-    (let [start-time  (System/currentTimeMillis)
-          eval-output (try {:clojure/result        (eval clojure-form)
+    (let [calling-ns  *ns*
+          start-time  (System/currentTimeMillis)
+          eval-output (try {:clojure/result (binding [*ns* (create-ns clj-ns)]
+                                              (clojure.core/refer-clojure)
+                                              (eval clojure-form))
                             :clojure.eval/duration (- (System/currentTimeMillis)
                                                       start-time)}
                            (catch Exception e
-                             {:clojure/error (Throwable->map e)}))]
+                             #_{:clojure/error (Throwable->map e)}
+                             (try (if (string? clj-str)
+                                    {:clojure/result (binding [*ns* (create-ns
+                                                                     clj-ns)]
+                                                       (eval (parse-fallback
+                                                              clj-str
+                                                              {:auto-resolve
+                                                               {:current
+                                                                clj-ns}})))
+                                     :clojure.eval/duration
+                                     (- (System/currentTimeMillis) start-time)
+                                     :context        :fallback}
+                                    {:clojure/error (Throwable->map e)})
+                                  (catch Exception ee
+                                    {:clojure/error (Throwable->map ee)
+                                     :context       :fallback
+                                     :clojure/form  (parse-fallback
+                                                     clj-str
+                                                     {:auto-resolve
+                                                      {:current clj-ns}})}))))]
       (merge unevaluated-form eval-output))
     unevaluated-form))
+
+(comment
+  (reader/read-string {:read-cond :allow :features #{:clj}} "#?(:clj :a)")
+  read)
 
 ;; should there be any "top level" stuff?
 
@@ -116,14 +188,14 @@
 ;; metadata.
 (defn eval-forms
   "Evaluate the Clojure forms in a parsed file."
-  {:malli/schema (m/schema [:-> [:* form-map-schema] [:* form-map-schema]])}
-  [forms]
+  {:malli/schema (m/schema [:-> [:map [:clojure/forms [:* form-map-schema]]]
+                            [:map [:clojure/forms [:* form-map-schema]]]])}
+  [{:keys [clojure/forms] :as input}]
   (let [evaluated-forms (mapv eval-form forms)]
-    {:clojure/namespace (ns-name *ns*)
-     :clojure/forms     evaluated-forms
-     :input/file        (:input/file (first evaluated-forms))}))
+    (merge input {:clojure/forms evaluated-forms})))
 
 (comment
+  (create-ns)
   (ns-name *ns*)
   (kind/md (str (parser/parse-string ";; a comment")))
   (parser/parse-string "^:kindly/hide-code '(quoted-form a b c)")
