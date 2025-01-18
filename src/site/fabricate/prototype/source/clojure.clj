@@ -196,6 +196,54 @@
   (let [evaluated-forms (mapv eval-form forms)]
     (merge input {:clojure/forms evaluated-forms})))
 
+
+;; rules:
+;; 1. any comments separated by 2 or more newlines are separate paragraphs
+;; 2. comments separated by a single newline get combined into a single
+;; paragraph, with line breaks removed
+;; 3. clojure expressions always terminate a paragraph
+;; 4. paragraphs are not grouped together into divs
+;; 5. consecutive semicolons are ignored.
+
+;; these functions probably should be in a different namespace
+;; and maybe should be a part of a public API; they're not really specific to
+;; the Clojure evaluation mode - they're for dealing with Hiccup elements
+(defn- paragraph-element? [e] (and (vector? e) (= :p (first e))))
+(defn- newline-element? [e] (and (vector? e) (= :br (first e))))
+(defn- trailing-newlines [e] (take-while newline-element? (reverse e)))
+(defn- count-newlines [s] (count (re-seq #"\R" s)))
+
+(defn merge-paragraphs
+  "Returns one or more paragraphs, depending on whether the next element should be merged"
+  [prev-element
+   {:keys        [clojure/result clojure/newlines clojure/uneval]
+    next-comment :clojure/comment
+    :as          next}]
+  (let [prev-newlines (trailing-newlines prev-element)
+        para (paragraph-element? prev-element)]
+    (cond
+      ;; uneval: discard
+      uneval (list prev-element)
+      ;; clojure results following a paragraph: trim newlines
+      (and para result) (list (vec (drop-last (count prev-newlines)
+                                              prev-element))
+                              [:pre [:code {:class "language-clojure"} result]])
+      ;; clojure results: always start a new element
+      result (list [:pre [:code {:class "language-clojure"} result]])
+      ;; one or more newlines following a non-paragraph element: discard
+      (and (not para) newlines) (list prev-element)
+      ;; comment following a non-paragraph element: new paragraph
+      (and (not para) next-comment) (list prev-element [:p next-comment])
+      ;; one or more newlines following a paragraph: add to paragraph
+      (and para newlines) (list (into prev-element
+                                      (repeat (count-newlines newlines) [:br])))
+      ;; text after a paragraph with 2+ newlines: new paragraph
+      (and para next-comment (<= 2 (count prev-newlines)))
+      (list (vec (drop-last (count prev-newlines) prev-element))
+            [:p next-comment])
+      ;; text after a paragraph with a single linebreak: add to paragraph
+      (and para next-comment (newline-element? (peek prev-element)))
+      (list (conj (pop prev-element) " " next-comment)))))
 (comment
   (create-ns)
   (ns-name *ns*)

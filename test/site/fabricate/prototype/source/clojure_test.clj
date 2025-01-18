@@ -23,6 +23,40 @@
        ";; in the assemble step, should the Clojure code be treated as a \"block\"?\n")))
     (t/is (= "a comment " (#'clj/extract-comment-text ";; a comment ")))))
 
+(t/deftest hiccup
+  (t/testing "paragraph merging"
+    (t/is (= (list [:pre [:code {:class "language-clojure"}] "(+ 3 4)"]
+                   [:p "Clojure example"])
+             (clj/merge-paragraphs [:pre [:code {:class "language-clojure"}]
+                                    "(+ 3 4)"]
+                                   {:clojure/comment "Clojure example"}))
+          "Comment following code should start new paragraph")
+    (t/is (= (list [:p "Clojure example" [:br]])
+             (clj/merge-paragraphs [:p "Clojure example"]
+                                   {:clojure/newlines "\n"}))
+          "Newlines should be appended to a paragraph")
+    (t/is (= (list [:p "Clojure example" [:br] [:br] [:br]])
+             (clj/merge-paragraphs [:p "Clojure example"]
+                                   {:clojure/newlines "\n\n\n"}))
+          "Newlines should be appended to a paragraph")
+    (t/is (= (list [:p "Clojure example"] [:p "next paragraph"])
+             (clj/merge-paragraphs [:p "Clojure example" [:br] [:br]]
+                                   {:clojure/comment "next paragraph"}))
+          "Paragraphs should be separated by multiple newlines and trimmed")
+    (t/is (= (list [:p "comment example" " " "with single linebreak"])
+             (clj/merge-paragraphs [:p "comment example" [:br]]
+                                   {:clojure/comment "with single linebreak"}))
+          "Single linebreaks should be be added to paragraph with whitespace")
+    (t/is (= (list [:p "Clojure example"]
+                   [:pre [:code {:class "language-clojure"} "(+ 3 4)"]])
+             (clj/merge-paragraphs [:p "Clojure example"]
+                                   {:clojure/result "(+ 3 4)"}))
+          "Code following comment should begin new element")
+    (t/is (= (list [:p "comment example"])
+             (clj/merge-paragraphs [:p "comment example"]
+                                   {:clojure/uneval "#_nil"}))
+          "Uneval forms should be skipped")))
+
 (t/deftest node-functions
   (t/testing "metadata normalization"
     (t/is (= {:kindly/hide-code true}
