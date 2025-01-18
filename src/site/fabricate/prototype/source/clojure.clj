@@ -209,6 +209,7 @@
 ;; and maybe should be a part of a public API; they're not really specific to
 ;; the Clojure evaluation mode - they're for dealing with Hiccup elements
 (defn- paragraph-element? [e] (and (vector? e) (= :p (first e))))
+(defn- code-element? [e] (and (vector? e) (= :pre (first e))))
 (defn- newline-element? [e] (and (vector? e) (= :br (first e))))
 (defn- trailing-newlines [e] (take-while newline-element? (reverse e)))
 (defn- count-newlines [s] (count (re-seq #"\R" s)))
@@ -220,16 +221,26 @@
     next-comment :clojure/comment
     :as          next}]
   (let [prev-newlines (trailing-newlines prev-element)
-        para (paragraph-element? prev-element)]
+        clj-result    (or (some? result) (contains? next :clojure/result))
+        para          (paragraph-element? prev-element)
+        code-elem     (code-element? prev-element)]
     (cond
       ;; uneval: discard
       uneval (list prev-element)
+      ;; map previous element and clojure results: results only
+      (and (map? prev-element) clj-result)
+      (list prev-element [:pre [:code {:class "language-clojure"} result]])
+      ;; map previous element and comment: new paragraph
+      (and (map? prev-element) next-comment) (list prev-element
+                                                   [:p next-comment])
+      ;; map previous element and newlines: discard
+      (and (map? prev-element) newlines) (list prev-element)
       ;; clojure results following a paragraph: trim newlines
-      (and para result) (list (vec (drop-last (count prev-newlines)
-                                              prev-element))
-                              [:pre [:code {:class "language-clojure"} result]])
+      (and para clj-result)
+      (list (vec (drop-last (count prev-newlines) prev-element))
+            [:pre [:code {:class "language-clojure"} result]])
       ;; clojure results: always start a new element
-      result (list [:pre [:code {:class "language-clojure"} result]])
+      clj-result (list [:pre [:code {:class "language-clojure"} result]])
       ;; one or more newlines following a non-paragraph element: discard
       (and (not para) newlines) (list prev-element)
       ;; comment following a non-paragraph element: new paragraph
@@ -242,8 +253,33 @@
       (list (vec (drop-last (count prev-newlines) prev-element))
             [:p next-comment])
       ;; text after a paragraph with a single linebreak: add to paragraph
-      (and para next-comment (newline-element? (peek prev-element)))
-      (list (conj (pop prev-element) " " next-comment)))))
+      ;; text after a paragraph with one or no linebreaks: add to paragraph
+      (and para next-comment) (list (conj (pop prev-element) " " next-comment))
+      :default (throw (ex-info "No matching clause"
+                               {:context {:prev-element prev-element
+                                          :next-entry   next}})))))
+
+(comment
+  (parser/parse-string-all
+   "; multiline comment line 1
+; multiline comment line 2
+; multiline comment line 3"))
+
+
+(defn forms->hiccup
+  "Produce a Hiccup vector from the given forms."
+  [{:keys [clojure/forms] :as page-map}]
+  (let [main (reduce
+              (fn process-next-form [body-hiccup {:keys [] :as next-form-map}]
+                (let [last-element  (peek body-hiccup)
+                      rest-elements (pop body-hiccup)]
+                  (into rest-elements
+                        (merge-paragraphs last-element next-form-map))))
+              ;; TODO: think of better ways to include metadata +
+              ;; provenance
+              [:main {:data-clojure-namespace (:clojure/namespace page-map)}]
+              forms)]))
+
 (comment
   (create-ns)
   (ns-name *ns*)

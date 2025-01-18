@@ -55,7 +55,21 @@
     (t/is (= (list [:p "comment example"])
              (clj/merge-paragraphs [:p "comment example"]
                                    {:clojure/uneval "#_nil"}))
-          "Uneval forms should be skipped")))
+          "Uneval forms should be skipped")
+    (t/is (= (list {:class "attribute-example"} [:p "comment"])
+             (clj/merge-paragraphs {:class "attribute-example"}
+                                   {:clojure/comment "comment"}))
+          "Attribute maps should be preserved before comments")
+    (t/is (= (list {:class "attribute-example"}
+                   [:pre [:code {:class "language-clojure"} "string"]])
+             (clj/merge-paragraphs {:class "attribute-example"}
+                                   {:clojure/result "string"}))
+          "Attribute maps should be preserved before results")
+    (t/is (= (list [:pre [:code {:class "language-clojure"} nil]])
+             (clj/merge-paragraphs [:pre
+                                    [:code {:class "language-clojure"} nil]]
+                                   {:clojure/newlines "\n\n\n"}))
+          "Newlines following a code block should be discarded")))
 
 (t/deftest node-functions
   (t/testing "metadata normalization"
@@ -77,7 +91,13 @@
     (t/testing "parsing file into sequence of forms with rewrite-clj"
       (doseq [src-file (fs/glob "." "**.clj")]
         (t/testing (str "\n" src-file)
-          (let [forms      (:clojure/forms (clj/file->forms (fs/file src-file)))
+          (let [forms      (try (:clojure/forms (clj/file->forms (fs/file
+                                                                  src-file)))
+                                (catch Exception e
+                                  (let [err (Throwable->map e)]
+                                    [{:type  :invalid
+                                      :error err
+                                      :file  (str src-file)}])))
                 all-valid? (every? valid-form-map? forms)]
             (when-not all-valid?
               (doseq [invalid-form (filter #(not (valid-form-map? %)) forms)]
@@ -124,6 +144,11 @@
 
 
 (comment
+  (def example-evaluated
+    (-> "test-resources/site/fabricate/example.clj"
+        clj/file->forms
+        clj/eval-forms))
+  (clj/forms->hiccup example-evaluated)
   (require '[edamame.core :as e])
   (require '[matcher-combinators.standalone :as match])
   (match/match (m/any-of {:a int?} {:x string?}) {:a 1})
