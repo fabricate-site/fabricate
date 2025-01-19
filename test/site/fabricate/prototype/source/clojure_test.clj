@@ -10,6 +10,7 @@
             [matcher-combinators.matchers :as m]
             [malli.core :as malli]
             [malli.error :as me]
+            [site.fabricate.prototype.html :as html]
             [site.fabricate.prototype.source.clojure :as clj]))
 
 
@@ -25,43 +26,63 @@
 
 (t/deftest hiccup
   (t/testing "paragraph merging"
-    (t/is (= (list [:pre [:code {:class "language-clojure"}] "(+ 3 4)"]
-                   [:p "Clojure example"])
-             (clj/merge-paragraphs [:pre [:code {:class "language-clojure"}]
+    (t/is (= (list [:pre {:class "clojure-form"}
+                    [:code {:class "language-clojure"}] "(+ 3 4)"]
+                   [:p {:class "clojure-comment"} "Clojure example"])
+             (clj/merge-paragraphs [:pre {:class "clojure-form"}
+                                    [:code {:class "language-clojure"}]
                                     "(+ 3 4)"]
-                                   {:clojure/comment "Clojure example"}))
+                                   {:clojure/comment      "Clojure example"
+                                    :clojure.comment/text "Clojure example"}))
           "Comment following code should start new paragraph")
-    (t/is (= (list [:p "Clojure example" [:br]])
-             (clj/merge-paragraphs [:p "Clojure example"]
+    (t/is (= (list [:p {:class "clojure-comment"} "Clojure example"
+                    [:br {:class "clojure-newline"}]])
+             (clj/merge-paragraphs [:p {:class "clojure-comment"}
+                                    "Clojure example"]
                                    {:clojure/newlines "\n"}))
           "Newlines should be appended to a paragraph")
-    (t/is (= (list [:p "Clojure example" [:br] [:br] [:br]])
-             (clj/merge-paragraphs [:p "Clojure example"]
-                                   {:clojure/newlines "\n\n\n"}))
-          "Newlines should be appended to a paragraph")
-    (t/is (= (list [:p "Clojure example"] [:p "next paragraph"])
-             (clj/merge-paragraphs [:p "Clojure example" [:br] [:br]]
-                                   {:clojure/comment "next paragraph"}))
+    (t/is
+     (= (list [:p {:class "clojure-comment"} "Clojure example"
+               [:br {:class "clojure-newline"}] [:br {:class "clojure-newline"}]
+               [:br {:class "clojure-newline"}]])
+        (clj/merge-paragraphs [:p {:class "clojure-comment"} "Clojure example"]
+                              {:clojure/newlines "\n\n\n"}))
+     "Newlines should be appended to a paragraph")
+    (t/is (= (list [:p {:class "clojure-comment"} "Clojure example"]
+                   [:p {:class "clojure-comment"} "next paragraph"])
+             (clj/merge-paragraphs [:p {:class "clojure-comment"}
+                                    "Clojure example" [:br] [:br]]
+                                   {:clojure/comment      "next paragraph"
+                                    :clojure.comment/text "next paragraph"}))
           "Paragraphs should be separated by multiple newlines and trimmed")
-    (t/is (= (list [:p "comment example" " " "with single linebreak"])
-             (clj/merge-paragraphs [:p "comment example" [:br]]
-                                   {:clojure/comment "with single linebreak"}))
+    (t/is (= (list [:p {:class "clojure-comment"} "comment example" " "
+                    "with single linebreak"])
+             (clj/merge-paragraphs
+              [:p {:class "clojure-comment"} "comment example"
+               [:br {:class "clojure-newline"}]]
+              {:clojure/comment      "with single linebreak"
+               :clojure.comment/text "with single linebreak"}))
           "Single linebreaks should be be added to paragraph with whitespace")
-    (t/is (= (list [:p "Clojure example"]
-                   [:pre [:code {:class "language-clojure"} "(+ 3 4)"]])
-             (clj/merge-paragraphs [:p "Clojure example"]
+    (t/is (= (list [:p {:class "clojure-comment"} "Clojure example"]
+                   [:pre {:class "clojure-form"}
+                    [:code {:class "language-clojure"} "(+ 3 4)"]])
+             (clj/merge-paragraphs [:p {:class "clojure-comment"}
+                                    "Clojure example"]
                                    {:clojure/result "(+ 3 4)"}))
           "Code following comment should begin new element")
     (t/is (= (list [:p "comment example"])
              (clj/merge-paragraphs [:p "comment example"]
                                    {:clojure/uneval "#_nil"}))
           "Uneval forms should be skipped")
-    (t/is (= (list {:class "attribute-example"} [:p "comment"])
+    (t/is (= (list {:class "attribute-example"}
+                   [:p {:class "clojure-comment"} "comment"])
              (clj/merge-paragraphs {:class "attribute-example"}
-                                   {:clojure/comment "comment"}))
+                                   {:clojure/comment      "comment"
+                                    :clojure.comment/text "comment"}))
           "Attribute maps should be preserved before comments")
     (t/is (= (list {:class "attribute-example"}
-                   [:pre [:code {:class "language-clojure"} "string"]])
+                   [:pre {:class "clojure-form"}
+                    [:code {:class "language-clojure"} "string"]])
              (clj/merge-paragraphs {:class "attribute-example"}
                                    {:clojure/result "string"}))
           "Attribute maps should be preserved before results")
@@ -69,7 +90,17 @@
              (clj/merge-paragraphs [:pre
                                     [:code {:class "language-clojure"} nil]]
                                    {:clojure/newlines "\n\n\n"}))
-          "Newlines following a code block should be discarded")))
+          "Newlines following a code block should be discarded"))
+  (t/testing "postprocessing"
+    #_(t/is (malli/validate html/html
+                            (-> "test-resources/site/fabricate/example.clj"
+                                clj/file->forms
+                                clj/eval-forms
+                                clj/forms->hiccup)))
+    (t/is (vector? (-> "test-resources/site/fabricate/example.clj"
+                       clj/file->forms
+                       clj/eval-forms
+                       clj/forms->hiccup)))))
 
 (t/deftest node-functions
   (t/testing "metadata normalization"
@@ -144,11 +175,6 @@
 
 
 (comment
-  (def example-evaluated
-    (-> "test-resources/site/fabricate/example.clj"
-        clj/file->forms
-        clj/eval-forms))
-  (clj/forms->hiccup example-evaluated)
   (require '[edamame.core :as e])
   (require '[matcher-combinators.standalone :as match])
   (match/match (m/any-of {:a int?} {:x string?}) {:a 1})

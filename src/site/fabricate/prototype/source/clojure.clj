@@ -11,7 +11,8 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [scicloj.kindly.v4.api :as kindly]
-            [scicloj.kindly.v4.kind :as kind]))
+            [scicloj.kindly.v4.kind :as kind]
+            [site.fabricate.api :as api]))
 
 
 ;; in the assemble step, should the Clojure code be treated as a "block"?
@@ -60,6 +61,11 @@
           (nil? node-meta) (throw (ex-info "No metadata value" {:node m-node}))
           :default  (node/sexpr node-meta))))
 
+(def ^:private comment-pattern #"(?:;+\s*)([\s\S]*)(?:\R+)")
+
+(defn- extract-comment-text
+  [comment-str]
+  (last (re-matches comment-pattern comment-str)))
 
 ;; should this be a multimethod?
 (defn normalize-node
@@ -68,7 +74,9 @@
   (let [t      (node/tag n)
         src    (str n)
         result (case t
-                 :comment    {:clojure/comment (str n) :text ""}
+                 :comment    {:clojure/comment      (str n)
+                              :clojure.comment/text (extract-comment-text (str
+                                                                           n))}
                  :newline    {:clojure/newlines (str n) :line-count 0}
                  :whitespace {:clojure/whitespace (str n)}
                  :uneval     {:clojure/uneval (str n)}
@@ -82,11 +90,6 @@
                    {:type :unknown :node/tag t :clojure/node n}))]
     (assoc result :clojure/source src :clojure/node n :node/tag t)))
 
-(def ^:private comment-pattern #"(?:;+\s*)([\s\S]*)")
-
-(defn- extract-comment-text
-  [comment-str]
-  (last (re-matches comment-pattern comment-str)))
 
 
 (defn node->map
@@ -156,6 +159,8 @@
                                               (eval clojure-form))
                             :clojure.eval/duration (- (System/currentTimeMillis)
                                                       start-time)}
+                           ;; the parse fallback should be moved to... the
+                           ;; parsing step!
                            (catch Exception e
                              #_{:clojure/error (Throwable->map e)}
                              (try (if (string? clj-str)
@@ -213,58 +218,74 @@
 (defn- newline-element? [e] (and (vector? e) (= :br (first e))))
 (defn- trailing-newlines [e] (take-while newline-element? (reverse e)))
 (defn- count-newlines [s] (count (re-seq #"\R" s)))
+(defn- trim-newlines [e] (vec (take-while #(not (newline-element? %)) e)))
+(defn- ->newlines
+  [{:keys [clojure/newlines]}]
+  (repeat (count-newlines newlines) [:br {:class "clojure-newline"}]))
 
+(defn- code-block
+  [{:keys [clojure/result clojure/error] :as form}]
+  (if result
+    [:pre {:class "clojure-form"} [:code {:class "language-clojure"} result]]
+    [:pre {:class "clojure-form clojure-error"}
+     [:code {:class "language-clojure"} result]]))
+(defn- new-paragraph
+  [{:keys [clojure.comment/text] :as form}]
+  [:p {:class "clojure-comment"} text])
+
+;; because matching dispatches on two things:
+;; 1. the previous element (or attributes derived from it)
+;; 2. the next element (or attributes derived from it)
+;; I think this could actually be rewritten as a case statement,
+;; if the elements are preprocessed correctly
+
+;; the dispatch is complex enough that I'm tempted to reach for a multimethod -
+;; but I won't!
 (defn merge-paragraphs
-  "Returns one or more paragraphs, depending on whether the next element should be merged"
-  [prev-element
-   {:keys        [clojure/result clojure/newlines clojure/uneval]
-    next-comment :clojure/comment
-    :as          next}]
-  (let [prev-newlines (trailing-newlines prev-element)
-        clj-result    (or (some? result) (contains? next :clojure/result))
-        para          (paragraph-element? prev-element)
-        code-elem     (code-element? prev-element)]
-    (cond
-      ;; uneval: discard
-      uneval (list prev-element)
-      ;; map previous element and clojure results: results only
-      (and (map? prev-element) clj-result)
-      (list prev-element [:pre [:code {:class "language-clojure"} result]])
-      ;; map previous element and comment: new paragraph
-      (and (map? prev-element) next-comment) (list prev-element
-                                                   [:p next-comment])
-      ;; map previous element and newlines: discard
-      (and (map? prev-element) newlines) (list prev-element)
-      ;; clojure results following a paragraph: trim newlines
-      (and para clj-result)
-      (list (vec (drop-last (count prev-newlines) prev-element))
-            [:pre [:code {:class "language-clojure"} result]])
-      ;; clojure results: always start a new element
-      clj-result (list [:pre [:code {:class "language-clojure"} result]])
-      ;; one or more newlines following a non-paragraph element: discard
-      (and (not para) newlines) (list prev-element)
-      ;; comment following a non-paragraph element: new paragraph
-      (and (not para) next-comment) (list prev-element [:p next-comment])
-      ;; one or more newlines following a paragraph: add to paragraph
-      (and para newlines) (list (into prev-element
-                                      (repeat (count-newlines newlines) [:br])))
-      ;; text after a paragraph with 2+ newlines: new paragraph
-      (and para next-comment (<= 2 (count prev-newlines)))
-      (list (vec (drop-last (count prev-newlines) prev-element))
-            [:p next-comment])
-      ;; text after a paragraph with a single linebreak: add to paragraph
-      ;; text after a paragraph with one or no linebreaks: add to paragraph
-      (and para next-comment) (list (conj (pop prev-element) " " next-comment))
-      :default (throw (ex-info "No matching clause"
-                               {:context {:prev-element prev-element
-                                          :next-entry   next}})))))
-
-(comment
-  (parser/parse-string-all
-   "; multiline comment line 1
-; multiline comment line 2
-; multiline comment line 3"))
-
+  [prev-element next-form]
+  (let [prev-element-type (cond (:clojure/uneval next-form) :any
+                                (map? prev-element) :attr-map
+                                ;; paragraph break: 2+ <br> elements
+                                (and (vector? prev-element)
+                                     (= :p (first prev-element))
+                                     (<= 2
+                                         (count (trailing-newlines
+                                                 prev-element))))
+                                [:p :break]
+                                (vector? prev-element) (nth prev-element 0))
+        next-form-type    (cond (:clojure/uneval next-form) :uneval
+                                (contains? next-form :clojure/result)
+                                :code-block
+                                (:clojure/comment
+                                  next-form)
+                                :comment
+                                (:clojure/newlines next-form) :newlines
+                                (:clojure/whitespace next-form) :whitespace
+                                (:clojure/error next-form) :code-block
+                                :default (throw (ex-info "Unmatched form type"
+                                                         {:clojure/form
+                                                          next-form})))]
+    (case [prev-element-type next-form-type]
+      [[:p :break] :comment]    (list (trim-newlines prev-element)
+                                      (new-paragraph next-form))
+      [[:p :break] :code-block] (list (trim-newlines prev-element)
+                                      (code-block next-form))
+      [:p :comment]             (list (conj (trim-newlines prev-element)
+                                            " "
+                                            (:clojure.comment/text next-form)))
+      [:p :newlines]            (list (into prev-element
+                                            (->newlines next-form)))
+      [:p :code-block]          (list (trim-newlines prev-element)
+                                      (code-block next-form))
+      [:pre :comment]           (list (trim-newlines prev-element)
+                                      (new-paragraph next-form))
+      [:pre :code-block]        (list prev-element (code-block next-form))
+      [:pre :newlines]          (list prev-element)
+      [:pre :whitespace]        (list prev-element)
+      [:attr-map :comment]      (list prev-element (new-paragraph next-form))
+      [:attr-map :code-block]   (list prev-element (code-block next-form))
+      ;; uneval always gets discarded
+      [:any :uneval]            (list prev-element))))
 
 (defn forms->hiccup
   "Produce a Hiccup vector from the given forms."
@@ -278,7 +299,16 @@
               ;; TODO: think of better ways to include metadata +
               ;; provenance
               [:main {:data-clojure-namespace (:clojure/namespace page-map)}]
-              forms)]))
+              forms)]
+    [:html [:head] [:body main]]))
+
+(defmethod api/build [:clojure.v0.test :hiccup]
+  [{source-location :site.fabricate.source/location :as entry} opts]
+  (merge entry
+         {:site.fabricate.document/format :hiccup
+          :site.fabricate.document/data   (-> source-location
+                                              file->forms
+                                              forms->hiccup)}))
 
 (comment
   (create-ns)
