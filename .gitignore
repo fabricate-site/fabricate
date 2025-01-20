@@ -17,6 +17,13 @@ docs/**/*.html
 docs/*.html
 docs/**/*.woff
 docs/**/*.woff2
+.dir-locals.el
 
 # Local Netlify folder
 .netlify
+/docs/css/*.css
+/docs/media/*
+/docs/README.md
+
+# example HTML outputs
+test-resources/html/*.html
