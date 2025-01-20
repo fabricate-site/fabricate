@@ -24,3 +24,6 @@ docs/**/*.woff2
 /docs/css/*.css
 /docs/media/*
 /docs/README.md
+
+# example HTML outputs
+test-resources/html/*.html

@@ -79,3 +79,21 @@
         scroll-margin-block: 5ex;
     }
 }
+
+@layer defaults {
+    /* https://systemfontstack.com/ */
+    html {
+        --font-serif: Iowan Old Style, Apple Garamond, Baskerville, Times New Roman, Droid Serif, Times, Source Serif Pro, serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol;
+        --font-sans: -apple-system, BlinkMacSystemFont, avenir next, avenir, segoe ui, helvetica neue, helvetica, Cantarell, Ubuntu, roboto, noto, arial, sans-serif;
+        --font-mono: Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
+    }
+    :where(pre, code) {
+        font-family: var(--font-mono);
+        max-width: 85ch;
+        text-wrap: wrap;
+    }
+    :where(p) {
+        font-family: var(--font-sans);
+        max-width: 75ch;
+    }
+}

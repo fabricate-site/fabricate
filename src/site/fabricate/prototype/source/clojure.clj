@@ -11,6 +11,7 @@
             [clojure.string :as str]
             [scicloj.kindly.v4.api :as kindly]
             [scicloj.kindly.v4.kind :as kind]
+            [site.fabricate.adorn :as adorn]
             [site.fabricate.api :as api]
             [clojure.string :as str]
             [clojure.tools.reader :as reader]))
@@ -225,11 +226,22 @@
   (repeat (count-newlines newlines) [:br {:class "clojure-newline"}]))
 
 (defn- code-block
-  [{:keys [clojure/result clojure/error] :as form}]
-  (if result
-    [:pre {:class "clojure-form"} [:code {:class "language-clojure"} result]]
-    [:pre {:class "clojure-form clojure-error"}
-     [:code {:class "language-clojure"} result]]))
+  [{:keys [clojure/result clojure/error clojure/source] :as form}]
+  (cond result   (list [:pre {:class "clojure-form"}
+                        [:code {:class "language-clojure"}
+                         (adorn/clj->hiccup source)]]
+                       [:pre {:class "clojure-result"}
+                        [:code {:class "language-clojure"}
+                         (adorn/clj->hiccup result)]])
+        error    (list [:pre {:class "clojure-form"}
+                        [:code {:class "language-clojure"}
+                         (adorn/clj->hiccup source)]]
+                       [:pre {:class "clojure-error"}
+                        [:code {:class "language-clojure"}
+                         (adorn/clj->hiccup error)]])
+        :default (list [:pre {:class "clojure-form"}
+                        [:code {:class "language-clojure"}
+                         (adorn/clj->hiccup source)]])))
 (defn- new-paragraph
   [{:keys [clojure.comment/text] :as form}]
   [:p {:class "clojure-comment"} text])
@@ -243,6 +255,7 @@
 ;; the dispatch is complex enough that I'm tempted to reach for a multimethod -
 ;; but I won't!
 (defn merge-paragraphs
+  "Combine the previous Hiccup form with the next Clojure form map"
   [prev-element next-form]
   (let [prev-element-type (cond (:clojure/uneval next-form) :any
                                 (map? prev-element) :attr-map
@@ -269,21 +282,25 @@
     (case [prev-element-type next-form-type]
       [:break :comment]       (list (trim-newlines prev-element)
                                     (new-paragraph next-form))
-      [:break :code-block]    (list (trim-newlines prev-element)
-                                    (code-block next-form))
+      [:break :code-block]    (apply list
+                                     (trim-newlines prev-element)
+                                     (code-block next-form))
       [:p :comment]           (list (conj (trim-newlines prev-element)
                                           " "
                                           (:clojure.comment/text next-form)))
       [:p :newlines]          (list (into prev-element (->newlines next-form)))
-      [:p :code-block]        (list (trim-newlines prev-element)
-                                    (code-block next-form))
+      [:p :whitespace]        (list (into prev-element
+                                          (:clojure/whitespace next-form)))
+      [:p :code-block]        (apply list
+                                     (trim-newlines prev-element)
+                                     (code-block next-form))
       [:pre :comment]         (list (trim-newlines prev-element)
                                     (new-paragraph next-form))
-      [:pre :code-block]      (list prev-element (code-block next-form))
+      [:pre :code-block]      (apply list prev-element (code-block next-form))
       [:pre :newlines]        (list prev-element)
       [:pre :whitespace]      (list prev-element)
       [:attr-map :comment]    (list prev-element (new-paragraph next-form))
-      [:attr-map :code-block] (list prev-element (code-block next-form))
+      [:attr-map :code-block] (apply list prev-element (code-block next-form))
       ;; uneval always gets discarded
       [:any :uneval]          (list prev-element))))
 
@@ -300,7 +317,8 @@
               ;; provenance
               [:main {:data-clojure-namespace (:clojure/namespace page-map)}]
               forms)]
-    [:html [:head] [:body main]]))
+    [:html [:head [:link {:rel "stylesheet" :href "/reset.css"}]]
+     [:body main]]))
 
 (defmethod api/build [:clojure.v0.test :hiccup]
   [{source-location :site.fabricate.source/location :as entry} opts]

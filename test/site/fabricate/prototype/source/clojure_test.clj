@@ -4,6 +4,7 @@
             [rewrite-clj.parser :as parser]
             [rewrite-clj.node :as node]
             [babashka.fs :as fs]
+            [hiccup.page]
             [edamame.core :as e]
             [clojure.tools.reader :as reader]
             [matcher-combinators.test]
@@ -63,9 +64,9 @@
               {:clojure/comment      "with single linebreak"
                :clojure.comment/text "with single linebreak"}))
           "Single linebreaks should be be added to paragraph with whitespace")
-    (t/is (= (list [:p {:class "clojure-comment"} "Clojure example"]
-                   [:pre {:class "clojure-form"}
-                    [:code {:class "language-clojure"} "(+ 3 4)"]])
+    (t/is (= (apply list
+                    [:p {:class "clojure-comment"} "Clojure example"]
+                    (#'clj/code-block {:clojure/result "(+ 3 4)"}))
              (clj/merge-paragraphs [:p {:class "clojure-comment"}
                                     "Clojure example"]
                                    {:clojure/result "(+ 3 4)"}))
@@ -80,9 +81,9 @@
                                    {:clojure/comment      "comment"
                                     :clojure.comment/text "comment"}))
           "Attribute maps should be preserved before comments")
-    (t/is (= (list {:class "attribute-example"}
-                   [:pre {:class "clojure-form"}
-                    [:code {:class "language-clojure"} "string"]])
+    (t/is (= (apply list
+                    {:class "attribute-example"}
+                    (#'clj/code-block {:clojure/result "string"}))
              (clj/merge-paragraphs {:class "attribute-example"}
                                    {:clojure/result "string"}))
           "Attribute maps should be preserved before results")
@@ -97,10 +98,14 @@
                                 clj/file->forms
                                 clj/eval-forms
                                 clj/forms->hiccup)))
-    (t/is (vector? (-> "test-resources/site/fabricate/example.clj"
-                       clj/file->forms
-                       clj/eval-forms
-                       clj/forms->hiccup)))))
+    (let [final-hiccup (-> "test-resources/site/fabricate/example.clj"
+                           clj/file->forms
+                           clj/eval-forms
+                           clj/forms->hiccup)]
+      (t/is (vector? final-hiccup))
+      (t/is
+       (string? (hiccup.page/html5 final-hiccup))
+       "Hiccup produced from Clojure namespace should be rendered without errors"))))
 
 (t/deftest node-functions
   (t/testing "metadata normalization"
@@ -175,6 +180,13 @@
 
 
 (comment
+  (require '[hiccup.page])
+  (->> "test-resources/site/fabricate/example.clj"
+       clj/file->forms
+       clj/eval-forms
+       clj/forms->hiccup
+       hiccup.page/html5
+       (spit "test-resources/html/site.fabricate.example.html"))
   (require '[edamame.core :as e])
   (require '[matcher-combinators.standalone :as match])
   (match/match (m/any-of {:a int?} {:x string?}) {:a 1})
