@@ -98,7 +98,7 @@
                                    base-node (peek (:children n))]
                                (assoc (normalize-node base-node)
                                       :clojure/metadata
-                                      (node/sexpr meta-node)))
+                                      (meta-node->metadata-map n)))
                  (if (node/sexpr-able? n)
                    {:clojure/node n :clojure/form (node/sexpr n)}
                    {:type :unknown :node/tag t :clojure/node n}))]
@@ -153,6 +153,8 @@
      :clojure/namespace nmspc
      :input/string      clj-str}))
 
+
+
 (defn- parse-fallback
   [str opts]
   (binding [*read-eval* false]
@@ -164,6 +166,7 @@
   [{clojure-form :clojure/form
     clj-ns       :clojure/namespace
     clj-str      :clojure/source
+    :or          {clj-ns (ns-name *ns*)}
     :as          unevaluated-form}]
   (if clojure-form
     (let [calling-ns  *ns*
@@ -234,22 +237,31 @@
 (defn- trim-newlines [e] (vec (take-while #(not (newline-element? %)) e)))
 
 (defn- code-block
-  [{:keys [clojure/result clojure/error clojure/source] :as form}]
-  (cond result   (list [:pre {:class "clojure-form"}
-                        [:code {:class "language-clojure"}
-                         (adorn/clj->hiccup source)]]
-                       [:pre {:class "clojure-result"}
-                        [:code {:class "language-clojure"}
-                         (adorn/clj->hiccup result)]])
-        error    (list [:pre {:class "clojure-form"}
-                        [:code {:class "language-clojure"}
-                         (adorn/clj->hiccup source)]]
-                       [:pre {:class "clojure-error"}
-                        [:code {:class "language-clojure"}
-                         (adorn/clj->hiccup error)]])
-        :default (list [:pre {:class "clojure-form"}
-                        [:code {:class "language-clojure"}
-                         (adorn/clj->hiccup source)]])))
+  [{:keys [clojure/result clojure/error clojure/source clojure/metadata]
+    :as   form}]
+  (let [hide-code?   (true? (:kindly/hide-code metadata))
+        hide-result? (true? (:kindly/hide-result metadata))]
+    (cond (and result hide-code?) (list [:pre {:class "clojure-result"}
+                                         [:code {:class "language-clojure"}
+                                          (adorn/clj->hiccup result)]])
+          (and result (not hide-result?))
+          (list [:pre {:class "clojure-form"}
+                 [:code {:class "language-clojure"} (adorn/clj->hiccup source)]]
+                [:pre {:class "clojure-result"}
+                 [:code {:class "language-clojure"}
+                  (adorn/clj->hiccup result)]])
+          (and hide-code? hide-result?) '()
+          (and error (and (not hide-code?) (not hide-result?)))
+          (list [:pre {:class "clojure-form"}
+                 [:code {:class "language-clojure"} (adorn/clj->hiccup source)]]
+                [:pre {:class "clojure-error"}
+                 [:code {:class "language-clojure"} (adorn/clj->hiccup error)]])
+          (and error hide-code?) (list [:pre {:class "clojure-error"}
+                                        [:code {:class "language-clojure"}
+                                         (adorn/clj->hiccup error)]])
+          :default (list [:pre {:class "clojure-form"}
+                          [:code {:class "language-clojure"}
+                           (adorn/clj->hiccup source)]]))))
 (defn- new-paragraph
   [{:keys [clojure.comment/text] :as form}]
   (into [:p {:class "clojure-comment"}] text))

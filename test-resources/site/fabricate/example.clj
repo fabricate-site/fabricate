@@ -9,10 +9,10 @@
 
 (map #(* 2 (+ 1 %)) [1 3 5 7 9 11]) ;; this should have code and results
 
-'(quoted-form a b c d) ;; this quoted form should be displayed as-is
-
 
 ^:kindly/hide-code '(hidden-form "example") ;; this quoted form should be hidden
+^:kindly/hide-code (+ 2 3) ;; this form should be hidden
+^:kindly/hide-result (def my-var 3) ;; results of this form should be hidden
 
 ;; This is one paragraph of a comment.
 

@@ -95,6 +95,14 @@
                                    {:clojure/newlines "\n\n\n"}))
           "Newlines following a code block should be discarded"))
   (t/testing "postprocessing"
+    (let [hide-code-str      "^:kindly/hide-code '(hidden-form \"example\")"
+          code-block-results (-> hide-code-str
+                                 parser/parse-string
+                                 clj/normalize-node
+                                 clj/eval-form
+                                 (#'clj/code-block))]
+      (t/is (= "clojure-result"
+               (get-in (first code-block-results) [1 :class]))))
     #_(t/is (malli/validate html/html
                             (-> "test-resources/site/fabricate/example.clj"
                                 clj/file->forms
@@ -118,10 +126,23 @@
     (t/is (= {:type 'Double}
              (#'clj/meta-node->metadata-map (parser/parse-string "^Double a")))
           "keyword metadata should be normalized into a map")
+    (t/is (= {:kindly/kind :kind/code}
+             (-> "^{:kindly/kind :kind/code} '(+ 3 4 5)"
+                 parser/parse-string
+                 clj/normalize-node
+                 :clojure/metadata))
+          "metadata should be placed in the normalized form map")
     (t/is
      (thrown? clojure.lang.ExceptionInfo
               (#'clj/meta-node->metadata-map (node/coerce [1 2 3 4])))
      "Nil/non-metadata nodes should throw an error when conversion is attempted")))
+
+
+(comment
+  (eval (node/sexpr
+         (parser/parse-string
+          "(let [x 5 lst '(a b c)] `(fred x ~x lst ~@lst 7 8 :nine))"))))
+
 
 (t/deftest parsing
   (let [valid-form-map? (malli/validator clj/form-map-schema)
