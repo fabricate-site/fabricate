@@ -1,4 +1,4 @@
-(ns ^{:site.fabricate/title "Fabricate Clojure example namespace"}
+(ns ^{:site.fabricate.document/title "Fabricate Clojure example namespace"}
     site.fabricate.example
   "Example namespace for testing parsing and evaluation of clojure forms"
   (:require [clojure.string :as str]

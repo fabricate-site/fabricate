@@ -1,7 +1,6 @@
 (ns site.fabricate.prototype.source.clojure
   "Fabricate namespace defining methods for turning Clojure namespaces into Hiccup documents"
-  (:require [hiccup2.core :as hiccup]
-            [rewrite-clj.parser :as parser]
+  (:require [rewrite-clj.parser :as parser]
             [rewrite-clj.node :as node]
             [rewrite-clj.zip :as zip]
             [malli.core :as m]
@@ -11,6 +10,7 @@
             [clojure.string :as str]
             [scicloj.kindly.v4.api :as kindly]
             [scicloj.kindly.v4.kind :as kind]
+            [site.fabricate.prototype.document.hiccup :as hiccup]
             [site.fabricate.adorn :as adorn]
             [site.fabricate.api :as api]
             [clojure.string :as str]
@@ -133,12 +133,16 @@
   [clj-file]
   (let [parsed (parser/parse-file-all clj-file)
         nmspc  (get-ns parsed)]
-    {:clojure/forms     (mapv #(node->map %
-                                          {:input/file        clj-file
-                                           :clojure/namespace nmspc})
-                              (:children parsed))
-     :clojure/namespace nmspc
-     :input/file        clj-file}))
+    (merge (select-keys (meta nmspc)
+                        [:site.fabricate.document/title
+                         :site.fabricate.document/description])
+           {:clojure/forms     (mapv #(node->map %
+                                                 {:input/file        clj-file
+                                                  :clojure/namespace nmspc})
+                                     (:children parsed))
+            :site.fabricate.source/format :clojure/v0
+            :clojure/namespace nmspc
+            :input/file        clj-file})))
 
 ;; think about refactoring these
 (defn string->forms
@@ -350,24 +354,21 @@
                         ;; provenance
                         [:main {:data-clojure-namespace page-ns}]
                         forms)]
-    [:html
-     [:head [:title (:site.fabricate/title ns-meta)]
-      [:link {:rel "stylesheet" :href "/reset.css"}]] [:body main]]))
+    main))
 
-(defmethod api/build [:clojure.v0.test :hiccup]
+(defmethod api/build [:clojure/v0 :hiccup]
   [{source-location :site.fabricate.source/location :as entry} opts]
-  (merge entry
-         {:site.fabricate.document/format :hiccup
-          :site.fabricate.document/data   (-> source-location
-                                              file->forms
-                                              forms->hiccup)}))
-
-(comment
-  (create-ns)
-  (ns-name *ns*)
-  (kind/md (str (parser/parse-string ";; a comment")))
-  (parser/parse-string "^:kindly/hide-code '(quoted-form a b c)")
-  (kindly/hide-code "abc")
-  (kindly/consider)
-  (kin)
-  (file->forms *file*))
+  (let [{:keys [site.fabricate.document/title
+                site.fabricate.document/description]
+         :as   evaluated-entry}
+        (-> source-location
+            file->forms
+            eval-forms)]
+    (merge entry
+           {:site.fabricate.document/format :hiccup/html
+            :site.fabricate.document/data   [:html
+                                             (into [:head [:title title]]
+                                                   hiccup/default-metadata)
+                                             [:body
+                                              (forms->hiccup
+                                               evaluated-entry)]]})))

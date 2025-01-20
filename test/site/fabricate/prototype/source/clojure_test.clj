@@ -12,7 +12,8 @@
             [malli.core :as malli]
             [malli.error :as me]
             [site.fabricate.prototype.html :as html]
-            [site.fabricate.prototype.source.clojure :as clj]))
+            [site.fabricate.prototype.source.clojure :as clj]
+            [site.fabricate.api :as api]))
 
 
 
@@ -108,10 +109,12 @@
                                 clj/file->forms
                                 clj/eval-forms
                                 clj/forms->hiccup)))
-    (let [final-hiccup (-> "test-resources/site/fabricate/example.clj"
-                           clj/file->forms
-                           clj/eval-forms
-                           clj/forms->hiccup)]
+    (let [final-entry  (api/build {:site.fabricate.source/location
+                                   "test-resources/site/fabricate/example.clj"
+                                   :site.fabricate.source/format :clojure/v0
+                                   :site.fabricate.document/format :hiccup}
+                                  {})
+          final-hiccup (:site.fabricate.document/data final-entry)]
       (t/is (vector? final-hiccup))
       (t/is
        (string? (hiccup.page/html5 final-hiccup))
@@ -136,13 +139,6 @@
      (thrown? clojure.lang.ExceptionInfo
               (#'clj/meta-node->metadata-map (node/coerce [1 2 3 4])))
      "Nil/non-metadata nodes should throw an error when conversion is attempted")))
-
-
-(comment
-  (eval (node/sexpr
-         (parser/parse-string
-          "(let [x 5 lst '(a b c)] `(fred x ~x lst ~@lst 7 8 :nine))"))))
-
 
 (t/deftest parsing
   (let [valid-form-map? (malli/validator clj/form-map-schema)
