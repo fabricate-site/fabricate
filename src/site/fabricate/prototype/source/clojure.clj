@@ -63,11 +63,23 @@
           (nil? node-meta) (throw (ex-info "No metadata value" {:node m-node}))
           :default  (node/sexpr node-meta))))
 
-(def ^:private comment-pattern #"(?:;+\s*)([\s\S]*)(?:\R*)")
+(def ^:private comment-pattern #"(?:;+\s*)([\V\S]*)(\R*)")
+
+(defn- count-newlines [s] (count (re-seq #"\R" s)))
+(defn- ->newlines
+  [{:keys [clojure/newlines]}]
+  (repeat (count-newlines newlines) [:br {:class "clojure-newline"}]))
 
 (defn- extract-comment-text
   [comment-str]
-  (str/trim (last (re-matches comment-pattern comment-str))))
+  (let [[_ comment-txt newlines] (re-matches comment-pattern comment-str)]
+    (apply list
+           (str/trim comment-txt)
+           (->newlines {:clojure/newlines newlines}))))
+
+(comment
+  (->newlines {:clojure/newlines ""})
+  (apply list 3 4 ()))
 
 ;; should this be a multimethod?
 (defn normalize-node
@@ -219,11 +231,7 @@
 (defn- code-element? [e] (and (vector? e) (= :pre (first e))))
 (defn- newline-element? [e] (and (vector? e) (= :br (first e))))
 (defn- trailing-newlines [e] (take-while newline-element? (reverse e)))
-(defn- count-newlines [s] (count (re-seq #"\R" s)))
 (defn- trim-newlines [e] (vec (take-while #(not (newline-element? %)) e)))
-(defn- ->newlines
-  [{:keys [clojure/newlines]}]
-  (repeat (count-newlines newlines) [:br {:class "clojure-newline"}]))
 
 (defn- code-block
   [{:keys [clojure/result clojure/error clojure/source] :as form}]
@@ -244,7 +252,7 @@
                          (adorn/clj->hiccup source)]])))
 (defn- new-paragraph
   [{:keys [clojure.comment/text] :as form}]
-  [:p {:class "clojure-comment"} text])
+  (into [:p {:class "clojure-comment"}] text))
 
 ;; because matching dispatches on two things:
 ;; 1. the previous element (or attributes derived from it)
@@ -285,8 +293,8 @@
       [:break :code-block]    (apply list
                                      (trim-newlines prev-element)
                                      (code-block next-form))
-      [:p :comment]           (list (conj (trim-newlines prev-element)
-                                          " "
+      [:p :comment]           (list (into (conj (trim-newlines prev-element)
+                                                " ")
                                           (:clojure.comment/text next-form)))
       [:p :newlines]          (list (into prev-element (->newlines next-form)))
       [:p :whitespace]        (list (into prev-element

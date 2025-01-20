@@ -20,21 +20,23 @@
   (t/testing "clojure comments"
     (t/is
      (=
-      "in the assemble step, should the Clojure code be treated as a \"block\"?"
+      (list
+       "in the assemble step, should the Clojure code be treated as a \"block\"?"
+       [:br {:class "clojure-newline"}])
       (#'clj/extract-comment-text
        ";; in the assemble step, should the Clojure code be treated as a \"block\"?\n")))
-    (t/is (= "a comment" (#'clj/extract-comment-text ";; a comment ")))))
+    (t/is (= '("a comment") (#'clj/extract-comment-text ";; a comment ")))))
 
 (t/deftest hiccup
   (t/testing "paragraph merging"
     (t/is (= (list [:pre {:class "clojure-form"}
                     [:code {:class "language-clojure"}] "(+ 3 4)"]
                    [:p {:class "clojure-comment"} "Clojure example"])
-             (clj/merge-paragraphs [:pre {:class "clojure-form"}
-                                    [:code {:class "language-clojure"}]
-                                    "(+ 3 4)"]
-                                   {:clojure/comment      "Clojure example"
-                                    :clojure.comment/text "Clojure example"}))
+             (clj/merge-paragraphs
+              [:pre {:class "clojure-form"} [:code {:class "language-clojure"}]
+               "(+ 3 4)"]
+              {:clojure/comment      "Clojure example"
+               :clojure.comment/text '("Clojure example")}))
           "Comment following code should start new paragraph")
     (t/is (= (list [:p {:class "clojure-comment"} "Clojure example"
                     [:br {:class "clojure-newline"}]])
@@ -54,7 +56,7 @@
              (clj/merge-paragraphs [:p {:class "clojure-comment"}
                                     "Clojure example" [:br] [:br]]
                                    {:clojure/comment      "next paragraph"
-                                    :clojure.comment/text "next paragraph"}))
+                                    :clojure.comment/text '("next paragraph")}))
           "Paragraphs should be separated by multiple newlines and trimmed")
     (t/is (= (list [:p {:class "clojure-comment"} "comment example" " "
                     "with single linebreak"])
@@ -62,7 +64,7 @@
               [:p {:class "clojure-comment"} "comment example"
                [:br {:class "clojure-newline"}]]
               {:clojure/comment      "with single linebreak"
-               :clojure.comment/text "with single linebreak"}))
+               :clojure.comment/text '("with single linebreak")}))
           "Single linebreaks should be be added to paragraph with whitespace")
     (t/is (= (apply list
                     [:p {:class "clojure-comment"} "Clojure example"]
@@ -79,7 +81,7 @@
                    [:p {:class "clojure-comment"} "comment"])
              (clj/merge-paragraphs {:class "attribute-example"}
                                    {:clojure/comment      "comment"
-                                    :clojure.comment/text "comment"}))
+                                    :clojure.comment/text '("comment")}))
           "Attribute maps should be preserved before comments")
     (t/is (= (apply list
                     {:class "attribute-example"}
