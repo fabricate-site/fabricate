@@ -27,8 +27,6 @@
                   hiccup/hiccup {:mvn/version "2.0.0-RC2"}
                   instaparse/instaparse {:mvn/version "1.4.12"}
                   metosin/malli {:mvn/version "0.17.0"}
-                  nasus/nasus {:git/url "https://github.com/kachayev/nasus/"
-                               :sha "8923283db09f88f3503d0246bad31eea15341138"}
                   org.clojure/clojure {:mvn/version "1.11.3"}
                   org.clojure/data.finger-tree {:mvn/version "0.0.3"}
                   org.scicloj/kindly {:mvn/version "4-alpha16"}
