@@ -18,8 +18,8 @@
 
 ;; And this is a second paragraph of a comment, because of the 2+ linebreaks.
 
-;; This is the third paragraph. No clojure forms between - one single HTML
-;; <div> element, with 3 <p> elements within.
+;; This is the third paragraph. No clojure forms between; 3 <p> elements.
+;; This text is in the third paragraph despite having a newline separating it.
 
 (throw (ex-info "A test error" {:context "testing" :severity :trivial}))
 

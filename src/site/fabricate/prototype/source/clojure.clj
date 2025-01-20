@@ -6,13 +6,14 @@
             [rewrite-clj.zip :as zip]
             [malli.core :as m]
             [babashka.fs :as fs]
-            [clojure.tools.reader :as reader]
             [edamame.core :as e]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [scicloj.kindly.v4.api :as kindly]
             [scicloj.kindly.v4.kind :as kind]
-            [site.fabricate.api :as api]))
+            [site.fabricate.api :as api]
+            [clojure.string :as str]
+            [clojure.tools.reader :as reader]))
 
 
 ;; in the assemble step, should the Clojure code be treated as a "block"?
@@ -61,11 +62,11 @@
           (nil? node-meta) (throw (ex-info "No metadata value" {:node m-node}))
           :default  (node/sexpr node-meta))))
 
-(def ^:private comment-pattern #"(?:;+\s*)([\s\S]*)(?:\R+)")
+(def ^:private comment-pattern #"(?:;+\s*)([\s\S]*)(?:\R*)")
 
 (defn- extract-comment-text
   [comment-str]
-  (last (re-matches comment-pattern comment-str)))
+  (str/trim (last (re-matches comment-pattern comment-str))))
 
 ;; should this be a multimethod?
 (defn normalize-node
@@ -251,7 +252,7 @@
                                      (<= 2
                                          (count (trailing-newlines
                                                  prev-element))))
-                                [:p :break]
+                                :break
                                 (vector? prev-element) (nth prev-element 0))
         next-form-type    (cond (:clojure/uneval next-form) :uneval
                                 (contains? next-form :clojure/result)
@@ -266,26 +267,25 @@
                                                          {:clojure/form
                                                           next-form})))]
     (case [prev-element-type next-form-type]
-      [[:p :break] :comment]    (list (trim-newlines prev-element)
-                                      (new-paragraph next-form))
-      [[:p :break] :code-block] (list (trim-newlines prev-element)
-                                      (code-block next-form))
-      [:p :comment]             (list (conj (trim-newlines prev-element)
-                                            " "
-                                            (:clojure.comment/text next-form)))
-      [:p :newlines]            (list (into prev-element
-                                            (->newlines next-form)))
-      [:p :code-block]          (list (trim-newlines prev-element)
-                                      (code-block next-form))
-      [:pre :comment]           (list (trim-newlines prev-element)
-                                      (new-paragraph next-form))
-      [:pre :code-block]        (list prev-element (code-block next-form))
-      [:pre :newlines]          (list prev-element)
-      [:pre :whitespace]        (list prev-element)
-      [:attr-map :comment]      (list prev-element (new-paragraph next-form))
-      [:attr-map :code-block]   (list prev-element (code-block next-form))
+      [:break :comment]       (list (trim-newlines prev-element)
+                                    (new-paragraph next-form))
+      [:break :code-block]    (list (trim-newlines prev-element)
+                                    (code-block next-form))
+      [:p :comment]           (list (conj (trim-newlines prev-element)
+                                          " "
+                                          (:clojure.comment/text next-form)))
+      [:p :newlines]          (list (into prev-element (->newlines next-form)))
+      [:p :code-block]        (list (trim-newlines prev-element)
+                                    (code-block next-form))
+      [:pre :comment]         (list (trim-newlines prev-element)
+                                    (new-paragraph next-form))
+      [:pre :code-block]      (list prev-element (code-block next-form))
+      [:pre :newlines]        (list prev-element)
+      [:pre :whitespace]      (list prev-element)
+      [:attr-map :comment]    (list prev-element (new-paragraph next-form))
+      [:attr-map :code-block] (list prev-element (code-block next-form))
       ;; uneval always gets discarded
-      [:any :uneval]            (list prev-element))))
+      [:any :uneval]          (list prev-element))))
 
 (defn forms->hiccup
   "Produce a Hiccup vector from the given forms."

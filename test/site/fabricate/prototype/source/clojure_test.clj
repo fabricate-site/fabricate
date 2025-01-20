@@ -19,10 +19,10 @@
   (t/testing "clojure comments"
     (t/is
      (=
-      "in the assemble step, should the Clojure code be treated as a \"block\"?\n"
+      "in the assemble step, should the Clojure code be treated as a \"block\"?"
       (#'clj/extract-comment-text
        ";; in the assemble step, should the Clojure code be treated as a \"block\"?\n")))
-    (t/is (= "a comment " (#'clj/extract-comment-text ";; a comment ")))))
+    (t/is (= "a comment" (#'clj/extract-comment-text ";; a comment ")))))
 
 (t/deftest hiccup
   (t/testing "paragraph merging"
