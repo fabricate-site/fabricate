@@ -1,7 +1,13 @@
-(ns site.fabricate.example
+(ns ^{:site.fabricate/title "Fabricate Clojure example namespace"}
+    site.fabricate.example
   "Example namespace for testing parsing and evaluation of clojure forms"
   (:require [clojure.string :as str]
             [scicloj.kindly.v4.kind :as kind]))
+
+^{:kindly/kind :kind/hiccup}
+(let [curr-ns *ns*
+      ns-meta (meta curr-ns)]
+  [:h1 (:site.fabricate/title ns-meta)])
 
 ;; This file demonstrates behavior expected of Fabricate's initial clojure
 ;; parsing function. This particular multi-line comment block should be
@@ -9,6 +15,11 @@
 
 (map #(* 2 (+ 1 %)) [1 3 5 7 9 11]) ;; this should have code and results
 
+;; arbitrary Hiccup data can be rendered to HTML by using :kind/hiccup
+
+^{:kindly/kind :kind/hiccup} [:h2 "Other kindly options"]
+
+;; right now only hide-code and hide-result are supported.
 
 ^:kindly/hide-code '(hidden-form "example") ;; this quoted form should be hidden
 ^:kindly/hide-code (+ 2 3) ;; this form should be hidden
@@ -22,6 +33,7 @@
  ;; elements.
 ;; This text is in the third paragraph despite having a newline separating it.
 
+^{:kindly/kind :kind/hiccup} [:h2 "Error example"]
 (throw (ex-info "A test error" {:context "testing" :severity :trivial}))
 
 ;; the above error should be surfaced, but not block subsequent forms.

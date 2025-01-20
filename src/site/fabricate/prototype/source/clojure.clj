@@ -240,31 +240,38 @@
   [{:keys [clojure/result clojure/error clojure/source clojure/metadata]
     :as   form}]
   (let [hide-code?   (true? (:kindly/hide-code metadata))
-        hide-result? (true? (:kindly/hide-result metadata))]
-    (cond (and result hide-code?) (list [:pre {:class "clojure-result"}
-                                         [:code {:class "language-clojure"}
-                                          (adorn/clj->hiccup result)]])
-          (and result (not hide-result?))
-          (list [:pre {:class "clojure-form"}
-                 [:code {:class "language-clojure"} (adorn/clj->hiccup source)]]
-                [:pre {:class "clojure-result"}
-                 [:code {:class "language-clojure"}
-                  (adorn/clj->hiccup result)]])
-          (and hide-code? hide-result?) '()
-          (and error (and (not hide-code?) (not hide-result?)))
-          (list [:pre {:class "clojure-form"}
-                 [:code {:class "language-clojure"} (adorn/clj->hiccup source)]]
-                [:pre {:class "clojure-error"}
-                 [:code {:class "language-clojure"} (adorn/clj->hiccup error)]])
-          (and error hide-code?) (list [:pre {:class "clojure-error"}
-                                        [:code {:class "language-clojure"}
-                                         (adorn/clj->hiccup error)]])
-          :default (list [:pre {:class "clojure-form"}
-                          [:code {:class "language-clojure"}
-                           (adorn/clj->hiccup source)]]))))
+        hide-result? (true? (:kindly/hide-result metadata))
+        hiccup?      (= :kind/hiccup (:kindly/kind metadata))]
+    (cond
+      ;; treat hiccup as-is
+      hiccup? (list result)
+      (and result hide-code?) (list [:pre {:class "clojure-result"}
+                                     [:code {:class "language-clojure"}
+                                      (adorn/clj->hiccup result)]])
+      (and result (not hide-result?))
+      (list [:pre {:class "clojure-form"}
+             [:code {:class "language-clojure"} (adorn/clj->hiccup source)]]
+            [:pre {:class "clojure-result"}
+             [:code {:class "language-clojure"} (adorn/clj->hiccup result)]])
+      (and hide-code? hide-result?) '()
+      (and error (and (not hide-code?) (not hide-result?)))
+      (list [:pre {:class "clojure-form"}
+             [:code {:class "language-clojure"} (adorn/clj->hiccup source)]]
+            [:pre {:class "clojure-error"}
+             [:code {:class "language-clojure"} (adorn/clj->hiccup error)]])
+      (and error hide-code?) (list [:pre {:class "clojure-error"}
+                                    [:code {:class "language-clojure"}
+                                     (adorn/clj->hiccup error)]])
+      :default (list [:pre {:class "clojure-form"}
+                      [:code {:class "language-clojure"}
+                       (adorn/clj->hiccup source)]]))))
 (defn- new-paragraph
   [{:keys [clojure.comment/text] :as form}]
   (into [:p {:class "clojure-comment"}] text))
+
+(defn- get-element-type
+  [hiccup-vector]
+  (let [tag (first hiccup-vector)] (if (#{:p :pre} tag) tag :hiccup)))
 
 ;; because matching dispatches on two things:
 ;; 1. the previous element (or attributes derived from it)
@@ -286,7 +293,8 @@
                                          (count (trailing-newlines
                                                  prev-element))))
                                 :break
-                                (vector? prev-element) (nth prev-element 0))
+                                (vector? prev-element) (get-element-type
+                                                        prev-element))
         next-form-type    (cond (:clojure/uneval next-form) :uneval
                                 (contains? next-form :clojure/result)
                                 :code-block
@@ -321,24 +329,30 @@
       [:pre :whitespace]      (list prev-element)
       [:attr-map :comment]    (list prev-element (new-paragraph next-form))
       [:attr-map :code-block] (apply list prev-element (code-block next-form))
+      [:hiccup :newlines]     (list prev-element)
+      [:hiccup :comment]      (list prev-element (new-paragraph next-form))
+      [:hiccup :code-block]   (apply list prev-element (code-block next-form))
       ;; uneval always gets discarded
       [:any :uneval]          (list prev-element))))
 
 (defn forms->hiccup
   "Produce a Hiccup vector from the given forms."
-  [{:keys [clojure/forms] :as page-map}]
-  (let [main (reduce
-              (fn process-next-form [body-hiccup {:keys [] :as next-form-map}]
-                (let [last-element  (peek body-hiccup)
-                      rest-elements (pop body-hiccup)]
-                  (into rest-elements
-                        (merge-paragraphs last-element next-form-map))))
-              ;; TODO: think of better ways to include metadata +
-              ;; provenance
-              [:main {:data-clojure-namespace (:clojure/namespace page-map)}]
-              forms)]
-    [:html [:head [:link {:rel "stylesheet" :href "/reset.css"}]]
-     [:body main]]))
+  [{:keys [clojure/forms] page-ns :clojure/namespace :as page-map}]
+  (let [ns-meta (meta (find-ns page-ns))
+        main    (reduce (fn process-next-form [body-hiccup
+                                               {:keys [] :as next-form-map}]
+                          (let [last-element  (peek body-hiccup)
+                                rest-elements (pop body-hiccup)]
+                            (into rest-elements
+                                  (merge-paragraphs last-element
+                                                    next-form-map))))
+                        ;; TODO: think of better ways to include metadata +
+                        ;; provenance
+                        [:main {:data-clojure-namespace page-ns}]
+                        forms)]
+    [:html
+     [:head [:title (:site.fabricate/title ns-meta)]
+      [:link {:rel "stylesheet" :href "/reset.css"}]] [:body main]]))
 
 (defmethod api/build [:clojure.v0.test :hiccup]
   [{source-location :site.fabricate.source/location :as entry} opts]
