@@ -9,6 +9,7 @@
             [site.fabricate.prototype.hiccup]
             [site.fabricate.prototype.check]
             [site.fabricate.prototype.source.clojure]
+            [site.fabricate.prototype.document.hiccup]
             [malli.core :as m]
             [malli.util :as mu]
             [babashka.fs :as fs]))
@@ -24,6 +25,19 @@
 
 (t/use-fixtures :once with-instrumentation)
 
+(t/deftest default-multimethods
+  (t/testing "clojure"
+    (let [entries (vec (for [src-path (fs/glob "." "**/*.clj")]
+                         {:site.fabricate.source/location (str src-path)
+                          :site.fabricate.source/format   :clojure/v0
+                          :site.fabricate.page/location   (fs/file
+                                                           "test-resources/html"
+                                                           (fs/file-name
+                                                            src-path))}))]
+      (doseq [e entries]
+        (t/testing (:site.fabricate.source/location e)
+          (t/is (map? (api/build e {}))
+                "Arbitrary clojure sources should build without errors"))))))
 
 (t/deftest operations
   (let [tmp-dir (fs/create-temp-dir {:prefix "fabricate-test-"})
@@ -274,6 +288,7 @@
                           (not (re-find #"^site\.fabricate\.adorn" ns-str))
                           (not (re-find #"^site\.fabricate\.dev" ns-str))
                           (not (re-find #"^site\.fabricate.*test" ns-str))
+                          (not (re-find #"^site\.fabricate.example" ns-str))
                           (not (re-find #"^site\.fabricate.*docs" ns-str))
                           (not (re-find #"^site\.fabricate.*time" ns-str))))))
          (run! test-namespace))))

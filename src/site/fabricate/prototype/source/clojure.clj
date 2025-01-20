@@ -356,7 +356,7 @@
                         forms)]
     main))
 
-(defmethod api/build [:clojure/v0 :hiccup]
+(defmethod api/build [:clojure/v0 :hiccup/html]
   [{source-location :site.fabricate.source/location :as entry} opts]
   (let [{:keys [site.fabricate.document/title
                 site.fabricate.document/description]

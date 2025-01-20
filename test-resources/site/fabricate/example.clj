@@ -7,7 +7,7 @@
 ^{:kindly/kind :kind/hiccup}
 (let [curr-ns *ns*
       ns-meta (meta curr-ns)]
-  [:h1 (:site.fabricate/title ns-meta)])
+  [:h1 (:site.fabricate.document/title ns-meta)])
 
 ;; This file demonstrates behavior expected of Fabricate's initial clojure
 ;; parsing function. This particular multi-line comment block should be

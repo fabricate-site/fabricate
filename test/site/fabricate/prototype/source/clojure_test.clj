@@ -112,7 +112,7 @@
     (let [final-entry  (api/build {:site.fabricate.source/location
                                    "test-resources/site/fabricate/example.clj"
                                    :site.fabricate.source/format :clojure/v0
-                                   :site.fabricate.document/format :hiccup}
+                                   :site.fabricate.document/format :hiccup/html}
                                   {})
           final-hiccup (:site.fabricate.document/data final-entry)]
       (t/is (vector? final-hiccup))
@@ -200,10 +200,12 @@
 
 (comment
   (require '[hiccup.page])
-  (->> "test-resources/site/fabricate/example.clj"
-       clj/file->forms
-       clj/eval-forms
-       clj/forms->hiccup
+  (->> (api/build {:site.fabricate.source/location
+                   "test-resources/site/fabricate/example.clj"
+                   :site.fabricate.source/format :clojure/v0
+                   :site.fabricate.document/format :hiccup/html}
+                  {})
+       :site.fabricate.document/data
        hiccup.page/html5
        (spit "test-resources/html/site.fabricate.example.html"))
   (require '[edamame.core :as e])
