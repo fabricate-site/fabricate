@@ -1,30 +1,26 @@
-{:aliases {:clj-path       ["src"]
-           :resource-paths ["resources"]
-           :runner         {:exec-args {:excludes [:performance]
-                                        :patterns ["^(?!.*performance).*$"]}
-                            :exec-fn cognitect.test-runner.api/test
-                            :extra-deps
-                            {io.github.cognitect-labs/test-runner
-                             {:git/url
-                              "https://github.com/cognitect-labs/test-runner"
-                              :sha "7284cda41fb9edc0f3bc6b6185cfb7138fc8a023"}}
-                            :jvm-opts ["-Dclojure.main.report=stderr"]
-                            :main-opts ["-m" "cognitect.test-runner"]}
-           :test           {:extra-deps
-                            {babashka/babashka.curl {:mvn/version "0.1.2"}
-                             com.brunobonacci/mulog {:mvn/version "0.9.0"}
-                             com.gfredericks/test.chuck {:mvn/version "0.2.14"}
-                             nu.validator/validator {:mvn/version "20.7.2"}
-                             nubank/matcher-combinators {:mvn/version "3.9.1"}
-                             org.clojure/test.check {:mvn/version "1.1.1"}
-                             site.fabricate/manual
-                             {:git/url
-                              "https://github.com/fabricate-site/manual.git"
-                              :sha "0285311b5517b806dca43360235bc0fff4970728"}}
-                            :extra-paths ["test"]
-                            :resource-paths ["test-resources"]}
-           :validate       {:exec-args {:dirs ["docs/"]}
-                            :exec-fn   site.fabricate.prototype.check/html}}
+{:aliases {:runner   {:exec-args {:excludes [:performance]
+                                  :patterns ["^(?!.*performance).*$"]}
+                      :exec-fn cognitect.test-runner.api/test
+                      :extra-deps
+                      {io.github.cognitect-labs/test-runner
+                       {:git/url "https://github.com/cognitect-labs/test-runner"
+                        :sha     "7284cda41fb9edc0f3bc6b6185cfb7138fc8a023"}}
+                      :jvm-opts ["-Dclojure.main.report=stderr"]
+                      :main-opts ["-m" "cognitect.test-runner"]}
+           :test     {:extra-deps
+                      {babashka/babashka.curl {:mvn/version "0.1.2"}
+                       com.brunobonacci/mulog {:mvn/version "0.9.0"}
+                       com.gfredericks/test.chuck {:mvn/version "0.2.14"}
+                       nu.validator/validator {:mvn/version "20.7.2"}
+                       nubank/matcher-combinators {:mvn/version "3.9.1"}
+                       org.clojure/test.check {:mvn/version "1.1.1"}
+                       site.fabricate/manual
+                       {:git/url "https://github.com/fabricate-site/manual.git"
+                        :sha     "0285311b5517b806dca43360235bc0fff4970728"}}
+                      :extra-paths ["test"]
+                      :resource-paths ["test-resources"]}
+           :validate {:exec-args {:dirs ["docs/"]}
+                      :exec-fn   site.fabricate.prototype.check/html}}
  :deps    {babashka/fs             {:mvn/version "0.2.12"}
            hiccup/hiccup           {:mvn/version "2.0.0-RC2"}
            instaparse/instaparse   {:mvn/version "1.4.12"}
@@ -38,4 +34,4 @@
                                     "https://github.com/fabricate-site/adorn"
                                     :sha
                                     "6a9a87959537a71760cd08f8fc2a292ba4957755"}}
- :paths   [:clj-path :resource-paths]}
+ :paths   ["src" "resources"]}
