@@ -6,8 +6,7 @@
 
 (def css-reset
   "CSS reset for Fabricate pages"
-  (slurp (or (io/resource "site/fabricate/reset.css")
-             "test-resources/html/reset.css")))
+  (slurp (io/resource "site/fabricate/reset.css")))
 
 (def default-metadata
   "Default metadata to add to page head elements"
