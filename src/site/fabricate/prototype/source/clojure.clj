@@ -333,6 +333,7 @@
       [:pre :whitespace]      (list prev-element)
       [:attr-map :comment]    (list prev-element (new-paragraph next-form))
       [:attr-map :code-block] (apply list prev-element (code-block next-form))
+      [:attr-map :newlines]   (list prev-element)
       [:hiccup :newlines]     (list prev-element)
       [:hiccup :comment]      (list prev-element (new-paragraph next-form))
       [:hiccup :code-block]   (apply list prev-element (code-block next-form))
