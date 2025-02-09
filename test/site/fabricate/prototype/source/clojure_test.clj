@@ -96,14 +96,24 @@
                                    {:clojure/newlines "\n\n\n"}))
           "Newlines following a code block should be discarded"))
   (t/testing "postprocessing"
-    (let [hide-code-str      "^:kindly/hide-code '(hidden-form \"example\")"
-          code-block-results (-> hide-code-str
-                                 parser/parse-string
-                                 clj/normalize-node
-                                 clj/eval-form
-                                 (#'clj/code-block))]
-      (t/is (= "clojure-result"
-               (get-in (first code-block-results) [1 :class]))))
+    (let
+      [hide-code-str "^:kindly/hide-code '(hidden-form \"example\")"
+       code-block-results (-> hide-code-str
+                              parser/parse-string
+                              clj/normalize-node
+                              clj/eval-form
+                              (#'clj/code-block))
+       hide-both-results
+       (->
+         "^{:kindly/hide-code true :kindly/hide-result true} (def example-hidden 1 )"
+         parser/parse-string
+         clj/normalize-node
+         clj/eval-form
+         (#'clj/code-block))]
+      (t/is (= "clojure-result" (get-in (first code-block-results) [1 :class])))
+      (t/is
+       (= '() hide-both-results)
+       "When both code and result are hidden, no Hiccup should be generated."))
     #_(t/is (malli/validate html/html
                             (-> "test-resources/site/fabricate/example.clj"
                                 clj/file->forms

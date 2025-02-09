@@ -249,6 +249,7 @@
     (cond
       ;; treat hiccup as-is
       hiccup? (list result)
+      (and hide-code? hide-result?) '()
       (and result hide-code?) (list [:pre {:class "clojure-result"}
                                      [:code {:class "language-clojure"}
                                       (adorn/clj->hiccup result)]])
@@ -257,7 +258,6 @@
              [:code {:class "language-clojure"} (adorn/clj->hiccup source)]]
             [:pre {:class "clojure-result"}
              [:code {:class "language-clojure"} (adorn/clj->hiccup result)]])
-      (and hide-code? hide-result?) '()
       (and error (and (not hide-code?) (not hide-result?)))
       (list [:pre {:class "clojure-form"}
              [:code {:class "language-clojure"} (adorn/clj->hiccup source)]]
