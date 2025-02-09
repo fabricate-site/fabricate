@@ -113,7 +113,19 @@
       (t/is (= "clojure-result" (get-in (first code-block-results) [1 :class])))
       (t/is
        (= '() hide-both-results)
-       "When both code and result are hidden, no Hiccup should be generated."))
+       "When both code and result are hidden, no Hiccup should be generated.")
+      (t/is
+       (=
+        [:main {:data-clojure-namespace 'example-ns}
+         [:p {:class "clojure-comment"} "example ns"] [:h1 "Example ns"]]
+        (->
+          "^{:kindly/hide-code true :kindly/hide-result true} (ns example-ns)
+;; example ns
+^{:kindly/kind :kind/hiccup} [:h1 \"Example ns\"]"
+          clj/string->forms
+          clj/eval-forms
+          clj/forms->hiccup))
+       "Hidden namespaces should not be included in final hiccup"))
     #_(t/is (malli/validate html/html
                             (-> "test-resources/site/fabricate/example.clj"
                                 clj/file->forms

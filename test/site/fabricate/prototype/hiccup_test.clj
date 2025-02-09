@@ -126,6 +126,10 @@
     (t/is (= [:p [:del [:em [:u "text" [:br] "more text"]]]]
              (parse-paragraphs [:p [:del [:em [:u "text\n\nmore text"]]]]))
           "Paragraphs should be detected at arbitrary levels of nesting")
+    (t/is (= [:header [:h1 [:span "text" '([:wbr] "more text")]]]
+             (parse-paragraphs [:header
+                                [:h1 [:span "text" '([:wbr] "more text")]]]))
+          "Paragraphs should not be detected in header elements")
     (t/is (= [:svg {:width 100 :height 100} [:circle {:cx 50 :cy 50 :r 3}]]
              (parse-paragraphs [:svg {:width 100 :height 100}
                                 [:circle {:cx 50 :cy 50 :r 3}]]))
