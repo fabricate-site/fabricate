@@ -34,7 +34,9 @@
          res
          (cond
            ; don't detect in specific elements
-           (#{:svg :dl :figure :pre :img :header} (first form)) form
+           (#{:svg :dl :figure :pre :img :header :h1 :h2 :h3 :h4 :h5 :h6}
+            (first form))
+           form
            ;; (non-hiccup-seq? form)
            ;; recurse?
            ;; (parse-paragraphs (apply conj default-form form) opts)
