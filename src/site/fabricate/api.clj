@@ -180,10 +180,13 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
                                      ;; this is superfluous and can be
                                      ;; eliminated now
                                      output     (:site.fabricate.page/outputs
-                                                 entry-data)]
-                                 (-> entry-data
-                                     (dissoc :site.fabricate.page/outputs)
-                                     (merge output))))]
+                                                 entry-data
+                                                 [:default])]
+                                 (if (= output :default)
+                                   entry-data
+                                   (-> entry-data
+                                       (dissoc :site.fabricate.page/outputs)
+                                       (merge output)))))]
     (update post-setup-site
             :site.fabricate.api/entries
             (fn [es] (reduce conj es collected-entries)))))
@@ -258,3 +261,6 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
         sorted-entries entries]
     (doseq [e entries] (produce! e options))
     (reduce (fn [site task] (task site)) init-site sorted-tasks)))
+
+
+(comment)
