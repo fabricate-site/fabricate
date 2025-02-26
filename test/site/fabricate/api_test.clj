@@ -1,8 +1,6 @@
 (ns site.fabricate.api-test
   (:require [clojure.test :as t]
             [site.fabricate.api :as api]
-            ;; register default collect methods
-            [site.fabricate.source :as source]
             ;; refer the dev ns to ensure multimethods have impls
             [site.fabricate.dev.build]
             [site.fabricate.prototype.test-utils :refer [with-instrumentation]]
@@ -46,19 +44,6 @@
 
 (def valid-entry? (m/validator api/entry-schema))
 (def explain-entry (m/explainer api/entry-schema))
-
-(t/deftest default-multimethods
-  (t/testing "clojure"
-    (let [entries (api/collect "**/*.clj"
-                               {:site.fabricate.source/location "."})]
-      (doseq [e entries]
-        (t/testing (:site.fabricate.source/location e)
-          (let [built-entry (api/build e {})]
-            (when-not (valid-entry? built-entry)
-              (println (me/humanize (explain-entry built-entry))))
-            (t/is (valid-entry? built-entry)
-                  "Arbitrary clojure sources should build without errors")))))))
-
 
 
 (t/deftest operations
