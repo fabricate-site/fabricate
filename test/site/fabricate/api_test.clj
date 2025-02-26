@@ -1,6 +1,8 @@
 (ns site.fabricate.api-test
   (:require [clojure.test :as t]
             [site.fabricate.api :as api]
+            ;; register default collect methods
+            [site.fabricate.source :as source]
             ;; refer the dev ns to ensure multimethods have impls
             [site.fabricate.dev.build]
             [site.fabricate.prototype.test-utils :refer [with-instrumentation]]
@@ -42,31 +44,31 @@
          :site.fabricate.document/data
          (clojure.edn/read-string (slurp file))))
 
-
+(def valid-entry? (m/validator api/entry-schema))
+(def explain-entry (m/explainer api/entry-schema))
 
 (t/deftest default-multimethods
   (t/testing "clojure"
-    (let [entries (vec (for [src-path (fs/glob "." "**/*.clj")]
-                         {:site.fabricate.source/location (str src-path)
-                          :site.fabricate.source/format   :clojure/v0
-                          :site.fabricate.page/location   (fs/file
-                                                           "test-resources/html"
-                                                           (fs/file-name
-                                                            src-path))}))]
+    (let [entries (api/collect "**/*.clj"
+                               {:site.fabricate.source/location "."})]
       (doseq [e entries]
         (t/testing (:site.fabricate.source/location e)
-          (t/is (map? (api/build e {}))
-                "Arbitrary clojure sources should build without errors"))))))
+          (let [built-entry (api/build e {})]
+            (when-not (valid-entry? built-entry)
+              (println (me/humanize (explain-entry built-entry))))
+            (t/is (valid-entry? built-entry)
+                  "Arbitrary clojure sources should build without errors")))))))
 
-(def valid-entry? (m/validator api/entry-schema))
-(def explain-entry (m/explainer api/entry-schema))
+
 
 (t/deftest operations
   (let [tmp-dir (fs/create-temp-dir {:prefix "fabricate-test-"})
         {:keys [site.fabricate.api/entries] :as plan-data}
-        (api/plan! [(fn [s] (fs/create-dir (fs/path tmp-dir "css")) s)]
-                   {:site.fabricate.api/options
-                    {:site.fabricate.page/publish-dir tmp-dir}})]
+        (api/plan!
+         [(fn [s] (fs/create-dir (fs/path tmp-dir "css")) s)
+          (fn [s] (when-not (fs/exists? "docs") (fs/create-dir "docs")) s)]
+         {:site.fabricate.api/options {:site.fabricate.page/publish-dir
+                                       tmp-dir}})]
     (t/testing "planning"
       (t/is
        (some #(= "deps.edn" (fs/file-name (:site.fabricate.source/file %)))

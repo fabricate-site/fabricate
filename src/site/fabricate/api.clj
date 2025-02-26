@@ -177,8 +177,9 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
   (let [post-setup-site   (reduce (fn [site task] (task site)) site setup-tasks)
         collected-entries (vec (for [[source _] (.getMethodTable collect)
                                      entry-data (collect source options)
-                                     ;; this is superfluous and can be
-                                     ;; eliminated now
+                                     ;; this is superfluous, but is
+                                     ;; retained for backwards
+                                     ;; compatibility
                                      output     (:site.fabricate.page/outputs
                                                  entry-data
                                                  [:default])]
