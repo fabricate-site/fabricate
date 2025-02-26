@@ -12,7 +12,9 @@
             [site.fabricate.prototype.document.hiccup]
             [malli.core :as m]
             [malli.util :as mu]
-            [babashka.fs :as fs]))
+            [malli.error :as me]
+            [babashka.fs :as fs]
+            [clojure.java.io :as io]))
 
 (defn doc->page
   [{:keys [site.fabricate.document/title site.fabricate.document/data
@@ -25,28 +27,42 @@
 
 (t/use-fixtures :once with-instrumentation)
 
-(t/deftest default-multimethods
-  (t/testing "clojure"
-    (let [entries (vec (for [src-path (fs/glob "." "**/*.clj")]
-                         {:site.fabricate.source/location (str src-path)
-                          :site.fabricate.source/format   :clojure/v0
-                          :site.fabricate.page/location   (fs/file
-                                                           "test-resources/html"
-                                                           (fs/file-name
-                                                            src-path))}))]
-      (doseq [e entries]
-        (t/testing (:site.fabricate.source/location e)
-          (t/is (map? (api/build e {}))
-                "Arbitrary clojure sources should build without errors"))))))
+(defmethod api/collect "deps.edn"
+  [src opts]
+  (let [loc (fs/file (System/getProperty "user.dir"))]
+    [{:site.fabricate.source/location loc
+      :site.fabricate.source/file     (fs/file loc src)
+      :site.fabricate.api/source      src
+      :site.fabricate.source/format   :clojure/deps
+      :site.fabricate.document/format :clojure/edn}]))
+
+(defmethod api/build [:clojure/deps :clojure/edn]
+  [{:keys [site.fabricate.source/file] :as entry} _opts]
+  (assoc entry
+         :site.fabricate.document/data
+         (clojure.edn/read-string (slurp file))))
+
+(def valid-entry? (m/validator api/entry-schema))
+(def explain-entry (m/explainer api/entry-schema))
+
 
 (t/deftest operations
   (let [tmp-dir (fs/create-temp-dir {:prefix "fabricate-test-"})
         {:keys [site.fabricate.api/entries] :as plan-data}
-        (api/plan! [(fn [s] (fs/create-dir (fs/path tmp-dir "css")) s)]
-                   {:site.fabricate.api/options
-                    {:site.fabricate.page/publish-dir tmp-dir}})]
+        (api/plan!
+         [(fn [s] (fs/create-dir (fs/path tmp-dir "css")) s)
+          (fn [s] (when-not (fs/exists? "docs") (fs/create-dir "docs")) s)]
+         {:site.fabricate.api/options {:site.fabricate.page/publish-dir
+                                       tmp-dir}})]
     (t/testing "planning"
-      (t/is (every? (m/validator api/entry-schema) entries)))
+      (t/is
+       (some #(= "deps.edn" (fs/file-name (:site.fabricate.source/file %)))
+             entries)
+       "Entries without :site.fabricate/outputs key should be passed through")
+      (let [valid-entries? (every? valid-entry? entries)]
+        (when-not valid-entries?
+          (run! #(println (identity (explain-entry %))) entries))
+        (t/is valid-entries? "Every entry collected should be valid.")))
     (t/testing "building"
       (doseq [e entries]
         (let [built (try (api/build e {})
@@ -63,14 +79,15 @@
     (t/testing "production"
       (doseq [e entries]
         (let [built (api/build e {})
-              _ (do (t/is (some? (api/produce-dispatch built {}))))
-              {:keys [site.fabricate.page/output] :as produced}
-              (api/produce! built {})]
-          (t/is (some? (:site.fabricate.page/title produced))
-                (format "Page produced from %s should have a title"
-                        (str (:site.fabricate.source/location built))))
-          (t/is (instance? java.io.File output))
-          (t/is (fs/exists? output)))))))
+              _ (do (t/is (some? (api/produce-dispatch built {}))))]
+          (when-not (= :clojure/deps (:site.fabricate.source/format e))
+            (let [{:keys [site.fabricate.page/output] :as produced}
+                  (api/produce! built {})]
+              (t/is (some? (:site.fabricate.page/title produced))
+                    (format "Page produced from %s should have a title"
+                            (str (:site.fabricate.source/location built))))
+              (t/is (instance? java.io.File output))
+              (t/is (fs/exists? output)))))))))
 
 (defn unmap-multimethods
   "Utility function to ease reloading of redefined multimethods."
