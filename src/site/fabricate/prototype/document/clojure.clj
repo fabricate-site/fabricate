@@ -1,27 +1,17 @@
-(ns site.fabricate.prototype.source.clojure
-  "Fabricate namespace defining methods for turning Clojure namespaces into Hiccup documents"
-  (:require [rewrite-clj.parser :as parser]
+(ns site.fabricate.prototype.document.clojure
+  "Prototype namespace for generating Hiccup and Kindly values from Clojure forms."
+  (:require [site.fabricate.adorn :as adorn]
+            [clojure.string :as str]
             [rewrite-clj.node :as node]
             [rewrite-clj.zip :as zip]
+            [rewrite-clj.parser :as parser]
             [malli.core :as m]
-            [babashka.fs :as fs]
-            [edamame.core :as e]
-            [clojure.java.io :as io]
-            [clojure.string :as str]
-            [scicloj.kindly.v4.api :as kindly]
-            [scicloj.kindly.v4.kind :as kind]
-            [site.fabricate.prototype.document.hiccup :as hiccup]
-            [site.fabricate.adorn :as adorn]
-            [site.fabricate.api :as api]
-            [clojure.string :as str]
-            [clojure.tools.reader :as reader]))
+            [babashka.fs :as fs]))
 
+;; Refactor: the source -> forms functions from the
+;; site.fabricate.prototype.document.clojure ns
+;; should be migrated here
 
-;; in the assemble step, should the Clojure code be treated as a "block"?
-
-;; it probably doesn't make sense to fully tokenize it into hiccup nodes
-
-;; that are only required for display purposes
 
 ;; this means that this namespace has two purposes:
 ;; 1. generate "semantic" Hiccup from Clojure source code while evaluating it
@@ -39,7 +29,8 @@
      :any]
     [:clojure.form/metadata {:description "Metadata of form" :optional true}
      :map]
-    [:input/file {:description "Source file (relative to project)"}
+    [:input/file
+     {:description "Source file (relative to project)" :optional true}
      [:fn fs/exists?]]
     [:clojure/result {:description "Results of evaluation" :optional true} :any]
     [:clojure/comment {:description "Clojure comment as string" :optional true}
@@ -52,17 +43,7 @@
      {:description "Clojure comment text, without leading semicolon"
       :optional    true} :string]]))
 
-(defn- meta-node->metadata-map
-  "Normalize the metadata node by converting bare keywords to map entries and return it as a Clojure value."
-  [m-node]
-  (let [node-meta (when (= :meta (:tag m-node)) (first (:children m-node)))
-        kw?       (contains? node-meta :k)
-        type-tag? (contains? node-meta :value)]
-    (cond kw?       {(:k node-meta) true}
-          type-tag? {:type (:value node-meta)}
-          (nil? node-meta) (throw (ex-info "No metadata value" {:node m-node}))
-          :default  (node/sexpr node-meta))))
-
+;; comment handling
 (def ^:private comment-pattern #"(?:;+\s*)([\V\S]*)(\R*)")
 
 (defn- count-newlines [s] (count (re-seq #"\R" s)))
@@ -77,9 +58,18 @@
            (str/trim comment-txt)
            (->newlines {:clojure/newlines newlines}))))
 
-(comment
-  (->newlines {:clojure/newlines ""})
-  (apply list 3 4 ()))
+;; metadata handling
+
+(defn- meta-node->metadata-map
+  "Normalize the metadata node by converting bare keywords to map entries and return it as a Clojure value."
+  [m-node]
+  (let [node-meta (when (= :meta (:tag m-node)) (first (:children m-node)))
+        kw?       (contains? node-meta :k)
+        type-tag? (contains? node-meta :value)]
+    (cond kw?       {(:k node-meta) true}
+          type-tag? {:type (:value node-meta)}
+          (nil? node-meta) (throw (ex-info "No metadata value" {:node m-node}))
+          :default  (node/sexpr node-meta))))
 
 ;; should this be a multimethod?
 (defn normalize-node
@@ -105,7 +95,6 @@
     (assoc result :clojure/source src :clojure/node n :node/tag t)))
 
 
-
 (defn node->map
   "Convert the given rewrite-clj node into a form map."
   [n m]
@@ -115,49 +104,38 @@
                             (meta n))]
     (merge src-info (normalize-node n))))
 
-(defn get-ns
-  "Get the namespace symbol from a given node. Returns the first namespace."
+(defn- get-ns
+  "Get the namespace symbol from a given multi-form node. Returns the first namespace."
   [node]
   (let [ns-loc (zip/find-value (zip/of-node node) zip/next 'ns)]
     (zip/sexpr (zip/next ns-loc))))
 
-(comment
-  (m/validate :symbol
-              (get-ns (parser/parse-file-all
-                       "test-resources/site/fabricate/example.clj"))))
+;; reading forms
 
-(defn file->forms
-  "Generate a sequence of Clojure form maps from the input file."
-  {:malli/schema (m/schema [:=> [:cat [:fn fs/exists?]]
+(defn read-forms
+  "Generate a sequence of Clojure form maps from the input file or string.
+
+If passed a file or string path pointing to an existing file, will read from the file, otherwise treats the input as a string containing Clojure source."
+  {:malli/schema (m/schema [:=> [:cat [:or :string [:fn fs/exists?]]]
                             [:map [:clojure/forms [:* form-map-schema]]]])}
-  [clj-file]
-  (let [parsed (parser/parse-file-all clj-file)
-        nmspc  (get-ns parsed)]
+  [clj-src]
+  (let [file?    (fs/exists? clj-src)
+        parsed   (if file?
+                   (parser/parse-file-all clj-src)
+                   (parser/parse-string-all clj-src))
+        nmspc    (get-ns parsed)
+        src-info (merge
+                  {:clojure/namespace nmspc}
+                  (if file? {:input/file clj-src} {:input/string clj-src}))]
     (merge (select-keys (meta nmspc)
                         [:site.fabricate.document/title
                          :site.fabricate.document/description])
-           {:clojure/forms     (mapv #(node->map %
-                                                 {:input/file        clj-file
-                                                  :clojure/namespace nmspc})
-                                     (:children parsed))
-            :site.fabricate.source/format :clojure/v0
-            :clojure/namespace nmspc
-            :input/file        clj-file})))
-
-;; think about refactoring these
-(defn string->forms
-  "Generate a sequence of Clojure form maps from the input string."
-  {:malli/schema (m/schema [:-> :string
-                            [:map [:clojure/forms [:* form-map-schema]]]])}
-  [clj-str]
-  (let [parsed (parser/parse-string-all clj-str)
-        nmspc  (get-ns parsed)]
-    {:clojure/forms     (mapv #(node->map % {:clojure/namespace nmspc})
-                              (:children parsed))
-     :clojure/namespace nmspc
-     :input/string      clj-str}))
+           {:clojure/forms (mapv #(node->map % src-info) (:children parsed))
+            :site.fabricate.source/format :clojure/v0}
+           src-info)))
 
 
+;; evaluating forms
 
 (defn- parse-fallback
   [str opts]
@@ -180,8 +158,9 @@
                                               (eval clojure-form))
                             :clojure.eval/duration (- (System/currentTimeMillis)
                                                       start-time)}
-                           ;; the parse fallback should be moved to... the
-                           ;; parsing step!
+                           ;; the parse fallback can't be moved to the
+                           ;; parsing step mostly because it requires
+                           ;; evaluation to see whether it's failed
                            (catch Exception e
                              #_{:clojure/error (Throwable->map e)}
                              (try (if (string? clj-str)
@@ -206,14 +185,6 @@
       (merge unevaluated-form eval-output))
     unevaluated-form))
 
-(comment
-  (reader/read-string {:read-cond :allow :features #{:clj}} "#?(:clj :a)")
-  read)
-
-;; should there be any "top level" stuff?
-
-;; yes. there should be a map defining the namespace for the file and other
-;; metadata.
 (defn eval-forms
   "Evaluate the Clojure forms in a parsed file."
   {:malli/schema (m/schema [:-> [:map [:clojure/forms [:* form-map-schema]]]
@@ -222,6 +193,9 @@
   (let [evaluated-forms (mapv eval-form forms)]
     (merge input {:clojure/forms evaluated-forms})))
 
+;; hiccup
+
+;; paragraph detection
 
 ;; rules:
 ;; 1. any comments separated by 2 or more newlines are separate paragraphs
@@ -285,7 +259,7 @@
 
 ;; the dispatch is complex enough that I'm tempted to reach for a multimethod -
 ;; but I won't!
-(defn merge-paragraphs
+(defn- merge-paragraphs
   "Combine the previous Hiccup form with the next Clojure form map"
   [prev-element next-form]
   (let [prev-element-type (cond (:clojure/uneval next-form) :any
@@ -340,6 +314,7 @@
       ;; uneval always gets discarded
       [:any :uneval]          (list prev-element))))
 
+
 (defn forms->hiccup
   "Produce a Hiccup vector from the given forms."
   [{:keys [clojure/forms] page-ns :clojure/namespace :as page-map}]
@@ -357,19 +332,79 @@
                         forms)]
     main))
 
-(defmethod api/build [:clojure/v0 :hiccup/html]
-  [{source-location :site.fabricate.source/location :as entry} opts]
-  (let [{:keys [site.fabricate.document/title
-                site.fabricate.document/description]
-         :as   evaluated-entry}
-        (-> source-location
-            file->forms
-            eval-forms)]
-    (merge entry
-           {:site.fabricate.document/format :hiccup/html
-            :site.fabricate.document/data   [:html
-                                             (into [:head [:title title]]
-                                                   hiccup/default-metadata)
-                                             [:body
-                                              (forms->hiccup
-                                               evaluated-entry)]]})))
+
+;; kindly
+
+
+
+
+
+(defn form->kind
+  "Produce a kindly value from the given form.
+
+By default, produces a plaintext string from a Clojure comment form and marks it as a Clojure comment with metadata. Will wrap values not supporting metadata in vectors."
+  ([{:keys       [clojure/result clojure/metadata clojure/form clojure/source]
+     clj-comment :clojure/comment
+     clj-error   :clojure/error
+     :as         evaluated-form}
+    ;; options taken from clay as examples
+    {:keys [hide-nils hide-vars] :or {hide-nils true hide-vars true} :as opts}]
+   (let [kindly-metadata (select-keys metadata
+                                      [:kindly/hide-code :kindly/hide-result
+                                       :kindly/kind])
+         code         (cond (:kindly/hide-code kindly-metadata) nil
+                            (:clojure/whitespace evaluated-form) nil
+                            (:clojure/newlines evaluated-form) nil
+                            :default ^{:kindly/kind :kind/code}
+                                     [source #_(str form)])
+         result-value (cond (:kindly/hide-result kindly-metadata) nil
+                            (instance? clojure.lang.IObj result)
+                            (with-meta result kindly-metadata)
+                            clj-comment ^{:kindly/kind :comment}
+                                        [(str/replace clj-comment #"^;+\s*" "")]
+                            clj-error (with-meta clj-error kindly-metadata)
+                            (:clojure/whitespace evaluated-form) nil
+                            (:clojure/newlines evaluated-form) nil
+                            (not (instance? clojure.lang.IObj result))
+                            (with-meta [result] kindly-metadata))]
+     (cond (= :kind/hiccup (:kindly/kind kindly-metadata)) result-value
+           (= :comment (:kindly/kind (meta result-value))) result-value
+           (and code result-value) ^{:kindly/kind :kind/fragment}
+                                   [code result-value]
+           :default (or code result-value))))
+  ([]))
+
+(defn forms->fragment
+  "Produce a kindly fragment from the given forms.
+
+Consecutive comment forms get combined into a single plaintext string. Whitespace-only forms get skipped.
+
+See https://scicloj.github.io/kindly-noted/kinds.html#fragment
+for documentation about the fragment kind."
+  [{:keys [clojure/forms] page-ns :clojure/namespace :as page-map}]
+  (let [ns-meta (meta (find-ns page-ns))]
+    (reduce (fn [fragment next-form]
+              (let [prev-kind (peek fragment)
+                    next-kind (form->kind next-form)]
+                (cond (and (= :comment (:kindly/kind (meta prev-kind)))
+                           (= :comment (:kindly/kind (meta next-kind))))
+                      (conj (pop fragment)
+                            ^{:kindly/kind :comment}
+                            [(str (first prev-kind) " " (first next-kind))])
+                      (or (nil? next-kind) (:kindly/hide-code (meta next-kind)))
+                      fragment
+                      :default (conj fragment next-kind))))
+            (with-meta
+              []
+              (merge ns-meta {:kindly/kind :kind/fragment :clojure/ns page-ns}))
+            forms)))
+
+
+(comment
+  ;; crazy idea: return hidden DOM elements????
+  (-> "test-resources/site/fabricate/example.clj"
+      file->forms
+      eval-forms
+      forms->fragment)
+  (scicloj.kindly.v4.api/attach-meta-to-value 2 {:type :test})
+  (with-meta [1 2 3] nil))
