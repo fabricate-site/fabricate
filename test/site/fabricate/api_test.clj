@@ -8,7 +8,7 @@
             [site.fabricate.prototype.html]
             [site.fabricate.prototype.hiccup]
             [site.fabricate.prototype.check]
-            [site.fabricate.prototype.source.clojure]
+            [site.fabricate.source]
             [site.fabricate.prototype.document.hiccup]
             [malli.core :as m]
             [malli.util :as mu]
