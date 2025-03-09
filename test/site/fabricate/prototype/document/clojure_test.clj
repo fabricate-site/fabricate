@@ -1,5 +1,6 @@
 (ns site.fabricate.prototype.document.clojure-test
   (:require [site.fabricate.prototype.document.clojure :as clj]
+            [site.fabricate.adorn :as adorn]
             [babashka.fs :as fs]
             [rewrite-clj.parser :as parser]
             [rewrite-clj.node :as node]
@@ -47,8 +48,21 @@
                (-> "^{:kindly/kind :kind/code} '(+ 3 4 5)"
                    parser/parse-string
                    clj/normalize-node
+                   :meta))
+            "metadata should be placed in the normalized node")
+      (t/is (= {:kindly/kind :kind/code}
+               (-> "^{:kindly/kind :kind/code} '(+ 3 4 5)"
+                   parser/parse-string
+                   clj/node->form-map
                    :clojure/metadata))
-            "metadata should be placed in the normalized form map")
+            "metadata should be placed in the normalized node")
+      (t/is (= (node/coerce [1 2 3])
+               (-> "^{:type :test} [1 2 3]"
+                   parser/parse-string
+                   clj/node->form-map
+                   :clojure/node
+                   (dissoc :meta)))
+            "base node should be placed in form map as :clojure/node")
       (t/is
        (thrown? clojure.lang.ExceptionInfo
                 (#'clj/meta-node->metadata-map (node/coerce [1 2 3 4])))
@@ -171,14 +185,14 @@
         [hide-code-str "^:kindly/hide-code '(hidden-form \"example\")"
          code-block-results (-> hide-code-str
                                 parser/parse-string
-                                clj/normalize-node
+                                clj/node->form-map
                                 clj/eval-form
                                 (#'clj/code-block))
          hide-both-results
          (->
            "^{:kindly/hide-code true :kindly/hide-result true} (def example-hidden 1 )"
            parser/parse-string
-           clj/normalize-node
+           clj/node->form-map
            clj/eval-form
            (#'clj/code-block))]
         (t/is (= "clojure-result"
@@ -214,12 +228,44 @@
           (t/is
            (string? (hiccup.page/html5 final-hiccup))
            "Hiccup produced from Clojure namespace should be rendered without errors")))
-    (t/is false "Metadata on forms should be hidden by default")
-    (t/is false "Metadata on forms should be displayed when option is passed"))
+    (let [src-str "^{:type :test} [1 2 3]"]
+      (t/is (= (list [:pre {:class "clojure-form"}
+                      [:code {:class "language-clojure"}
+                       (first (adorn/clj->hiccup "[1 2 3]"))]]
+                     [:pre {:class "clojure-result"}
+                      [:code {:class "language-clojure"}
+                       (adorn/clj->hiccup [1 2 3])]])
+               (#'clj/code-block
+                {:clojure/source   "^{:type :test} [1 2 3]"
+                 :clojure/result   [1 2 3]
+                 :clojure/node     (clj/normalize-node
+                                    (parser/parse-string
+                                     "^{:type :test} [1 2 3]"))
+                 :clojure/metadata {:type :test}}))
+            "Metadata on forms' source code should be hidden by default")
+      (t/is
+       (= (list
+           [:pre {:class "clojure-form"}
+            [:code {:class "language-clojure"}
+             (first (adorn/clj->hiccup
+                     "^{:type :test :kindly/hide-metadata false} [1 2 3]"))]]
+           [:pre {:class "clojure-result"}
+            [:code {:class "language-clojure"} (adorn/clj->hiccup [1 2 3])]])
+          (#'clj/code-block
+           {:clojure/source "^{:type :test :kindly/hide-metadata false} [1 2 3]"
+            :clojure/result [1 2 3]
+            :clojure/metadata {:type :test :kindly/hide-metadata false}
+            :clojure/node
+            (clj/normalize-node
+             (parser/parse-string
+              "^{:type :test :kindly/hide-metadata false} [1 2 3]"))}))
+       "Metadata on forms' source code should be displayed when option is passed")))
   (t/testing "example file"))
 
 (t/deftest kindly
-  (t/testing "individual forms"
-    (t/is false "Metadata on forms should be hidden by default")
-    (t/is false "Metadata on forms should be displayed when option is passed"))
+  #_(t/testing "individual forms"
+      (t/is false "Metadata on forms' source code should be hidden by default")
+      (t/is
+       false
+       "Metadata on forms' source code should be displayed when option is passed"))
   (t/testing "example file"))

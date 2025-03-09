@@ -71,38 +71,60 @@
           (nil? node-meta) (throw (ex-info "No metadata value" {:node m-node}))
           :default  (node/sexpr node-meta))))
 
-;; should this be a multimethod?
+;; questions about this:
+;; - should this be a multimethod?
+;; - should normalization be recursive? should nested metadata also be
+;; hidden/converted?
+;;    - the answer to this second quetion is "hide only top-level metadata for
+;;    now, until it is addressed upstream in rewrite-clj"
+
+;; this function is confused about what it returns and should probably be
+;; renamed
+;; for clarity because it clashes/overlaps with the function immediately
+;; following it!
 (defn normalize-node
-  "Return a map representing the 'value' for the given node"
+  "Return a node representing the normalized 'value' for the given node"
+  {:malli/schema [:-> [:fn node/node?] [:fn node/node?]]}
   [n]
-  (let [t      (node/tag n)
-        src    (str n)
-        result (case t
-                 :comment    {:clojure/comment      (str n)
-                              :clojure.comment/text (extract-comment-text (str
-                                                                           n))}
-                 :newline    {:clojure/newlines (str n) :line-count 0}
-                 :whitespace {:clojure/whitespace (str n)}
-                 :uneval     {:clojure/uneval (str n)}
-                 :meta       (let [meta-node (first (:children n))
-                                   base-node (peek (:children n))]
-                               (assoc (normalize-node base-node)
-                                      :clojure/metadata
-                                      (meta-node->metadata-map n)))
-                 (if (node/sexpr-able? n)
-                   {:clojure/node n :clojure/form (node/sexpr n)}
-                   {:type :unknown :node/tag t :clojure/node n}))]
-    (assoc result :clojure/source src :clojure/node n :node/tag t)))
+  (let [t (node/tag n)]
+    (if (= t :meta)
+      (let [meta-node (first (:children n))
+            base-node (peek (:children n))]
+        (assoc (normalize-node base-node) :meta (meta-node->metadata-map n)))
+      n)))
 
 
-(defn node->map
+(defn node->form-map
   "Convert the given rewrite-clj node into a form map."
-  [n m]
-  (let [src-info (reduce-kv (fn [mm k v]
-                              (assoc mm (keyword "clojure.source" (name k)) v))
-                            m
-                            (meta n))]
-    (merge src-info (normalize-node n))))
+  ([n m]
+   (let [t        (node/tag n)
+         src      (str n)
+         src-info (reduce-kv (fn [mm k v]
+                               (assoc mm (keyword "clojure.source" (name k)) v))
+                             m
+                             (meta n))
+         r        (case t
+                    :comment    {:clojure/comment      (str n)
+                                 :clojure.comment/text (extract-comment-text
+                                                        (str n))}
+                    :newline    {:clojure/newlines (str n) :line-count 0}
+                    :meta       (let [n (normalize-node n)]
+                                  {:clojure/node     n
+                                   :clojure/metadata (:meta n)
+                                   :clojure/form     (node/sexpr n)})
+                    :whitespace {:clojure/whitespace (str n)}
+                    :uneval     {:clojure/uneval (str n)}
+                    (if (node/sexpr-able? n)
+                      {:clojure/node n :clojure/form (node/sexpr n)}
+                      {:clojure/node n}))]
+     (merge {:clojure/source src :clojure/node n :node/tag t} m src-info r)))
+  ([n] (node->form-map n {})))
+
+
+;; denormalization - does it need to be more complicated than this?
+(defn- form->meta-node
+  [{:keys [clojure/form clojure/source clojure/meta] :as form-map}]
+  (parser/parse-string source))
 
 (defn- get-ns
   "Get the namespace symbol from a given multi-form node. Returns the first namespace."
@@ -130,7 +152,8 @@ If passed a file or string path pointing to an existing file, will read from the
     (merge (select-keys (meta nmspc)
                         [:site.fabricate.document/title
                          :site.fabricate.document/description])
-           {:clojure/forms (mapv #(node->map % src-info) (:children parsed))
+           {:clojure/forms (mapv #(node->form-map % src-info)
+                                 (:children parsed))
             :site.fabricate.source/format :clojure/v0}
            src-info)))
 
@@ -215,11 +238,14 @@ If passed a file or string path pointing to an existing file, will read from the
 (defn- trim-newlines [e] (vec (take-while #(not (newline-element? %)) e)))
 
 (defn- code-block
-  [{:keys [clojure/result clojure/error clojure/source clojure/metadata]
+  [{:keys [clojure/result clojure/error clojure/source clojure/metadata
+           clojure/node]
     :as   form}]
-  (let [hide-code?   (true? (:kindly/hide-code metadata))
-        hide-result? (true? (:kindly/hide-result metadata))
-        hiccup?      (= :kind/hiccup (:kindly/kind metadata))]
+  (let [hide-code?     (true? (:kindly/hide-code metadata))
+        hide-result?   (true? (:kindly/hide-result metadata))
+        show-metadata? (false? (:kindly/hide-metadata metadata))
+        hiccup?        (= :kind/hiccup (:kindly/kind metadata))
+        node           (if show-metadata? (form->meta-node form) node)]
     (cond
       ;; treat hiccup as-is
       hiccup? (list result)
@@ -229,12 +255,12 @@ If passed a file or string path pointing to an existing file, will read from the
                                       (adorn/clj->hiccup result)]])
       (and result (not hide-result?))
       (list [:pre {:class "clojure-form"}
-             [:code {:class "language-clojure"} (adorn/clj->hiccup source)]]
+             [:code {:class "language-clojure"} (adorn/clj->hiccup node)]]
             [:pre {:class "clojure-result"}
              [:code {:class "language-clojure"} (adorn/clj->hiccup result)]])
       (and error (and (not hide-code?) (not hide-result?)))
       (list [:pre {:class "clojure-form"}
-             [:code {:class "language-clojure"} (adorn/clj->hiccup source)]]
+             [:code {:class "language-clojure"} (adorn/clj->hiccup node)]]
             [:pre {:class "clojure-error"}
              [:code {:class "language-clojure"} (adorn/clj->hiccup error)]])
       (and error hide-code?) (list [:pre {:class "clojure-error"}
@@ -243,6 +269,7 @@ If passed a file or string path pointing to an existing file, will read from the
       :default (list [:pre {:class "clojure-form"}
                       [:code {:class "language-clojure"}
                        (adorn/clj->hiccup source)]]))))
+
 (defn- new-paragraph
   [{:keys [clojure.comment/text] :as form}]
   (into [:p {:class "clojure-comment"}] text))
