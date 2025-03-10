@@ -18,8 +18,8 @@
 ;; 2. define a way for Clojure source to be tokenized into hiccup for
 ;; server-side syntax highlighting
 
-(def form-map-schema
-  "Schema describing a simplified way of storing Clojure forms and their potential results."
+(def form-schema
+  "Map schema describing a simplified way of storing Clojure forms and their potential results."
   (m/schema
    [:map
     [:clojure/source {:description "Source of the expression as a string"}
@@ -83,7 +83,7 @@
 ;; for clarity because it clashes/overlaps with the function immediately
 ;; following it!
 (defn normalize-node
-  "Return a node representing the normalized 'value' for the given node"
+  "Return a node representing the normalized 'value' for the given node."
   {:malli/schema [:-> [:fn node/node?] [:fn node/node?]]}
   [n]
   (let [t (node/tag n)]
@@ -94,7 +94,7 @@
       n)))
 
 
-(defn node->form-map
+(defn node->form
   "Convert the given rewrite-clj node into a form map."
   ([n m]
    (let [t        (node/tag n)
@@ -118,7 +118,7 @@
                       {:clojure/node n :clojure/form (node/sexpr n)}
                       {:clojure/node n}))]
      (merge {:clojure/source src :clojure/node n :node/tag t} m src-info r)))
-  ([n] (node->form-map n {})))
+  ([n] (node->form n {})))
 
 
 ;; denormalization - does it need to be more complicated than this?
@@ -135,11 +135,11 @@
 ;; reading forms
 
 (defn read-forms
-  "Generate a sequence of Clojure form maps from the input file or string.
+  "Return a vector of Clojure form maps from the input file or string.
 
 If passed a file or string path pointing to an existing file, will read from the file, otherwise treats the input as a string containing Clojure source."
   {:malli/schema (m/schema [:=> [:cat [:or :string [:fn fs/exists?]]]
-                            [:map [:clojure/forms [:* form-map-schema]]]])}
+                            [:map [:clojure/forms [:* form-schema]]]])}
   [clj-src]
   (let [file?    (fs/exists? clj-src)
         parsed   (if file?
@@ -152,8 +152,7 @@ If passed a file or string path pointing to an existing file, will read from the
     (merge (select-keys (meta nmspc)
                         [:site.fabricate.document/title
                          :site.fabricate.document/description])
-           {:clojure/forms (mapv #(node->form-map % src-info)
-                                 (:children parsed))
+           {:clojure/forms (mapv #(node->form % src-info) (:children parsed))
             :site.fabricate.source/format :clojure/v0}
            src-info)))
 
@@ -167,51 +166,51 @@ If passed a file or string path pointing to an existing file, will read from the
 
 (defn eval-form
   "Evaluate the Clojure form contained in the given map."
-  {:malli/schema (m/schema [:-> form-map-schema form-map-schema])}
+  {:malli/schema (m/schema [:-> form-schema form-schema])}
   [{clojure-form :clojure/form
     clj-ns       :clojure/namespace
     clj-str      :clojure/source
     :or          {clj-ns (ns-name *ns*)}
     :as          unevaluated-form}]
   (if clojure-form
-    (let [calling-ns  *ns*
-          start-time  (System/currentTimeMillis)
-          eval-output (try {:clojure/result (binding [*ns* (create-ns clj-ns)]
-                                              (clojure.core/refer-clojure)
-                                              (eval clojure-form))
-                            :clojure.eval/duration (- (System/currentTimeMillis)
-                                                      start-time)}
-                           ;; the parse fallback can't be moved to the
-                           ;; parsing step mostly because it requires
-                           ;; evaluation to see whether it's failed
-                           (catch Exception e
-                             #_{:clojure/error (Throwable->map e)}
-                             (try (if (string? clj-str)
-                                    {:clojure/result (binding [*ns* (create-ns
-                                                                     clj-ns)]
-                                                       (eval (parse-fallback
-                                                              clj-str
+    (let [eval-ns (create-ns (or clj-ns (ns-name *ns*)))
+          start-time (System/currentTimeMillis)
+          eval-output
+          (try
+            {:clojure/result        (binding [*ns* eval-ns]
+                                      (clojure.core/refer-clojure)
+                                      (eval clojure-form))
+             :clojure.eval/duration (- (System/currentTimeMillis) start-time)}
+            ;; the parse fallback can't be moved to the
+            ;; parsing step mostly because it requires
+            ;; evaluation to see whether it's failed
+            (catch Exception e
+              #_{:clojure/error (Throwable->map e)}
+              (try (if (string? clj-str)
+                     {:clojure/result (binding [*ns* eval-ns]
+                                        (eval (parse-fallback clj-str
                                                               {:auto-resolve
                                                                {:current
-                                                                clj-ns}})))
-                                     :clojure.eval/duration
-                                     (- (System/currentTimeMillis) start-time)
-                                     :context        :fallback}
-                                    {:clojure/error (Throwable->map e)})
-                                  (catch Exception ee
-                                    {:clojure/error (Throwable->map ee)
-                                     :context       :fallback
-                                     :clojure/form  (parse-fallback
-                                                     clj-str
-                                                     {:auto-resolve
-                                                      {:current clj-ns}})}))))]
+                                                                (ns-name
+                                                                 eval-ns)}})))
+                      :clojure.eval/duration (- (System/currentTimeMillis)
+                                                start-time)
+                      :context        :fallback}
+                     {:clojure/error (Throwable->map e)})
+                   (catch Exception ee
+                     {:clojure/error (Throwable->map ee)
+                      :context       :fallback
+                      :clojure/form  (parse-fallback
+                                      clj-str
+                                      {:auto-resolve {:current
+                                                      (ns-name eval-ns)}})}))))]
       (merge unevaluated-form eval-output))
     unevaluated-form))
 
 (defn eval-forms
   "Evaluate the Clojure forms in a parsed file."
-  {:malli/schema (m/schema [:-> [:map [:clojure/forms [:* form-map-schema]]]
-                            [:map [:clojure/forms [:* form-map-schema]]]])}
+  {:malli/schema (m/schema [:-> [:map [:clojure/forms [:* form-schema]]]
+                            [:map [:clojure/forms [:* form-schema]]]])}
   [{:keys [clojure/forms] :as input}]
   (let [evaluated-forms (mapv eval-form forms)]
     (merge input {:clojure/forms evaluated-forms})))
@@ -399,7 +398,7 @@ By default, produces a plaintext string from a Clojure comment form and marks it
            (and code result-value) ^{:kindly/kind :kind/fragment}
                                    [code result-value]
            :default (or code result-value))))
-  ([]))
+  ([form] (form->kind form {})))
 
 (defn forms->fragment
   "Produce a kindly fragment from the given forms.

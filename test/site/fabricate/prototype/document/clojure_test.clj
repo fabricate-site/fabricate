@@ -53,13 +53,13 @@
       (t/is (= {:kindly/kind :kind/code}
                (-> "^{:kindly/kind :kind/code} '(+ 3 4 5)"
                    parser/parse-string
-                   clj/node->form-map
+                   clj/node->form
                    :clojure/metadata))
             "metadata should be placed in the normalized node")
       (t/is (= (node/coerce [1 2 3])
                (-> "^{:type :test} [1 2 3]"
                    parser/parse-string
-                   clj/node->form-map
+                   clj/node->form
                    :clojure/node
                    (dissoc :meta)))
             "base node should be placed in form map as :clojure/node")
@@ -67,7 +67,15 @@
        (thrown? clojure.lang.ExceptionInfo
                 (#'clj/meta-node->metadata-map (node/coerce [1 2 3 4])))
        "Nil/non-metadata nodes should throw an error when conversion is attempted")))
-  (t/testing "individual forms")
+  (t/testing "individual forms"
+    (= [1 2 3]
+       (let [meta-example "^{:type :test} [1 2 3]"]
+         (-> meta-example
+             clj/read-forms
+             :clojure/forms
+             first
+             clj/eval-form
+             :clojure/result))))
   (t/testing "example file"
     (let [evaluated-results (-> example-file
                                 clj/read-forms
@@ -89,8 +97,8 @@
                                                           :context "testing"}}})
                         result-form))))))
   (t/testing "fabricate source code"
-    (let [valid-form-map? (malli/validator clj/form-map-schema)
-          form-explainer  (malli/explainer clj/form-map-schema)]
+    (let [valid-form-map? (malli/validator clj/form-schema)
+          form-explainer  (malli/explainer clj/form-schema)]
       (t/testing "parsing file into sequence of forms with rewrite-clj"
         (doseq [src-file (fs/glob "." "**.clj")]
           (t/testing (str "\n" src-file)
@@ -185,14 +193,14 @@
         [hide-code-str "^:kindly/hide-code '(hidden-form \"example\")"
          code-block-results (-> hide-code-str
                                 parser/parse-string
-                                clj/node->form-map
+                                clj/node->form
                                 clj/eval-form
                                 (#'clj/code-block))
          hide-both-results
          (->
            "^{:kindly/hide-code true :kindly/hide-result true} (def example-hidden 1 )"
            parser/parse-string
-           clj/node->form-map
+           clj/node->form
            clj/eval-form
            (#'clj/code-block))]
         (t/is (= "clojure-result"
