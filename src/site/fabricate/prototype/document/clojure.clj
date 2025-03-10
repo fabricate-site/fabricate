@@ -378,21 +378,25 @@ By default, produces a plaintext string from a Clojure comment form and marks it
    (let [kindly-metadata (select-keys metadata
                                       [:kindly/hide-code :kindly/hide-result
                                        :kindly/kind])
-         code         (cond (:kindly/hide-code kindly-metadata) nil
-                            (:clojure/whitespace evaluated-form) nil
-                            (:clojure/newlines evaluated-form) nil
-                            :default ^{:kindly/kind :kind/code}
-                                     [source #_(str form)])
-         result-value (cond (:kindly/hide-result kindly-metadata) nil
-                            (instance? clojure.lang.IObj result)
-                            (with-meta result kindly-metadata)
-                            clj-comment ^{:kindly/kind :comment}
-                                        [(str/replace clj-comment #"^;+\s*" "")]
-                            clj-error (with-meta clj-error kindly-metadata)
-                            (:clojure/whitespace evaluated-form) nil
-                            (:clojure/newlines evaluated-form) nil
-                            (not (instance? clojure.lang.IObj result))
-                            (with-meta [result] kindly-metadata))]
+         show-metadata?  (false? (:kindly/hide-metadata metadata))
+         code            (cond (:kindly/hide-code kindly-metadata) nil
+                               (:clojure/whitespace evaluated-form) nil
+                               (:clojure/newlines evaluated-form) nil
+                               show-metadata? ^{:kindly/kind :kind/code}
+                                              [source]
+                               :default ^{:kindly/kind :kind/code}
+                                        [(str (:clojure/node evaluated-form))])
+         result-value    (cond (:kindly/hide-result kindly-metadata) nil
+                               (instance? clojure.lang.IObj result)
+                               (with-meta result kindly-metadata)
+                               clj-comment
+                               ^{:kindly/kind :comment}
+                               [(str/replace clj-comment #"^;+\s*" "")]
+                               clj-error (with-meta clj-error kindly-metadata)
+                               (:clojure/whitespace evaluated-form) nil
+                               (:clojure/newlines evaluated-form) nil
+                               (not (instance? clojure.lang.IObj result))
+                               (with-meta [result] kindly-metadata))]
      (cond (= :kind/hiccup (:kindly/kind kindly-metadata)) result-value
            (= :comment (:kindly/kind (meta result-value))) result-value
            (and code result-value) ^{:kindly/kind :kind/fragment}

@@ -271,9 +271,24 @@
   (t/testing "example file"))
 
 (t/deftest kindly
-  #_(t/testing "individual forms"
-      (t/is false "Metadata on forms' source code should be hidden by default")
-      (t/is
-       false
-       "Metadata on forms' source code should be displayed when option is passed"))
+  (t/testing "individual forms"
+    (t/is (= ["[1 2 3]"]
+             (-> "^{:type :test} [1 2 3]"
+                 clj/read-forms
+                 :clojure/forms
+                 first
+                 clj/eval-form
+                 clj/form->kind
+                 first))
+          "Metadata on forms' source code should be hidden by default")
+    (t/is
+     (= ["^{:type :test :kindly/hide-metadata false} [1 2 3]"]
+        (-> "^{:type :test :kindly/hide-metadata false} [1 2 3]"
+            clj/read-forms
+            :clojure/forms
+            first
+            clj/eval-form
+            clj/form->kind
+            first))
+     "Metadata on forms' source code should be displayed when option is passed"))
   (t/testing "example file"))
