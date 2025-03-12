@@ -210,7 +210,7 @@
          "When both code and result are hidden, no Hiccup should be generated.")
         (t/is
          (=
-          [:main {:data-clojure-namespace 'example-ns}
+          [:article {:data-clojure-namespace 'example-ns}
            [:p {:class "clojure-comment"} "example ns"] [:h1 "Example ns"]]
           (->
             "^{:kindly/hide-code true :kindly/hide-result true} (ns example-ns)
@@ -291,4 +291,13 @@
             clj/form->kind
             first))
      "Metadata on forms' source code should be displayed when option is passed"))
-  (t/testing "example file"))
+  (t/testing "example file"
+    (let [result-fragment (-> example-file
+                              clj/read-forms
+                              clj/eval-forms
+                              clj/forms->fragment)]
+      (t/is (= :kind/fragment
+               (-> result-fragment
+                   meta
+                   :kindly/kind))
+            "Document should be processed into kindly fragment"))))

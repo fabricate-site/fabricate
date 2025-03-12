@@ -212,8 +212,9 @@ If passed a file or string path pointing to an existing file, will read from the
   {:malli/schema (m/schema [:-> [:map [:clojure/forms [:* form-schema]]]
                             [:map [:clojure/forms [:* form-schema]]]])}
   [{:keys [clojure/forms] :as input}]
-  (let [evaluated-forms (mapv eval-form forms)]
-    (merge input {:clojure/forms evaluated-forms})))
+  (let [evaluated-forms (mapv eval-form forms)
+        clj-ns (get-in evaluated-forms [0 :clojure/namespace])]
+    (merge input {:clojure/forms evaluated-forms :clojure/namespace clj-ns})))
 
 ;; hiccup
 
@@ -342,27 +343,26 @@ If passed a file or string path pointing to an existing file, will read from the
 
 
 (defn forms->hiccup
-  "Produce a Hiccup vector from the given forms."
+  "Produce a Hiccup article vector from the given forms after evaluation."
   [{:keys [clojure/forms] page-ns :clojure/namespace :as page-map}]
   (let [ns-meta (meta (find-ns page-ns))
-        main    (reduce (fn process-next-form [body-hiccup
+        article (reduce (fn process-next-form [body-hiccup
                                                {:keys [] :as next-form-map}]
                           (let [last-element  (peek body-hiccup)
                                 rest-elements (pop body-hiccup)]
                             (into rest-elements
                                   (merge-paragraphs last-element
                                                     next-form-map))))
-                        ;; TODO: think of better ways to include metadata +
-                        ;; provenance
-                        [:main {:data-clojure-namespace page-ns}]
+                        [:article
+                         (merge {:data-clojure-namespace page-ns}
+                                (when-let [title (:site.fabricate.document/title
+                                                  ns-meta)]
+                                  {:title title}))]
                         forms)]
-    main))
+    (with-meta article ns-meta)))
 
 
 ;; kindly
-
-
-
 
 
 (defn form->kind
