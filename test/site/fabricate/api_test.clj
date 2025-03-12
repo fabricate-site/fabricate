@@ -9,7 +9,6 @@
             [site.fabricate.prototype.hiccup]
             [site.fabricate.prototype.check]
             [site.fabricate.source]
-            [site.fabricate.prototype.document.hiccup]
             [malli.core :as m]
             [malli.util :as mu]
             [malli.error :as me]

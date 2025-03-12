@@ -1,4 +1,4 @@
-(ns site.fabricate.prototype.document.hiccup
+(ns site.fabricate.prototype.page.hiccup
   "Default API methods for converting Hiccup documents into pages."
   (:require [hiccup2.core :as hiccup]
             [hiccup.page :as hiccup-page]
