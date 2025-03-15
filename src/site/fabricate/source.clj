@@ -28,10 +28,10 @@
   (let [clj-files (fs/glob source-location src)]
     (mapv (fn clj-path->entry [p]
             (merge (file-times p)
-                   {::format     ::clj/v0
+                   {::format     :clojure/file
                     ::location   source-location
                     ::api/source src
-                    :site.fabricate.document/format :hiccup
+                    :site.fabricate.document/format :hiccup/article
                     :site.fabricate.page/format :html
                     ::file       (fs/file p)}))
           clj-files)))
