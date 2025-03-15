@@ -16,7 +16,7 @@
             :site.fabricate.page/title        (:title article-attrs)
             :site.fabricate.document/metadata article-metadata})))
 
-(defmethod api/build [::clj/v0 :hiccup/article]
+(defmethod api/build [:clojure/file :hiccup/article]
   [{:keys [site.fabricate.source/location] :as entry} opts]
   (let [article          (-> location
                              clj/read-forms
@@ -32,7 +32,7 @@
             :site.fabricate.document/metadata article-metadata
             :site.fabricate.document/data     article})))
 
-(defmethod api/build [::clj/v0 :kind/fragment]
+(defmethod api/build [:clojure/file :kind/fragment]
   [{:keys [site.fabricate.source/location] :as entry} opts]
   (let [fragment (-> location
                      clj/read-forms
@@ -43,9 +43,7 @@
            {:site.fabricate.document/metadata (merge ns-meta (meta fragment))
             :site.fabricate.document/data     fragment})))
 
-;; do clojure source files need version numbers?
-;; or does the output document need a version number?
-(defmethod api/build [::clj/v0 ::clj/forms]
+(defmethod api/build [:clojure/file ::clj/forms]
   [{:keys [site.fabricate.source/location] :as entry} opts]
   (let [forms    (-> location
                      clj/read-forms
