@@ -119,7 +119,7 @@
                :site.fabricate.page/language :site.fabricate.page/locale
                :site.fabricate.page/image :me.ogp/type
                :site.fabricate.page/published-time
-               :site.fabricate.document/metadata
+               #_:site.fabricate.document/metadata
                :site.fabricate.page/publish-dir :site.fabricate.source/created
                :site.fabricate.source/modified
                :site.fabricate.page/modified-time :site.fabricate.page/tags
