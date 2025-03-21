@@ -1,4 +1,5 @@
 (ns site.fabricate.document
+  "Default methods for building documents from sources"
   (:require [site.fabricate.api :as api]
             [site.fabricate.prototype.document.clojure :as clj]
             [site.fabricate.prototype.document.fabricate :as fabricate]))
