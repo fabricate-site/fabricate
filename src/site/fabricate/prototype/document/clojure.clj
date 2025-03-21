@@ -424,9 +424,10 @@ for documentation about the fragment kind."
                       (or (nil? next-kind) (:kindly/hide-code (meta next-kind)))
                       fragment
                       :default (conj fragment next-kind))))
-            (with-meta
-              []
-              (merge ns-meta {:kindly/kind :kind/fragment :clojure/ns page-ns}))
+            (with-meta []
+                       (merge ns-meta
+                              {:kindly/kind       :kind/fragment
+                               :clojure/namespace page-ns}))
             forms)))
 
 
