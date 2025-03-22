@@ -8,7 +8,8 @@
 
 (def defaults
   "Default options for sources."
-  {::location (fs/file (System/getProperty "user.dir") "docs")})
+  {:site.fabricate.source/location (fs/file (System/getProperty "user.dir")
+                                            "docs")})
 
 (defn- filetime->zdt
   [ft]
