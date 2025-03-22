@@ -23,13 +23,13 @@
 (defmethod api/collect "**/*.clj"
   [src
    {source-location ::location
-    :or {source-location (::location defaults)}
+    :or {source-location (:site.fabricate.source/location defaults)}
     :as opts}]
   (let [clj-files (fs/glob source-location src)]
     (mapv (fn clj-path->entry [p]
             (merge (file-times p)
                    {::format     :clojure/file
-                    ::location   source-location
+                    ::location   (fs/file p)
                     ::api/source src
                     :site.fabricate.document/format :hiccup/article
                     :site.fabricate.page/format :html
@@ -47,7 +47,7 @@
                    {::format     ::fabricate/v0
                     ::file       (fs/file p)
                     ::api/source src
-                    ::location   source-location
+                    ::location   (fs/file p)
                     :site.fabricate.document/format :hiccup
                     :site.fabricate.page/format :html}))
           fabricate-templates)))
