@@ -100,10 +100,16 @@
     :term :site.fabricate.entry/namespace
     :type :namespace}])
 
-;; register schema components
-(doseq [{:keys [term doc] :as d} glossary]
-  (when-not (= :site.fabricate.api/entry term)
-    (s/register! term (mu/update-properties (:type d) assoc :doc doc))))
+;; register schema components and bind them to a registry var
+(def registry
+  "Registry for the Malli schemas defining aspects of Fabricate's API."
+  (into {}
+        (for [{:keys [term doc] :as d} glossary]
+          (when-not (= :site.fabricate.api/entry term)
+            (let [schema
+                  (mu/update-properties (m/schema (:type d)) assoc :doc doc)]
+              (s/register! term schema)
+              [term schema])))))
 
 
 (def entry-schema

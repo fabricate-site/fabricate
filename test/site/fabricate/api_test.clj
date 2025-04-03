@@ -10,11 +10,15 @@
             [site.fabricate.prototype.check]
             [site.fabricate.source :as source]
             [site.fabricate.document :as document]
+            [site.fabricate.prototype.schema :as s]
             [malli.core :as m]
             [malli.util :as mu]
             [malli.error :as me]
             [babashka.fs :as fs]
             [clojure.java.io :as io]))
+
+;; ensure registry is available
+(doseq [[term schema] api/registry] (s/register! term schema))
 
 (defn doc->page
   [{:keys [site.fabricate.document/title site.fabricate.document/data
