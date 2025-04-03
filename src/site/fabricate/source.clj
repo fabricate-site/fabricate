@@ -23,7 +23,7 @@
 
 (defmethod api/collect "**/*.clj"
   [src
-   {source-location ::location
+   {source-location :site.fabricate.source/location
     :or {source-location (:site.fabricate.source/location defaults)}
     :as opts}]
   (let [clj-files (fs/glob source-location src)]

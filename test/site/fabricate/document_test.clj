@@ -51,9 +51,6 @@
           (t/is valid-entry
                 (str "entry at "
                      location
-                     " should produce a valid entry after building")))))))
-
-
-(comment
-  (read-string "::html/p")
-  (rewrite-clj.parser/parse-string-all "::html/p"))
+                     " should produce a valid entry after building"))))
+      (when-not (= "example.clj" (str (fs/file-name location)))
+        (load-file (str location))))))
