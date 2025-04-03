@@ -8,7 +8,8 @@
 
 (def defaults
   "Default options for sources."
-  {::location (fs/file (System/getProperty "user.dir") "docs")})
+  {:site.fabricate.source/location (fs/file (System/getProperty "user.dir")
+                                            "docs")})
 
 (defn- filetime->zdt
   [ft]
@@ -22,16 +23,16 @@
 
 (defmethod api/collect "**/*.clj"
   [src
-   {source-location ::location
-    :or {source-location (::location defaults)}
+   {source-location :site.fabricate.source/location
+    :or {source-location (:site.fabricate.source/location defaults)}
     :as opts}]
   (let [clj-files (fs/glob source-location src)]
     (mapv (fn clj-path->entry [p]
             (merge (file-times p)
-                   {::format     ::clj/v0
-                    ::location   source-location
+                   {::format     :clojure/file
+                    ::location   (fs/file p)
                     ::api/source src
-                    :site.fabricate.document/format :hiccup
+                    :site.fabricate.document/format :hiccup/article
                     :site.fabricate.page/format :html
                     ::file       (fs/file p)}))
           clj-files)))
@@ -47,7 +48,7 @@
                    {::format     ::fabricate/v0
                     ::file       (fs/file p)
                     ::api/source src
-                    ::location   source-location
+                    ::location   (fs/file p)
                     :site.fabricate.document/format :hiccup
                     :site.fabricate.page/format :html}))
           fabricate-templates)))
