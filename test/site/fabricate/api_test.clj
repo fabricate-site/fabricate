@@ -34,11 +34,12 @@
 (defmethod api/collect "deps.edn"
   [src opts]
   (let [loc (fs/file (System/getProperty "user.dir"))]
-    [{:site.fabricate.source/location loc
+    [{:site.fabricate.source/location (fs/file loc src)
       :site.fabricate.source/file     (fs/file loc src)
       :site.fabricate.api/source      src
       :site.fabricate.source/format   :clojure/deps
-      :site.fabricate.document/format :clojure/edn}]))
+      :site.fabricate.document/format :clojure/edn
+      :site.fabricate.page/format     :clojure/edn}]))
 
 (defmethod api/build [:clojure/deps :clojure/edn]
   [{:keys [site.fabricate.source/file] :as entry} _opts]
@@ -46,8 +47,16 @@
          :site.fabricate.document/data
          (clojure.edn/read-string (slurp file))))
 
+
+
 (def valid-entry? (m/validator api/entry-schema))
 (def explain-entry (m/explainer api/entry-schema))
+
+
+(defmethod api/produce! [:clojure/edn :clojure/edn]
+  [entry _opts]
+  (t/is (valid-entry? entry))
+  (assoc entry :site.fabricate.page/output "test"))
 
 
 (t/deftest operations
@@ -81,17 +90,32 @@
                                     {:site.fabricate.api/entries entries})]
         (t/is (contains? (first assembled) :site.fabricate.page/data))))
     (t/testing "production"
-      (doseq [e entries]
-        (let [built (api/build e {})
-              _ (do (t/is (some? (api/produce-dispatch built {}))))]
-          (when-not (= :clojure/deps (:site.fabricate.source/format e))
-            (let [{:keys [site.fabricate.page/output] :as produced}
-                  (api/produce! built {})]
-              (t/is (some? (:site.fabricate.page/title produced))
-                    (format "Page produced from %s should have a title"
-                            (str (:site.fabricate.source/location built))))
-              (t/is (instance? java.io.File output))
-              (t/is (fs/exists? output)))))))))
+      (t/testing "for individual entries"
+        (doseq [e entries]
+          (let [built (api/build e {})
+                _ (do (t/is (some? (api/produce-dispatch built {}))))]
+            (when-not (= :clojure/deps (:site.fabricate.source/format e))
+              (let [{:keys [site.fabricate.page/output] :as produced}
+                    (api/produce! built {})]
+                (t/is (some? (:site.fabricate.page/title produced))
+                      (format "Page produced from %s should have a title"
+                              (str (:site.fabricate.source/location built))))
+                (t/is (instance? java.io.File output))
+                (t/is (fs/exists? output)))))))
+      (t/testing "using api/construct!"
+        (let [{constructed-entries :site.fabricate.api/entries
+               :as constructed-site}
+              (->> {:site.fabricate.api/entries entries}
+                   (api/assemble [])
+                   (api/construct! []))]
+          (t/is (map? constructed-site))
+          (doseq [{:keys [site.fabricate.page/output] :as e}
+                  constructed-entries]
+            (t/testing (str "- " (:site.fabricate.source/location e))
+              (when-not (or (string? output) (s/file? output)) (println e))
+              (t/is
+               (or (string? output) (s/file? output))
+               "Entries should be updated by api/produce! and api/construct!"))))))))
 
 (defn unmap-multimethods
   "Utility function to ease reloading of redefined multimethods."

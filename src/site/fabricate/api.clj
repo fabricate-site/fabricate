@@ -263,15 +263,16 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
 
 
 (defn construct!
-  "Run the tasks necessary to complete the website. Execute `produce` on every page, then run `tasks`."
+  "Run the tasks necessary to complete the website. Execute `produce` on every page, then run `tasks`. Returns a list of updated entries."
   {:malli/schema site-fn-schema}
   [tasks
-   {:keys [site.fabricate.api/entries site.fabricate.api/options]
-    :as   init-site}]
-  (let [sorted-tasks   tasks
-        sorted-entries entries]
-    (doseq [e entries] (produce! e options))
-    (reduce (fn [site task] (task site)) init-site sorted-tasks)))
+   {:keys [site.fabricate.api/entries site.fabricate.api/options] :as site}]
+  (let [sorted-tasks     tasks
+        sorted-entries   entries
+        produced-entries (mapv #(produce! % options) sorted-entries)]
+    (reduce (fn [site task] (task site))
+            (assoc site :site.fabricate.api/entries produced-entries)
+            sorted-tasks)))
 
 
 (comment)
