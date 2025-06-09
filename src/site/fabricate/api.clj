@@ -207,7 +207,8 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
   "Return the source and document formats for an entry."
   {:malli/schema (m/schema [:=> [:cat entry-schema :map]
                             [:tuple :site.fabricate.source/format
-                             :site.fabricate.document/format]])}
+                             :site.fabricate.document/format]])
+   :private      true}
   [entry options]
   [(:site.fabricate.source/format entry)
    (:site.fabricate.document/format entry)])
@@ -246,7 +247,8 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
   "Return the document and page format for an entry."
   {:malli/schema (m/schema [:=> [:cat entry-schema :map]
                             [:tuple :site.fabricate.document/format
-                             :site.fabricate.page/format]])}
+                             :site.fabricate.page/format]])
+   :private      true}
   [entry options]
   [(:site.fabricate.document/format entry) (:site.fabricate.page/format entry)])
 

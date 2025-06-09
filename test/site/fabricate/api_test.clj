@@ -93,7 +93,7 @@
       (t/testing "for individual entries"
         (doseq [e entries]
           (let [built (api/build e {})
-                _ (do (t/is (some? (api/produce-dispatch built {}))))]
+                _ (do (t/is (some? (#'api/produce-dispatch built {}))))]
             (when-not (= :clojure/deps (:site.fabricate.source/format e))
               (let [{:keys [site.fabricate.page/output] :as produced}
                     (api/produce! built {})]
