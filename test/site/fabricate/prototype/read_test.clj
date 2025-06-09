@@ -2,9 +2,13 @@
   (:require [clojure.test :as t]
             [malli.core :as m]
             [malli.instrument :as mi]
+            [malli.util :as mu]
+            [malli.transform :as mt]
             [hiccup.core :as hiccup]
             [clojure.java.io :as io]
+            [clojure.pprint :as pprint]
             [site.fabricate.adorn :as adorn]
+            [site.fabricate.forms :as forms]
             [site.fabricate.prototype.read.grammar :refer [template]]
             [site.fabricate.prototype.read :refer :all]))
 
@@ -14,6 +18,22 @@
 (defn setup [f] (mi/collect!) (mi/instrument!) (f) (mi/unstrument!))
 
 (t/use-fixtures :once setup)
+
+(defmethod t/assert-expr 'valid-schema?
+  [msg form]
+  `(let [schema#      ~(nth form 1)
+         form#        (m/form schema#)
+         data#        ~(nth form 2)
+         result#      (m/validate schema# data#)
+         schema-name# (last form#)]
+     (t/do-report
+      {:type     (if result# :pass :fail)
+       :message  ~msg
+       :expected (str (with-out-str (pprint/pprint data#))
+                      " conforms to schema for "
+                      schema-name#)
+       :actual   (if (not result#) (m/explain schema# data#) result#)})
+     result#))
 
 (t/deftest file-utils
   (t/testing "Filename utilities"
@@ -42,43 +62,85 @@
               :site.fabricate.file/template-suffix  ".fab"}
              (get-file-metadata "content/test.md.fab")))))
 
+;; helper function & decoder to make translation easier
+(defn old-map->kindly-map
+  "Transform from the previous way of representing Clojure forms to the kindly way"
+  [{:keys [display error expr expr-src result exec] :as frm}]
+  (-> frm
+      (clojure.set/rename-keys {:expr     :form
+                                :result   :value
+                                :expr-src :code
+                                :display  :kindly/hide-code
+                                :exec     :form})
+      (update :kindly/hide-code not)
+      (assoc :kindly/hide-result (if exec true false))))
+
+(def form-decoder
+  (m/decoder (mu/update-properties forms/kindly-form-schema
+                                   assoc
+                                   :decode/translate
+                                   old-map->kindly-map)
+             (mt/transformer {:name :translate})))
+
+
+(comment
+  (form-decoder
+   {:display false :error nil :expr '(+ 2 3) :expr-src "(+ 2 3)" :result 5})
+  (form-decoder
+   {:display true :error nil :exec '(+ 2 3) :expr-src "(+ 2 3)" :result 5})
+  (not nil)
+  (m/decode
+   (mu/update-properties forms/kindly-form-schema
+                         assoc
+                         :decode/translate
+                         old-map->kindly-map)
+   {:display false :error nil :expr '(+ 2 3) :expr-src "(+ 2 3)" :result 5}
+   (mt/transformer {:name :translate})))
+
 (t/deftest text-parser
   (t/testing "parsed element schema"
-    (t/is (m/validate
+    (t/is (valid-schema?
            parsed-expr-schema
-           {:expr-src "(+ 3 4)" :expr '(+ 3 4) :error nil :result 7}))
-    (t/is (m/validate
+           (form-decoder
+            {:expr-src "(+ 3 4)" :expr '(+ 3 4) :error nil :result 7})))
+    (t/is (valid-schema?
            parsed-expr-schema
-           {:expr-src "(+ 3 4)" :exec '(+ 3 4) :error nil :result nil}))
-    (t/is (m/validate parsed-expr-schema
-                      {:expr-src "((+ 3 4)"
-                       :expr     nil
-                       :error    {:type clojure.lang.ExceptionInfo
+           (form-decoder
+            {:expr-src "(+ 3 4)" :exec '(+ 3 4) :error nil :result nil})))
+    (t/is (valid-schema?
+           parsed-expr-schema
+           (form-decoder {:expr-src "((+ 3 4)"
+                          :expr nil
+                          :error {:type clojure.lang.ExceptionInfo
                                   :cause
                                   "Unexpected EOF while reading item 1 of list."
                                   :data {:type :reader-exception :ex-kind :eof}}
-                       :result   nil}))
+                          :result nil})))
     (t/is
-     (m/validate
+     (valid-schema?
       parsed-expr-schema
-      (first
-       (parse
-        "✳+(println \"a form evaluated but displayed without its output\")🔚")))))
+      (form-decoder
+       (first
+        (parse
+         "✳+(println \"a form evaluated but displayed without its output\")🔚"))))))
   (t/testing "expression parsing"
-    (t/is (= ["text " {:expr '(+ 2 3) :expr-src "(+ 2 3)" :display false}]
+    (t/is (= ["text "
+              (form-decoder
+               {:expr '(+ 2 3) :expr-src "(+ 2 3)" :display false})]
              (parse "text ✳=(+ 2 3)🔚")))
     (t/is (not (nil? (:error (first (parse "✳((+ 2 3)🔚")))))
           "Expression parsing errors should be surfaced")
-    (t/is (= [{:exec '(+ 2 3) :expr-src "(+ 2 3)" :display false}]
+    (t/is (= [(form-decoder
+               {:exec '(+ 2 3) :expr-src "(+ 2 3)" :display false})]
              (parse "✳(+ 2 3)🔚")))
-    (t/is (= [{:expr-src ":div" :expr :div}
-              {:expr-src "{:class \"col\"}" :expr {:class "col"}}
+    (t/is (= [{:code ":div" :form :div}
+              {:code "{:class \"col\"}" :form {:class "col"}}
               [:txt "some text"]]
              (extended-form->form [:extended-form "[" ":div {:class \"col\"}"
                                    [:form-contents [:txt "some text"]] "]"])))
     (t/is
-     (m/validate
-      parsed-schema
+     (valid-schema?
+      template-schema
       (template
        "✳//[:div
 ✳+=(let [s \"output\"]
@@ -86,7 +148,7 @@
 ]//🔚")))
     (t/is
      (=
-      [{:expr-src ":div" :expr :div} [:txt "\n"]
+      [{:code ":div" :form :div} [:txt "\n"]
        [:expr [:ctrl "+="]
         "(let [s \"output\"]\n    [:code (format \"a form evaluated and displayed with its %s\" s)]) "]
        [:txt "\n"]]
@@ -111,6 +173,9 @@
     (t/is (some? (meta (first (parse "✳//[:div \n more text ]//🔚")))))))
 
 (t/deftest parsed-content-transforms
+  (t/testing "schema conformance"
+    (t/is (every? #(m/validate parsed-expr-schema %)
+                  (parse "✳(ns test-ns)🔚"))))
   (t/testing "namespace retrieval"
     (t/is (= (symbol 'test-ns) (yank-ns (parse "✳(ns test-ns)🔚"))))
     (t/is (nil? (yank-ns (parse "✳=(+ 3 4)🔚")))))

@@ -13,39 +13,70 @@
             [malli.transform :as mt]
             [site.fabricate.adorn :as adorn]
             [site.fabricate.prototype.schema :as schema]
-            [site.fabricate.prototype.read.grammar :refer [template]]
+            [site.fabricate.forms :as forms]
+            [site.fabricate.prototype.read.grammar :as grammar :refer
+             [template]]
             [instaparse.core :as insta]
+            [instaparse.combinators :as combo]
             [clojure.string :as string]
             [clojure.java.io :as io]))
 
+#_(def parsed-expr-schema
+    "Schema describing the map used by Fabricate to evaluate forms embedded within page templates."
+    (m/schema
+     [:map [:expr-src {:doc "The source expression as a string"} :string]
+      [:expr
+       {:doc
+        "An expression intended to have its results embedded in the resulting text."
+        :optional true} :any]
+      [:exec
+       {:optional true
+        :doc
+        "An expression intended be evaluated for side effects or definitions."}
+       :any]
+      [::parse-error {:optional true :doc ""}
+       [:map [:type [:fn class?]] [:message :string]]]
+      [:file {:optional true :doc "The source file of the expression"}
+       :string]]))
+
+;; the :expr and :exec keywords need to be replaced by :kindly/hide-code and
+;; :kindly/hide-result where appropriate
+
 (def parsed-expr-schema
-  "Schema describing the map used by Fabricate to evaluate forms embedded within page templates."
-  (m/schema
-   [:map [:expr-src {:doc "The source expression as a string"} :string]
-    [:expr
-     {:doc
-      "An expression intended to have its results embedded in the resulting text."
-      :optional true} :any]
-    [:exec
-     {:optional true
-      :doc
-      "An expression intended be evaluated for side effects or definitions."}
-     :any]
-    [::parse-error {:optional true :doc ""}
-     [:map [:type [:fn class?]] [:message :string]]]
-    [:file {:optional true :doc "The source file of the expression"} :string]]))
+  (-> site.fabricate.forms/kindly-form-schema
+      (mu/merge
+       [:map
+        [::parse-error
+         {:optional true
+          :description
+          "Error message returned when Fabricate enounters a parsing error."}
+         :map]
+        [:error
+         {:optional    true
+          :description "Error map describing error thrown by source expression"}
+         #_:map [:or :map :nil]]])
+      ;; TODO set default kind
+      (mu/optional-keys [:value :kind])
+      (mu/update-properties
+       assoc
+       :description
+       "Schema for Clojure expressions parsed from Fabricate templates")))
+
 
 (def ^{:malli/schema [:=> [:cat :any] :boolean]} fabricate-expr?
   "Returns true if the given value matches the schema for parsed Fabricate expressions."
   (m/validator parsed-expr-schema))
 
-(def evaluated-expr-schema
-  "Schema describing a map containing the results of an evaluated Fabricate expression."
-  (-> parsed-expr-schema
-      (mu/assoc :result :any)
-      (mu/assoc :error [:or :nil :map])))
 
 (def ^:private read-str (comp z/sexpr z/of-string))
+
+(comment
+  (template "✳=(+ 3 4)🔚")
+  (template)
+  (let [enlive-parser (insta/parser grammar/grammar :output-format :enlive)]
+    (doseq [e ["✳=(+ 3 4)🔚" "✳(+ 3 4)🔚"]]
+      (println (template e))
+      (println (enlive-parser e)))))
 
 (defn parsed-form->expr-map
   "Transforms the results of a parsed Fabricate expression into the map used for evaluation."
@@ -61,20 +92,22 @@
                                        (select-keys (first (:via em)) [:type])
                                        (select-keys em [:cause :data])))}))
         m (with-meta
-            (merge {:expr-src (if (vector? form-or-ctrl?) form? form-or-ctrl?)
-                    :display  false}
+            (merge {:code (if (vector? form-or-ctrl?) form? form-or-ctrl?)
+                    :kindly/hide-code true
+                    :kindly/hide-result true}
                    (if (or (:error read-results) (::parse-error read-results))
-                     (assoc read-results :expr nil)))
+                     (assoc read-results :form nil)
+                     {:form read-results}))
             parse-metadata)]
     (cond (::parse-error m) m
           (:error m)        m
-          (not (vector? form-or-ctrl?)) (assoc m :exec read-results)
+          (not (vector? form-or-ctrl?)) m
           :else             (case (second form-or-ctrl?)
-                              "+"  (assoc m :exec read-results :display true)
-                              "="  (assoc m :expr read-results)
+                              "+"  (assoc m :kindly/hide-code false)
+                              "="  (assoc m :kindly/hide-result false)
                               "+=" (assoc m
-                                          :expr    read-results
-                                          :display true)))))
+                                          :kindly/hide-code   false
+                                          :kindly/hide-result false)))))
 
 (defn extended-form->form
   "Converts the parsed grammar describing an extended form to a Hiccup form."
@@ -83,41 +116,36 @@
   (let [delims (str open close)
         parsed-front-matter (if (= "" front-matter)
                               '()
-                              (map (fn [e] {:expr-src (str e) :expr e})
+                              (map (fn [e] {:code (str e) :form e})
                                    (read-str (str open front-matter close))))]
     (with-meta (cond (= delims "[]") (into []
                                            (concat parsed-front-matter forms))
                      (= delims "()") (concat () parsed-front-matter forms))
                (meta ext-form))))
 
-(def parsed-schema
+(def template-schema
   "Malli schema describing the elements of a fabricate template after it has been parsed by the Instaparse grammar."
-  (m/schema
-   [:schema
-    {:registry {::txt  [:tuple {:encode/get {:leave second}} [:= :txt] :string]
-                ::form [:or
-                        [:tuple {:encode/get {:leave parsed-form->expr-map}}
-                         [:= :expr] [:tuple [:= :ctrl] [:enum "=" "+" "+="]]
-                         :string]
-                        [:tuple {:encode/get {:leave parsed-form->expr-map}}
-                         [:= :expr] :string]]
-                ::extended-form
-                [:tuple {:encode/get {:leave extended-form->form}}
-                 [:= :extended-form] [:enum "{" "[" "("] :string
-                 [:cat [:= :form-contents]
-                  [:* [:or [:ref ::txt] [:ref ::form] [:ref ::extended-form]]]]
-                 [:enum "}" "]" ")"]]}}
-    [:cat [:= {:encode/get {:leave (constantly nil)}} :template]
-     [:* [:or [:ref ::txt] [:ref ::form] [:ref ::extended-form]]]]]))
+  (m/schema [:schema
+             {:registry
+              {::txt  [:tuple {:encode/get {:leave second}} [:= :txt] :string]
+               ::form [:or {:encode/get {:leave parsed-form->expr-map}}
+                       [:tuple [:= :expr]
+                        [:tuple [:= :ctrl] [:enum "=" "+" "+="]] :string]
+                       [:tuple [:= :expr] :string]]
+               ::extended-form
+               [:tuple {:encode/get {:leave extended-form->form}}
+                [:= :extended-form] [:enum "{" "[" "("] :string
+                [:cat [:= :form-contents]
+                 [:* [:or [:ref ::txt] [:ref ::form] [:ref ::extended-form]]]]
+                [:enum "}" "]" ")"]]}}
+             [:cat [:= {:encode/get {:leave (constantly nil)}} :template]
+              [:* [:or [:ref ::txt] [:ref ::form] [:ref ::extended-form]]]]]))
 
-(comment
-  (-> (template "✳=((+ 2 3)🔚")
-      (second)
-      parsed-form->expr-map))
+
 
 (defn read-template
   "Parses the given template and adds line and column metadata to the forms."
-  {:malli/schema [:=> [:cat :string] parsed-schema]}
+  {:malli/schema [:=> [:cat :string] template-schema]}
   [template-txt]
   (let [attempt (template template-txt)]
     (if (insta/failure? attempt)
@@ -186,6 +214,7 @@
   (adorn/form->hiccup "((+ 3 4)"))
 
 ;; TODO: should this be a multimethod?
+;; a multimethod _implementation_ of site.fabricate.adorn/clj->hiccup?
 (defn form->hiccup
   "If the form has no errors, return its results.
   Otherwise, create a hiccup form describing the error."
@@ -202,6 +231,8 @@
 ;; post-validator should have the following signature
 ;; if it validates, return the input in a map: {:result input}
 ;; if it doesn't, return a map describing the error
+
+;; should this just use the/a clojure namespace?
 
 (defn eval-parsed-expr
   "Evaluates the given expression form. Returns the value of the evaluated expression by default. Can optionally return a map with the value and also perform post-validation on the resulting value."
@@ -250,13 +281,13 @@
 
 (defn yank-ns
   "Pulls the namespace form out of the first expression in the parse tree."
-  {:malli/schema [:=> [:cat parsed-schema] [:or [:sequential :any] :symbol]]}
+  {:malli/schema [:=> [:cat template-schema] [:or [:sequential :any] :symbol]]}
   [expr-tree]
   (let [first-expr (->> expr-tree
                         (tree-seq vector? identity)
                         (filter #(m/validate parsed-expr-schema %))
                         first
-                        :exec)]
+                        :form)]
     (if (and (seq? first-expr) (schema/ns-form? first-expr))
       (second first-expr)
       nil)))
@@ -267,14 +298,14 @@
 
 (defn get-metadata
   "Get the metadata form from the parse tree."
-  {:malli/schema [:=> [:cat parsed-schema] [:map]]}
+  {:malli/schema [:=> [:cat template-schema] [:map]]}
   [expr-tree]
   (->> expr-tree
        (tree-seq vector? identity)
        (filter #(and (m/validate parsed-expr-schema %)
-                     (m/validate metadata-schema (:exec %))))
+                     (m/validate metadata-schema (:form %))))
        first
-       :exec))
+       :form))
 
 (comment
   (m/schema [:function [:=> [:cat [:sequential :int]] :any]
@@ -290,10 +321,10 @@
   {:malli/schema
    (m/schema
     [:function
-     [:=> [:cat #_[:schema parsed-schema] [:vector :any]] [:vector :any]]
-     [:=> [:cat #_[:schema parsed-schema] [:vector :any] :boolean]
+     [:=> [:cat #_[:schema template-schema] [:vector :any]] [:vector :any]]
+     [:=> [:cat #_[:schema template-schema] [:vector :any] :boolean]
       [:vector :any]]
-     [:=> [:cat #_[:schema parsed-schema] [:vector :any] :boolean :symbol]
+     [:=> [:cat #_[:schema template-schema] [:vector :any] :boolean :symbol]
       [:vector :any]]])}
   ([parsed-form simplify? nmspc]
    (let [form-nmspc (or (yank-ns parsed-form) nmspc)
@@ -329,6 +360,7 @@
     [:site.fabricate.file/modified
      {:optional true :description "When the file was modified"} :string]]))
 
+;; TODO: use babashka.fs for this
 (defn get-file-metadata
   "Get the metadata of the file used by Fabricate."
   {:malli/schema [:=> [:cat :string] file-metadata-schema]}
@@ -352,8 +384,8 @@
      :site.fabricate.file/template-suffix  (str "." suffix)}))
 
 
-(def ^:private parsed-encoder
-  (m/encoder parsed-schema (mt/transformer {:name :get})))
+(def ^:private template-encoder
+  (m/encoder template-schema (mt/transformer {:name :get})))
 
 (defn parse
   "Parses the template into a Hiccup expression with unevaluated forms."
@@ -368,7 +400,7 @@
      (into start-seq
            (map #(try (with-meta % (merge (meta %) {:file filename}))
                       (catch Exception e %))
-                (rest (parsed-encoder parsed))))))
+                (rest (template-encoder parsed))))))
   ([src] (parse src {})))
 
 (comment
