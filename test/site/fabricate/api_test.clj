@@ -49,9 +49,19 @@
 
 
 
-(def valid-entry? (m/validator api/entry-schema))
-(def explain-entry (m/explainer api/entry-schema))
+(def valid-entry? (m/validator api/Entry))
+(def explain-entry (m/explainer api/Entry))
 
+(t/deftest data-model
+(t/testing "kindly"
+    (t/is (m/validate api/Form
+                      {:code  "(into [:div] (for [i (range 9)] [:p i]))"
+                       :form  '(kind/hiccup
+                                (into [:div] (for [i (range 9)] [:p i])))
+                       :value ^{:kindly/kind :kind/hiccup}
+                              (into [:div] (for [i (range 9)] [:p i]))
+                       :kind  :kind/hiccup})))
+  )
 
 (defmethod api/produce! [:clojure/edn :clojure/edn]
   [entry _opts]
@@ -339,5 +349,6 @@
          (run! test-namespace))))
 
 (comment
-  (meta (find-ns 'site.fabricate.api))
-  (ns-publics (find-ns 'site.fabricate.prototype.schema)))
+
+ (meta (find-ns 'site.fabricate.api))
+ (ns-publics (find-ns 'site.fabricate.prototype.schema)))

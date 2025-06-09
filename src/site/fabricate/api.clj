@@ -13,6 +13,26 @@
            [java.time ZonedDateTime Instant ZoneId]))
 
 
+(def Form
+  "The map representation of a Clojure form & value used by Kindly"
+  (m/schema
+   [:map
+    {:description
+     "The map representation of a Clojure form & value used by Kindly"}
+    [:code
+     {:description "The source code of a form that produced a Kindly value"}
+     :string]
+    [:form {:description "The Clojure form that produced a Kindly value"} :any]
+    [:value {:description "The Kindly value returned by a Clojure form"} :any]
+    [:kind {:description "The Kindly kind annotation for the value"} :keyword]
+    [:kindly/hide-code
+     {:description "Whether to hide the source expression in the output"
+      :optional    true} :boolean]
+    [:kindly/hide-result
+     {:description "Whether to hide the result of evaluation in the output"
+      :optional    true} :boolean]]))
+
+
 (def glossary
   "Key terms used by Fabricate."
   [{:doc  "A source file used by Fabricate. May be a file, or a URL."
@@ -87,7 +107,7 @@
     :type :time/zoned-date-time}
    {:doc  "The datetime (ISO 8601-compatible) a page was most recently updated."
     :term :site.fabricate.page/modified-time
-    :type :time/zoned-date-time}
+    :type :time/Form-date-time}
    {:doc
     "Tags and labels describing the content of a page. May be strings, Clojure keywords, or Clojure symbols."
     :term :site.fabricate.page/tags
@@ -98,7 +118,10 @@
     :type [:or :string [:fn uuid?] :symbol :namespace]}
    {:doc  "The Clojure namespace of an entry."
     :term :site.fabricate.entry/namespace
-    :type :namespace}])
+    :type :namespace}
+   {:doc  "The map used by Kindly to represent Clojure forms"
+    :term :site.fabricate.api/form
+    :type Form}])
 
 ;; register schema components and bind them to a registry var
 (def registry
@@ -112,27 +135,33 @@
               [term schema])))))
 
 
-(def entry-schema
-  "Malli schema describing entries."
-  (mu/required-keys
-   (mu/optional-keys
-    (m/schema [:map :site.fabricate.api/source :site.fabricate.source/location
-               :site.fabricate.page/output :site.fabricate.document/data
-               :site.fabricate.document/format :site.fabricate.source/format
-               :site.fabricate.page/format :site.fabricate.page/uri
-               :site.fabricate.page/title :site.fabricate.page/permalink
-               :site.fabricate.page/description :site.fabricate.page/author
-               :site.fabricate.page/language :site.fabricate.page/locale
-               :site.fabricate.page/image :me.ogp/type
-               :site.fabricate.page/published-time
-               #_:site.fabricate.document/metadata
-               :site.fabricate.page/publish-dir :site.fabricate.source/created
-               :site.fabricate.source/modified
-               :site.fabricate.page/modified-time :site.fabricate.page/tags
-               :site.fabricate.entry/id :site.fabricate.entry/namespace]))
-   ;; entries ultimately have to come from somewhere.
-   [:site.fabricate.api/source :site.fabricate.source/location
-    :site.fabricate.source/format]))
+(def Entry
+  "A map representing a page before, during, and after the assemble and produce steps.
+
+One source may produce multiple entries."
+  (->
+    (m/schema
+     [:map
+      {:description
+       "A map representing a component of a page before, during, and after the assemble and produce operations. One source may produce multiple entries."}
+      :site.fabricate.api/source :site.fabricate.source/location
+      :site.fabricate.page/output :site.fabricate.document/data
+      :site.fabricate.document/format :site.fabricate.source/format
+      :site.fabricate.page/format :site.fabricate.page/uri
+      :site.fabricate.page/title :site.fabricate.page/permalink
+      :site.fabricate.page/description :site.fabricate.page/author
+      :site.fabricate.page/language :site.fabricate.page/locale
+      :site.fabricate.page/image :me.ogp/type
+      :site.fabricate.page/published-time #_:site.fabricate.document/metadata
+      :site.fabricate.page/publish-dir :site.fabricate.source/created
+      :site.fabricate.source/modified :site.fabricate.page/modified-time
+      :site.fabricate.page/tags :site.fabricate.entry/id
+      :site.fabricate.entry/namespace])
+    (mu/optional-keys)
+    (mu/required-keys
+     ;; entries ultimately have to come from somewhere.
+     [:site.fabricate.api/source :site.fabricate.source/location
+      :site.fabricate.source/format])))
 
 
 (defn collect-dispatch
@@ -152,9 +181,11 @@
   "Malli schema describing the contents of a Fabricate site.
 
 A site is the primary map passed between the 3 core API functions: plan!, assemble, and construct!"
-  (m/schema [:map [:site.fabricate.api/entries [:* entry-schema]]
+  (m/schema [:map [:site.fabricate.api/entries [:* Entry]]
              [:site.fabricate.api/options :map]]))
 
+
+;; TODO: decide whether this should be part of the public API
 (def site-fn-schema
   "Function schema for functions that operate on a site"
   (m/schema [:schema
@@ -167,13 +198,6 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
                                       [:schema site-schema]]}} ::site-fn]))
 
 
-;; question: should this actually be exactly the same signature /
-;; implementation as the other functions in the API? Making it different
-;; - by simply executing each setup task for its side effects rather than
-;; for returning an updated site - encourages keeping the initial setup
-;; simpler, and makes the API somewhat more orthogonal. I think this
-;; question is better answered through use while the API continues to
-;; stabilize.
 
 (defn plan!
   "Execute all the given `setup-tasks`, then `collect` the list of entries from each source.
@@ -205,7 +229,7 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
 
 (defn build-dispatch
   "Return the source and document formats for an entry."
-  {:malli/schema (m/schema [:=> [:cat entry-schema :map]
+  {:malli/schema (m/schema [:=> [:cat Entry :map]
                             [:tuple :site.fabricate.source/format
                              :site.fabricate.document/format]])
    :private      true}
@@ -245,7 +269,7 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
 
 (defn produce-dispatch
   "Return the document and page format for an entry."
-  {:malli/schema (m/schema [:=> [:cat entry-schema :map]
+  {:malli/schema (m/schema [:=> [:cat Entry :map]
                             [:tuple :site.fabricate.document/format
                              :site.fabricate.page/format]])
    :private      true}
@@ -277,4 +301,30 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
             sorted-tasks)))
 
 
-(comment)
+(comment
+  (ns-unmap *ns* 'entry-schema))
+
+
+(defn eval-form
+  "Evaluate the Clojure form and add the result to the map."
+  {:malli/schema [:=> [:cat Entry] Entry]}
+  [form]
+  nil)
+
+(defn value->form
+  "Convert the Clojure value into a Kindly form map."
+  {:malli/schema [:=> [:cat :any] Entry]})
+
+;;TODO: figure out how to specify the dispatch
+(defn display-form-dispatch
+  "Dispatch for display-form multimethod."
+  {:private true}
+  ([form
+    {:keys [site.fabricate.document/format] :or {format :hiccup/html} :as opts}]
+   [(:kind form) format])
+  ([form] (display-form-dispatch form {})))
+
+(defmulti display-form
+  "Multimethod to convert a Kindly form into an output format. Dispatches on the kindly kind and the output format."
+  {#_:malli/schema}
+  display-form-dispatch)
