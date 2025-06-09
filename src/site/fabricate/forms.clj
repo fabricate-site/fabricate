@@ -12,5 +12,10 @@
      :string]
     [:form {:description "The Clojure form that produced a Kindly value"} :any]
     [:value {:description "The Kindly value returned by a Clojure form"} :any]
-    [:kind {:description "The Kindly kind annotation for the value"}
-     :keyword]]))
+    [:kind {:description "The Kindly kind annotation for the value"} :keyword]
+    [:kindly/hide-code
+     {:description "Whether to hide the source expression in the output"
+      :optional    true} :boolean]
+    [:kindly/hide-result
+     {:description "Whether to hide the result of evaluation in the output"
+      :optional    true} :boolean]]))
