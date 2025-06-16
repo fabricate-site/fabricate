@@ -28,9 +28,16 @@
     [:kindly/hide-code
      {:description "Whether to hide the source expression in the output"
       :optional    true} :boolean]
-    [:kindly/hide-result
-     {:description "Whether to hide the result of evaluation in the output"
-      :optional    true} :boolean]]))
+    [:kindly/options
+     {:description "Additional options for kindly forms" :optional true}
+     [:map
+      ;; :hide-value is an undocumented option from the kindly-render
+      ;; library but it make sense to include it here because the
+      ;; capability of hiding results is also required by the template
+      ;; implementation
+      [:hide-value
+       {:optional true :description "Whether to hide the value in the output."}
+       :boolean]]]]))
 
 
 (def glossary
@@ -107,7 +114,7 @@
     :type :time/zoned-date-time}
    {:doc  "The datetime (ISO 8601-compatible) a page was most recently updated."
     :term :site.fabricate.page/modified-time
-    :type :time/Form-date-time}
+    :type :time/zoned-date-time}
    {:doc
     "Tags and labels describing the content of a page. May be strings, Clojure keywords, or Clojure symbols."
     :term :site.fabricate.page/tags
@@ -320,7 +327,7 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
   "Dispatch for display-form multimethod."
   {:private true}
   ([form
-    {:keys [site.fabricate.document/format] :or {format :hiccup/html} :as opts}]
+    {:keys [site.fabricate.page/format] :or {format :hiccup/html} :as opts}]
    [(:kind form) format])
   ([form] (display-form-dispatch form {})))
 
@@ -328,3 +335,32 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
   "Multimethod to convert a Kindly form into an output format. Dispatches on the kindly kind and the output format."
   {#_:malli/schema}
   display-form-dispatch)
+
+
+(comment
+ ;; for now, assume that :kind :code means "code block" and then create a
+ ;; different kind for inline code elements (e.g. in templates).
+)
+
+
+;; render-form relies upon defers to display-form while
+;; ensuring the ancillary cases of :hide-code and :hide-value
+;; options are handled. there may have been a way to make render-form
+;; completely recursive, but I don't think (at this stage) that it would have
+;; been worth some potentially confusing self-referential loops.
+(defn render-form
+  "Render the form based on the Kindly options."
+  ([form options]
+   (let [hide-value  (true? (get-in form [:kindly/options :hide-value] false))
+         hide-code   (true? (or
+                             (:kindly/hide-code form)
+                             (get-in form [:kindly/options :hide-code] true)))
+         form-code   (when-not hide-code (or (:form form) (:code form)))
+         page-format (or (:site.fabricate.page/format options)
+                         (:site.fabricate.page/format form))]
+     (case [hide-code hide-value]
+       [true true]   nil
+       [false true]  (display-form form options)
+       [true false]  (display-form {:kind :code :value form-code} options)
+       [false false] (list (display-form {:kind :code :value form-code} options)
+                           (display-form form options))))))
