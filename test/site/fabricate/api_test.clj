@@ -14,6 +14,8 @@
             [malli.core :as m]
             [malli.util :as mu]
             [malli.error :as me]
+            [matcher-combinators.test]
+            [matcher-combinators.matchers :as matchers]
             [babashka.fs :as fs]
             [clojure.java.io :as io]))
 
@@ -147,8 +149,8 @@
           :site.fabricate.page/output]
          [:site.fabricate.document/data {:optional true}
           :site.fabricate.document/data]
-         [:site.fabricate.document/format {:optional true}
-          :site.fabricate.document/format]
+         #_[:site.fabricate.document/format {:optional true}
+            :site.fabricate.document/format]
          [:site.fabricate.source/format :site.fabricate.source/format]
          [:site.fabricate.page/format {:optional true}
           :site.fabricate.page/format]
@@ -161,6 +163,8 @@
           :site.fabricate.page/description]
          [:site.fabricate.page/author {:optional true}
           :site.fabricate.page/author]
+         [:site.fabricate.document/format {:optional true}
+          :site.fabricate.document/format]
          [:site.fabricate.page/language {:optional true}
           :site.fabricate.page/language]
          [:site.fabricate.page/locale {:optional true}
@@ -321,7 +325,14 @@
   (doseq [[v schema] api-contracts]
     (t/testing (str v)
       (let [var-schema (:malli/schema (meta v))]
-        (t/is (mu/equals schema var-schema) "API contract must be stable.")))))
+        ;; use the AST of the schemas to make order of map entry
+        ;; schemas irrelevant to the equality checks
+        (t/is (match? (matchers/match-with
+                       ;; order is encoded in the AST, so dissoc it
+                       [(fn [v] (and (map? v) (contains? v :order)))
+                        (fn [expected] (dissoc expected :order))]
+                       (m/ast schema))
+                      (m/ast var-schema)))))))
 
 (defn test-namespace
   [nmspc]
