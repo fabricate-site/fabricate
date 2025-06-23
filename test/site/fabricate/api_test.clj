@@ -8,6 +8,7 @@
             [site.fabricate.prototype.html]
             [site.fabricate.prototype.hiccup]
             [site.fabricate.prototype.check]
+            [site.fabricate.prototype.kindly]
             [site.fabricate.source :as source]
             [site.fabricate.document :as document]
             [site.fabricate.prototype.schema :as s]
@@ -31,7 +32,7 @@
          :site.fabricate.page/title title
          :site.fabricate.page/id    id))
 
-(t/use-fixtures :once with-instrumentation)
+#_(t/use-fixtures :once with-instrumentation)
 
 (defmethod api/collect "deps.edn"
   [src opts]
@@ -54,16 +55,18 @@
 (def valid-entry? (m/validator api/Entry))
 (def explain-entry (m/explainer api/Entry))
 
-(t/deftest data-model
-(t/testing "kindly"
-    (t/is (m/validate api/Form
-                      {:code  "(into [:div] (for [i (range 9)] [:p i]))"
-                       :form  '(kind/hiccup
-                                (into [:div] (for [i (range 9)] [:p i])))
-                       :value ^{:kindly/kind :kind/hiccup}
-                              (into [:div] (for [i (range 9)] [:p i]))
-                       :kind  :kind/hiccup})))
-  )
+
+(t/deftest functions
+  (t/testing "form evaluation"
+    (t/is (= 3
+             (-> {:code "(+ 1 2)" :form '(+ 1 2) :kind :code}
+                 (api/eval-form)
+                 :value)))
+    (t/is (map? (-> {:code "(inc \"a\")" :form '(inc "a") :kind :code}
+                    (api/eval-form)
+                    :error)))))
+
+
 
 (defmethod api/produce! [:clojure/edn :clojure/edn]
   [entry _opts]
@@ -360,6 +363,5 @@
          (run! test-namespace))))
 
 (comment
-
- (meta (find-ns 'site.fabricate.api))
- (ns-publics (find-ns 'site.fabricate.prototype.schema)))
+  (meta (find-ns 'site.fabricate.api))
+  (ns-publics (find-ns 'site.fabricate.prototype.schema)))

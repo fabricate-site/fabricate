@@ -13,31 +13,6 @@
            [java.time ZonedDateTime Instant ZoneId]))
 
 
-(def Form
-  "The map representation of a Clojure form & value used by Kindly"
-  (m/schema
-   [:map
-    {:description
-     "The map representation of a Clojure form & value used by Kindly"}
-    [:code
-     {:description "The source code of a form that produced a Kindly value"}
-     :string]
-    [:form {:description "The Clojure form that produced a Kindly value"} :any]
-    [:value {:description "The Kindly value returned by a Clojure form"} :any]
-    [:kind {:description "The Kindly kind annotation for the value"} :keyword]
-    [:kindly/hide-code
-     {:description "Whether to hide the source expression in the output"
-      :optional    true} :boolean]
-    [:kindly/options
-     {:description "Additional options for kindly forms" :optional true}
-     [:map
-      ;; :hide-value is an undocumented option from the kindly-render
-      ;; library but it make sense to include it here because the
-      ;; capability of hiding results is also required by the template
-      ;; implementation
-      [:hide-value
-       {:optional true :description "Whether to hide the value in the output."}
-       :boolean]]]]))
 
 
 (def glossary
@@ -127,8 +102,8 @@
     :term :site.fabricate.entry/namespace
     :type :namespace}
    {:doc  "The map used by Kindly to represent Clojure forms"
-    :term :site.fabricate.api/form
-    :type Form}])
+    :term :site.fabricate.prototype.kindly/form
+    :type site.fabricate.prototype.kindly/Form}])
 
 ;; register schema components and bind them to a registry var
 (def registry
