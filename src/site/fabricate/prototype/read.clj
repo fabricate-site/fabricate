@@ -13,7 +13,8 @@
             [malli.transform :as mt]
             [site.fabricate.adorn :as adorn]
             [site.fabricate.prototype.schema :as schema]
-            [site.fabricate.forms :as forms]
+            [site.fabricate.api :as api]
+            [site.fabricate.prototype.eval :as prototype.eval]
             [site.fabricate.prototype.read.grammar :as grammar :refer
              [template]]
             [instaparse.core :as insta]
@@ -43,7 +44,7 @@
 ;; :kindly/hide-result where appropriate
 
 (def parsed-expr-schema
-  (-> site.fabricate.forms/kindly-form-schema
+  (-> site.fabricate.api/Form
       (mu/merge
        [:map
         [::parse-error
@@ -94,7 +95,7 @@
         m (with-meta
             (merge {:code (if (vector? form-or-ctrl?) form? form-or-ctrl?)
                     :kindly/hide-code true
-                    :kindly/hide-result true}
+                    :kindly/hide-value true}
                    (if (or (:error read-results) (::parse-error read-results))
                      (assoc read-results :form nil)
                      {:form read-results}))
@@ -104,10 +105,10 @@
           (not (vector? form-or-ctrl?)) m
           :else             (case (second form-or-ctrl?)
                               "+"  (assoc m :kindly/hide-code false)
-                              "="  (assoc m :kindly/hide-result false)
+                              "="  (assoc m :kindly/hide-value false)
                               "+=" (assoc m
-                                          :kindly/hide-code   false
-                                          :kindly/hide-result false)))))
+                                          :kindly/hide-code  false
+                                          :kindly/hide-value false)))))
 
 (defn extended-form->form
   "Converts the parsed grammar describing an extended form to a Hiccup form."
@@ -234,54 +235,57 @@
 
 ;; should this just use the/a clojure namespace?
 
-(defn eval-parsed-expr
-  "Evaluates the given expression form. Returns the value of the evaluated expression by default. Can optionally return a map with the value and also perform post-validation on the resulting value."
-  {:malli/schema [:=> [:cat parsed-expr-schema :boolean [:fn fn?]]
-                  [:or :map :any]]}
-  ([{:keys [expr-src expr exec error result display fabricate.read/parse-error]
-     :as   expr-map} simplify? post-validator]
-   (let [form-meta (meta expr-map)
-         evaluated-expr-map
-         (try
-           (assoc expr-map :result (eval (or exec expr)) :error (or nil error))
-           (catch Exception e
-             (assoc expr-map
-                    :result nil
-                    :error  (merge {:type    (.getClass e)
-                                    :message (.getMessage e)}
-                                   (select-keys (Throwable->map e)
-                                                [:cause :phase])))))
-         res       (with-meta evaluated-expr-map (meta expr-map))
-         validated (post-validator (:result res))]
-     (when (var? (:result res))
-       (alter-meta! (:result res)
-                    (fn [var-meta form-meta]
-                      (-> var-meta
-                          (merge form-meta)
-                          (#(assoc %
-                                   :column (% :instaparse.gll/start-column)
-                                   :line   (% :instaparse.gll/start-line)))))
-                    (meta expr-map)))
-     (cond (and (or error (:error res)) simplify?) (form->hiccup res)
-           (or error (:error res)) (assoc res :result (form->hiccup res))
-           (and simplify? display expr) (form->hiccup res)
-           (and exec display simplify?)
-           [:pre [:code {:class "language-clojure"} expr-src]]
-           (and exec display)
-           (assoc (merge expr-map res)
-                  :result
-                  [:pre [:code {:class "language-clojure"} expr-src]])
-           (and expr simplify? (:result res)) ; nil is overloaded here
-           (:result res)
-           (and exec simplify?) nil
-           (and (nil? (:result res)) (nil? (:error res))) nil
-           :else (merge expr-map res))))
-  ([expr simplify?] (eval-parsed-expr expr simplify? (constantly true)))
-  ([expr] (eval-parsed-expr expr false)))
+#_(defn eval-parsed-expr
+    "Evaluates the given expression form. Returns the value of the evaluated expression by default. Can optionally return a map with the value and also perform post-validation on the resulting value."
+    {:malli/schema [:=> [:cat parsed-expr-schema :boolean [:fn fn?]]
+                    [:or :map :any]]}
+    ([{:keys [expr-src expr exec error result display
+              fabricate.read/parse-error]
+       :as   expr-map} simplify? post-validator]
+     (let [form-meta (meta expr-map)
+           evaluated-expr-map
+           (try (assoc expr-map
+                       :result (eval (or exec expr))
+                       :error  (or nil error))
+                (catch Exception e
+                  (assoc expr-map
+                         :result nil
+                         :error  (merge {:type    (.getClass e)
+                                         :message (.getMessage e)}
+                                        (select-keys (Throwable->map e)
+                                                     [:cause :phase])))))
+           res       (with-meta evaluated-expr-map (meta expr-map))
+           validated (post-validator (:result res))]
+       (when (var? (:result res))
+         (alter-meta! (:result res)
+                      (fn [var-meta form-meta]
+                        (-> var-meta
+                            (merge form-meta)
+                            (#(assoc %
+                                     :column (% :instaparse.gll/start-column)
+                                     :line   (% :instaparse.gll/start-line)))))
+                      (meta expr-map)))
+       (cond (and (or error (:error res)) simplify?) (form->hiccup res)
+             (or error (:error res)) (assoc res :result (form->hiccup res))
+             (and simplify? display expr) (form->hiccup res)
+             (and exec display simplify?)
+             [:pre [:code {:class "language-clojure"} expr-src]]
+             (and exec display)
+             (assoc (merge expr-map res)
+                    :result
+                    [:pre [:code {:class "language-clojure"} expr-src]])
+             (and expr simplify? (:result res)) ; nil is overloaded here
+             (:result res)
+             (and exec simplify?) nil
+             (and (nil? (:result res)) (nil? (:error res))) nil
+             :else (merge expr-map res))))
+    ([expr simplify?] (eval-parsed-expr expr simplify? (constantly true)))
+    ([expr] (eval-parsed-expr expr false)))
 
 (defn yank-ns
   "Pulls the namespace form out of the first expression in the parse tree."
-  {:malli/schema [:=> [:cat template-schema] [:or [:sequential :any] :symbol]]}
+  {:malli/schema [:=> [:cat #_template-schema :any]
+                  [:or [:sequential :any] :symbol]]}
   [expr-tree]
   (let [first-expr (->> expr-tree
                         (tree-seq vector? identity)
@@ -316,6 +320,16 @@
   (mg/generate [:cat [:schema [:cat [:* :int]]] :boolean])
   (mg/generate [:cat [:schema [:cat [:* :int]]]]))
 
+(defn- process-form?
+  [i]
+  (if (fabricate-expr? i)
+    (prototype.eval/eval-form i)
+    #_(let [evaluated (prototype.eval/eval-form i)]
+        (if-not (:kindly/hide-result evaluated)
+          (api/display-form evaluated {:site.fabricate.document/format :hiccup})
+          ()))
+    i))
+
 (defn eval-all
   "Walks the parsed template and evaluates all the embedded expressions within it. Returns a Hiccup form."
   {:malli/schema
@@ -331,10 +345,7 @@
          nmspc      (if form-nmspc (create-ns form-nmspc) *ns*)]
      (binding [*ns* nmspc]
        (refer-clojure)
-       (let [final-form
-             (clojure.walk/postwalk
-              (fn [i] (if (fabricate-expr? i) (eval-parsed-expr i simplify?) i))
-              parsed-form)]
+       (let [final-form (clojure.walk/postwalk process-form? parsed-form)]
          (with-meta final-form
                     {:namespace nmspc
                      :metadata  (when-let [m (ns-resolve *ns* 'metadata)]
