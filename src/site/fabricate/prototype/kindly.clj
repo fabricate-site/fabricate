@@ -55,3 +55,10 @@
   (kind/vector 3)
   (= (kind/code 3) (kind/code [3]))
   (kind/fragment [(kind/code 'a) (kind/hiccup [:div "example"])]))
+
+
+(defn wrapped-value?
+  "Check whether the value is a 'wrapped' value that carries Kindly annotations"
+  {:malli/schema (m/schema [:-> :any :boolean])}
+  [v]
+  (and (vector? v (get-in (meta v) [:kindly/options :wrapped-value]))))

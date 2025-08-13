@@ -4,6 +4,7 @@
   This contains the core set of operations that Fabricate uses to produce a website from input files."
   (:require [site.fabricate.prototype.schema :as s]
             [site.fabricate.prototype.kindly]
+            [site.fabricate.prototype.eval :as eval]
             [malli.core :as m]
             [malli.util :as mu]
             [clojure.java.io :as io]
@@ -292,7 +293,7 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
   "Evaluate the Clojure form and add the result to the map."
   {:malli/schema [:=> [:cat Entry] Entry]}
   [form]
-  nil)
+  (eval/eval-form form))
 
 (defn value->form
   "Convert the Clojure value into a Kindly form map."

@@ -44,6 +44,7 @@
 ;; :kindly/hide-result where appropriate
 
 (def parsed-expr-schema
+  "Kindly map schema with additional Fabricate-specific keys"
   (-> site.fabricate.prototype.kindly/Form
       (mu/merge
        [:map
