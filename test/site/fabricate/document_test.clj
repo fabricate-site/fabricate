@@ -43,7 +43,13 @@
     (when-not (skip-files location)
       (t/testing (str "example entry at " location
                       " " [source-format document-format])
-        (let [built-entry (api/build entry {})
+        (let [built-entry (try (api/build entry {})
+                               (catch Exception e
+                                 (throw (-> e
+                                            Throwable->map
+                                            (assoc :context entry)
+                                            (#(ex-info "Error building entry"
+                                                       %))))))
               valid-entry (m/validate post-build-entry built-entry)]
           (when-not valid-entry
             (println (me/humanize (m/explain post-build-entry built-entry))))

@@ -1,4 +1,5 @@
 (ns site.fabricate.prototype.page
+  "Namespace providing defaults for output HTML pages"
   (:require [site.fabricate.api :as api]
             [site.fabricate.adorn :as adorn]))
 
