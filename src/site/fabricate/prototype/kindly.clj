@@ -61,4 +61,4 @@
   "Check whether the value is a 'wrapped' value that carries Kindly annotations"
   {:malli/schema (m/schema [:-> :any :boolean])}
   [v]
-  (and (vector? v (get-in (meta v) [:kindly/options :wrapped-value]))))
+  (and (vector? v) (get-in (meta v) [:kindly/options :wrapped-value])))

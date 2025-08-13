@@ -14,7 +14,7 @@
                        nu.validator/validator {:mvn/version "20.7.2"}
                        nubank/matcher-combinators {:mvn/version "3.9.1"}
                        org.clojure/test.check {:mvn/version "1.1.1"}
-                       org.scicloj/kindly {:mvn/version "4-beta15"}
+                       org.scicloj/kindly {:mvn/version "4-beta18"}
                        org.scicloj/kindly-render {:mvn/version "0.1.1-alpha"}
                        site.fabricate/manual
                        {:git/url "https://github.com/fabricate-site/manual.git"
