@@ -3,6 +3,7 @@
 
   This contains the core set of operations that Fabricate uses to produce a website from input files."
   (:require [site.fabricate.prototype.schema :as s]
+            [site.fabricate.prototype.kindly]
             [malli.core :as m]
             [malli.util :as mu]
             [clojure.java.io :as io]
@@ -295,7 +296,9 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
 
 (defn value->form
   "Convert the Clojure value into a Kindly form map."
-  {:malli/schema [:=> [:cat :any] Entry]})
+  {:malli/schema [:=> [:cat :any] Entry]}
+  [form]
+  nil)
 
 ;;TODO: figure out how to specify the dispatch
 (defn display-form-dispatch
@@ -325,6 +328,8 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
 ;; been worth some potentially confusing self-referential loops.
 (defn render-form
   "Render the form based on the Kindly options."
+  {:malli/schema (m/schema [:-> site.fabricate.prototype.kindly/Form :map
+                            :any])}
   ([form options]
    (let [hide-value  (true? (get-in form [:kindly/options :hide-value] false))
          hide-code   (true? (or

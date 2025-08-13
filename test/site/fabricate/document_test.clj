@@ -26,8 +26,7 @@
       ::document/format :hiccup/article}])
 
 
-(def post-build-entry
-  (m/schema (mu/required-keys api/entry-schema [::document/data])))
+(def post-build-entry (m/schema (mu/required-keys api/Entry [::document/data])))
 
 (def skip-files
   {(fs/file "test/site/fabricate/prototype/html_test.clj")

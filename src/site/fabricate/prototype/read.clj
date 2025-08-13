@@ -13,7 +13,7 @@
             [malli.transform :as mt]
             [site.fabricate.adorn :as adorn]
             [site.fabricate.prototype.schema :as schema]
-            [site.fabricate.api :as api]
+            [site.fabricate.prototype.kindly :as kindly]
             [site.fabricate.prototype.eval :as prototype.eval]
             [site.fabricate.prototype.read.grammar :as grammar :refer
              [template]]
@@ -44,7 +44,7 @@
 ;; :kindly/hide-result where appropriate
 
 (def parsed-expr-schema
-  (-> site.fabricate.api/Form
+  (-> site.fabricate.prototype.kindly/Form
       (mu/merge
        [:map
         [::parse-error

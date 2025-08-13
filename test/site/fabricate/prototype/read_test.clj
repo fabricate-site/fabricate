@@ -12,11 +12,12 @@
             [site.fabricate.api :as api]
             [matcher-combinators.test]
             [matcher-combinators.matchers :as matchers]
+            [site.fabricate.prototype.kindly]
             [site.fabricate.prototype.read.grammar :refer [template]]
             [site.fabricate.prototype.read :refer :all]))
 
 (def form?
-  (-> api/Form
+  (-> site.fabricate.prototype.kindly/Form
       (mu/optional-keys [:kind])
       (m/validator)))
 
@@ -43,7 +44,7 @@
           :value :foo
           :kindly/hide-code true
           :kindly/hide-result false})
-  (m/explain api/Form
+  (m/explain site.fabricate.prototype.kindly/Form
              {:code  ":foo"
               :form  :foo
               :value :foo
@@ -111,9 +112,11 @@
       (assoc :kindly/hide-value (if exec true false))))
 
 (def form-decoder
-  (m/decoder
-   (mu/update-properties api/Form assoc :decode/translate old-map->kindly-map)
-   (mt/transformer {:name :translate})))
+  (m/decoder (mu/update-properties site.fabricate.prototype.kindly/Form
+                                   assoc
+                                   :decode/translate
+                                   old-map->kindly-map)
+             (mt/transformer {:name :translate})))
 
 
 (comment
@@ -123,7 +126,10 @@
    {:display true :error nil :exec '(+ 2 3) :expr-src "(+ 2 3)" :result 5})
   (not nil)
   (m/decode
-   (mu/update-properties api/Form assoc :decode/translate old-map->kindly-map)
+   (mu/update-properties site.fabricate.prototype.kindly/Form
+                         assoc
+                         :decode/translate
+                         old-map->kindly-map)
    {:display false :error nil :expr '(+ 2 3) :expr-src "(+ 2 3)" :result 5}
    (mt/transformer {:name :translate})))
 
