@@ -365,7 +365,7 @@
       (let [ex-file (-> "README.md.fab"
                         slurp
                         (parse {:filename "README.md.fab"})
-                        #_eval-all)
+                        eval-all)
             ex-meta (-> 'site.fabricate.docs.readme/metadata
                         resolve
                         meta

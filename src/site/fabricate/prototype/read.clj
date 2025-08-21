@@ -18,7 +18,7 @@
             [site.fabricate.prototype.read.grammar :as grammar :refer
              [template]]
             [instaparse.core :as insta]
-            [instaparse.combinators :as combo]
+            [clojure.set :as set]
             [clojure.string :as string]
             [clojure.java.io :as io]))
 
@@ -53,6 +53,8 @@
           :description
           "Error message returned when Fabricate enounters a parsing error."}
          :map]
+        [:file {:description "The source file for a Fabricate expression"}
+         [:fn schema/file?]]
         [:error
          {:optional    true
           :description "Error map describing error thrown by source expression"}
@@ -323,13 +325,7 @@
 
 (defn- process-form?
   [i]
-  (if (fabricate-expr? i)
-    (prototype.eval/eval-form i)
-    #_(let [evaluated (prototype.eval/eval-form i)]
-        (if-not (:kindly/hide-result evaluated)
-          (api/display-form evaluated {:site.fabricate.document/format :hiccup})
-          ()))
-    i))
+  (if (fabricate-expr? i) (prototype.eval/eval-form i) i))
 
 (defn eval-all
   "Walks the parsed template and evaluates all the embedded expressions within it. Returns a Hiccup form."
@@ -399,6 +395,25 @@
 (def ^:private template-encoder
   (m/encoder template-schema (mt/transformer {:name :get})))
 
+(def ^:private meta-key-mapping
+  {:instaparse.gll/start-index  :file/start-index
+   :instaparse.gll/end-index    :file/end-index
+   :instaparse.gll/start-line   :file/start-line
+   :instaparse.gll/start-column :file/start-column
+   :instaparse.gll/end-line     :file/end-line
+   :instaparse.gll/end-column   :file/end-column})
+
+
+(defn- update-form
+  ([parsed-form data]
+   (if (fabricate-expr? parsed-form)
+     (merge parsed-form
+            (set/rename-keys (meta parsed-form) meta-key-mapping)
+            data)
+     parsed-form))
+  ([parsed-form] (update-form parsed-form {})))
+
+
 (defn parse
   "Parses the template into a Hiccup expression with unevaluated forms."
   {:malli/schema [:function
@@ -410,8 +425,7 @@
   ([src {:keys [start-seq filename] :or {start-seq [] filename ""}}]
    (let [parsed (read-template src)]
      (into start-seq
-           (map #(try (with-meta % (merge (meta %) {:file filename}))
-                      (catch Exception e %))
+           (map #(update-form % {:file filename})
                 (rest (template-encoder parsed))))))
   ([src] (parse src {})))
 
