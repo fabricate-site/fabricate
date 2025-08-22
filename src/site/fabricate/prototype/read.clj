@@ -22,26 +22,7 @@
             [clojure.string :as string]
             [clojure.java.io :as io]))
 
-#_(def parsed-expr-schema
-    "Schema describing the map used by Fabricate to evaluate forms embedded within page templates."
-    (m/schema
-     [:map [:expr-src {:doc "The source expression as a string"} :string]
-      [:expr
-       {:doc
-        "An expression intended to have its results embedded in the resulting text."
-        :optional true} :any]
-      [:exec
-       {:optional true
-        :doc
-        "An expression intended be evaluated for side effects or definitions."}
-       :any]
-      [::parse-error {:optional true :doc ""}
-       [:map [:type [:fn class?]] [:message :string]]]
-      [:file {:optional true :doc "The source file of the expression"}
-       :string]]))
 
-;; the :expr and :exec keywords need to be replaced by :kindly/hide-code and
-;; :kindly/hide-result where appropriate
 
 (def parsed-expr-schema
   "Kindly map schema with additional Fabricate-specific keys"
@@ -53,8 +34,9 @@
           :description
           "Error message returned when Fabricate enounters a parsing error."}
          :map]
-        [:file {:description "The source file for a Fabricate expression"}
-         [:fn schema/file?]]
+        [:file
+         {:description "The source file for a Fabricate expression"
+          :optional    true} [:or [:fn schema/file?] :string :nil]]
         [:error
          {:optional    true
           :description "Error map describing error thrown by source expression"}
@@ -73,14 +55,6 @@
 
 
 (def ^:private read-str (comp z/sexpr z/of-string))
-
-(comment
-  (template "✳=(+ 3 4)🔚")
-  (template)
-  (let [enlive-parser (insta/parser grammar/grammar :output-format :enlive)]
-    (doseq [e ["✳=(+ 3 4)🔚" "✳(+ 3 4)🔚"]]
-      (println (template e))
-      (println (enlive-parser e)))))
 
 (defn parsed-form->expr-map
   "Transforms the results of a parsed Fabricate expression into the map used for evaluation."
@@ -213,10 +187,6 @@
      [:code {:class "language-clojure"}
       (if (read-error? parsed-expr) expr-src (adorn/clj->hiccup expr-src))]]]])
 
-(comment
-  (read-error? (first (parse "✳((+ 2 3)🔚")))
-  (adorn/form->hiccup "((+ 3 4)"))
-
 ;; TODO: should this be a multimethod?
 ;; a multimethod _implementation_ of site.fabricate.adorn/clj->hiccup?
 (defn form->hiccup
@@ -313,15 +283,6 @@
                      (m/validate metadata-schema (:form %))))
        first
        :form))
-
-(comment
-  (m/schema [:function [:=> [:cat [:sequential :int]] :any]
-             [:=> [:cat [:sequential :int] :boolean] :any]])
-  (m/schema [:function [:=> [:cat :boolean [:* :int]] :any]
-             [:=> [:cat [:* :int]] :any]])
-  (m/validate [:sequential [:cat :int]] [[1 2]])
-  (mg/generate [:cat [:schema [:cat [:* :int]]] :boolean])
-  (mg/generate [:cat [:schema [:cat [:* :int]]]]))
 
 (defn- process-form?
   [i]
@@ -428,32 +389,3 @@
            (map #(update-form % {:file filename})
                 (rest (template-encoder parsed))))))
   ([src] (parse src {})))
-
-(comment
-  (meta (second (read-template "✳=(+ 2 3)🔚")))
-  (parsed-form->expr-map (second (read-template "✳=(+ 2 3)🔚")))
-  (meta (first (parse "✳=(+ 2 3)🔚")))
-  (meta (m/decode [:schema {:decode/get {:enter identity}}
-                   [:cat [:= :start] :map]]
-                  (with-meta [:start {:a 2}] {:meta true})
-                  (mt/transformer {:name :get})))
-  (meta (m/encode [:cat {:encode/get {:enter identity}} [:= :start] :map]
-                  (with-meta [:start {:a 2}] {:meta true})
-                  (mt/transformer {:name :get})))
-  (meta (m/encode [:tuple {:encode/get {:enter identity}} [:= :start] :map]
-                  (with-meta [:start {:a 2}] {:meta true})
-                  (mt/transformer {:name :get})))
-  (m/validate [:tuple :keyword [:* :int]] [:k [2]])
-  (m/validate [:tuple [:= :div] [:maybe [:map [:class [:= "fabricate-error"]]]]]
-              [:div {:class "fabricate-error"}])
-  (malli.error/humanize
-   (m/explain error-form-schema
-              [:div {:class "fabricate-error"} [:h6 "Error"]
-               [:dl [:dt "Error type"]
-                [:dd [:code "clojure.lang.ExceptionInfo"]] [:dt "Error message"]
-                [:dd [:code "Unexpected EOF while reading item 1 of list."]]
-                [:dt "Error phase"] [:dd [:code ""]] [:dt "Location"]
-                [:dd '("Line " [:strong 1] ", " "Columns " [:strong 1 "-" 12])]]
-               [:details [:summary "Source expression"]
-                [:pre [:code "((+ 2 3)"]]]]))
-  (meta (identity (with-meta [:start {:a 2}] {:meta true}))))

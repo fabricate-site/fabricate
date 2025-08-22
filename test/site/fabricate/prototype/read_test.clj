@@ -16,15 +16,11 @@
             [site.fabricate.prototype.read.grammar :refer [template]]
             [site.fabricate.prototype.read :refer :all]))
 
-(def form?
-  (-> site.fabricate.prototype.kindly/Form
-      (mu/optional-keys [:kind])
-      (m/validator)))
 
 (defn get-form-vals
   [r]
   (mapv (fn [i]
-          (if (form? i)
+          (if (#'fabricate-expr? i)
             (cond (:kindly/hide-value i) nil
                   :default (:value i))
             i))
@@ -160,10 +156,13 @@
         (parse
          "✳+(println \"a form evaluated but displayed without its output\")🔚"))))))
   (t/testing "expression parsing"
+    (t/is (fabricate-expr? (first (parse "✳=:foo🔚 bar ✳=:baz🔚")))
+          "Predicate should match parsed expressions")
     (t/is (match? ["text "
                    (form-decoder
                     {:expr '(+ 2 3) :expr-src "(+ 2 3)" :display false})]
                   (parse "text ✳=(+ 2 3)🔚")))
+    (t/is (read-error? (first (parse "✳((+ 2 3)🔚"))))
     (t/is (not (nil? (:error (first (parse "✳((+ 2 3)🔚")))))
           "Expression parsing errors should be surfaced")
     (t/is (match? [(form-decoder
