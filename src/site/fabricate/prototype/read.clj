@@ -24,34 +24,9 @@
 
 
 
-(def parsed-expr-schema
-  "Kindly map schema with additional Fabricate-specific keys"
-  (-> site.fabricate.prototype.kindly/Form
-      (mu/merge
-       [:map
-        [::parse-error
-         {:optional true
-          :description
-          "Error message returned when Fabricate enounters a parsing error."}
-         :map]
-        [:file
-         {:description "The source file for a Fabricate expression"
-          :optional    true} [:or [:fn schema/file?] :string :nil]]
-        [:error
-         {:optional    true
-          :description "Error map describing error thrown by source expression"}
-         #_:map [:or :map :nil]]])
-      ;; TODO set default kind
-      (mu/optional-keys [:value :kind])
-      (mu/update-properties
-       assoc
-       :description
-       "Schema for Clojure expressions parsed from Fabricate templates")))
-
-
 (def ^{:malli/schema [:=> [:cat :any] :boolean]} fabricate-expr?
   "Returns true if the given value matches the schema for parsed Fabricate expressions."
-  (m/validator parsed-expr-schema))
+  (m/validator prototype.eval/Parsed-Form))
 
 
 (def ^:private read-str (comp z/sexpr z/of-string))
@@ -59,7 +34,7 @@
 (defn parsed-form->expr-map
   "Transforms the results of a parsed Fabricate expression into the map used for evaluation."
   {:malli/schema [:=> [:cat [:schema [:cat :string :string :string]]]
-                  parsed-expr-schema]}
+                  prototype.eval/Parsed-Form]}
   [parsed-form]
   (let [[t form-or-ctrl? form?] parsed-form
         parse-metadata (meta parsed-form)
@@ -164,14 +139,14 @@
 ;; TODO: this probably needs to be made more robust
 (defn read-error?
   "Returns true if the given expression failed to read into a valid Clojure form."
-  {:malli/schema [:=> [:cat parsed-expr-schema] :boolean]}
+  {:malli/schema [:=> [:cat prototype.eval/Parsed-Form] :boolean]}
   [error-form]
   (= "Unexpected EOF." (get-in error-form [:error :data :msg])))
 
 ;; TODO: should this be a multimethod?
 (defn error->hiccup
   "Return a Hiccup form with context for the error."
-  {:malli/schema [:=> [:cat parsed-expr-schema] error-form-schema]}
+  {:malli/schema [:=> [:cat prototype.eval/Parsed-Form] error-form-schema]}
   [{:keys [expr-src exec expr error result display] :as parsed-expr}]
   [:div {:class "fabricate-error"} [:h6 "Error"]
    [:dl {:class "fabricate-error-info"} [:dt "Error type"]
@@ -192,7 +167,8 @@
 (defn form->hiccup
   "If the form has no errors, return its results.
   Otherwise, create a hiccup form describing the error."
-  {:malli/schema [:=> [:cat parsed-expr-schema] [:or error-form-schema :any]]}
+  {:malli/schema [:=> [:cat prototype.eval/Parsed-Form]
+                  [:or error-form-schema :any]]}
   [{:keys [expr-src exec expr error result display] :as parsed-expr}]
   (cond error   (error->hiccup parsed-expr)
         display (list [:pre
@@ -210,7 +186,7 @@
 
 #_(defn eval-parsed-expr
     "Evaluates the given expression form. Returns the value of the evaluated expression by default. Can optionally return a map with the value and also perform post-validation on the resulting value."
-    {:malli/schema [:=> [:cat parsed-expr-schema :boolean [:fn fn?]]
+    {:malli/schema [:=> [:cat prototype.eval/Parsed-Form :boolean [:fn fn?]]
                     [:or :map :any]]}
     ([{:keys [expr-src expr exec error result display
               fabricate.read/parse-error]
@@ -262,7 +238,7 @@
   [expr-tree]
   (let [first-expr (->> expr-tree
                         (tree-seq vector? identity)
-                        (filter #(m/validate parsed-expr-schema %))
+                        (filter #(m/validate prototype.eval/Parsed-Form %))
                         first
                         :form)]
     (if (and (seq? first-expr) (schema/ns-form? first-expr))
@@ -279,7 +255,7 @@
   [expr-tree]
   (->> expr-tree
        (tree-seq vector? identity)
-       (filter #(and (m/validate parsed-expr-schema %)
+       (filter #(and (m/validate prototype.eval/Parsed-Form %)
                      (m/validate metadata-schema (:form %))))
        first
        :form))

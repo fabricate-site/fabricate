@@ -13,6 +13,7 @@
             [matcher-combinators.test]
             [matcher-combinators.matchers :as matchers]
             [site.fabricate.prototype.kindly]
+            [site.fabricate.prototype.eval :as prototype.eval]
             [site.fabricate.prototype.read.grammar :refer [template]]
             [site.fabricate.prototype.read :refer :all]))
 
@@ -27,12 +28,14 @@
         r))
 
 ;; TODO: replace this and refactor tests to avoid this
+
+
 (defn parse-eval
   [v]
-  (->> v
-       parse
-       eval-all
-       get-form-vals))
+  #rtrace (->> v
+               parse
+               eval-all
+               get-form-vals))
 
 (comment
   (form? {:code  ":foo"
@@ -132,15 +135,15 @@
 (t/deftest text-parser
   (t/testing "parsed element schema"
     (t/is (valid-schema?
-           parsed-expr-schema
+           prototype.eval/Parsed-Form
            (form-decoder
             {:expr-src "(+ 3 4)" :expr '(+ 3 4) :error nil :result 7})))
     (t/is (valid-schema?
-           parsed-expr-schema
+           prototype.eval/Parsed-Form
            (form-decoder
             {:expr-src "(+ 3 4)" :exec '(+ 3 4) :error nil :result nil})))
     (t/is (valid-schema?
-           parsed-expr-schema
+           prototype.eval/Parsed-Form
            (form-decoder {:expr-src "((+ 3 4)"
                           :expr nil
                           :error {:type clojure.lang.ExceptionInfo
@@ -150,7 +153,7 @@
                           :result nil})))
     (t/is
      (valid-schema?
-      parsed-expr-schema
+      prototype.eval/Parsed-Form
       (form-decoder
        (first
         (parse
@@ -217,7 +220,7 @@
 (t/deftest parsed-content-transforms
   (t/testing "schema conformance"
     #_(t/is (valid-schema? template-schema (parse "✳(ns test-ns)🔚")))
-    (t/is (every? #(m/validate parsed-expr-schema %)
+    (t/is (every? #(m/validate prototype.eval/Parsed-Form %)
                   (parse "✳(ns test-ns)🔚"))))
   (t/testing "namespace retrieval"
     (t/is (match? (symbol 'test-ns) (yank-ns (parse "✳(ns test-ns)🔚"))))
