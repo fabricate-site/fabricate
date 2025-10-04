@@ -30,10 +30,15 @@
                                           :ns   test-ns})))))
     (t/testing "metadata after evaluation"
       ;; TODO: should Fabricate add its own metadata to trace provenance?
-      (let [var-form       {:code "(def my-test-var \"test value\")"
+      (let [test-ns        (create-ns 'site.fabricate.prototype.eval.ephemeral)
+            var-form       {:code "(def my-test-var \"test value\")"
                             :form '(def my-test-var "test value")
-                            :ns   (create-ns
-                                   'site.fabricate.prototype.eval.ephemeral)}
-            evaluated-form (prototype.eval/eval-form var-form)]
+                            :ns   test-ns}
+            evaluated-form (prototype.eval/eval-form var-form)
+            metadata-form  (prototype.eval/eval-form
+                            {:form '[^{:key :value} [1]]
+                             :code "[^{:key :value} [1]]"
+                             :ns   test-ns})]
         (println (meta (:value evaluated-form)))
-        (t/is (match? (:ns var-form) (:ns (meta (:value evaluated-form)))))))))
+        (t/is (match? (:ns var-form) (:ns (meta (:value evaluated-form)))))
+        (t/is (match? {:key :value} (meta (first (:value metadata-form)))))))))
