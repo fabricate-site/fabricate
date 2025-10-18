@@ -19,6 +19,7 @@
 ;; TODO: should all the schemas live in... the schema namespace?
 
 (def Parsed-Form
+  "A Kindly form that has been parsed but not evaluated, so lacks a :value entry."
   (-> site.fabricate.prototype.kindly/Form
       (mu/dissoc :value)
       ;; TODO: set default kind
@@ -42,6 +43,7 @@
 
 
 (def Evaluated-Form
+  "A Kindly form that has been evaluated by Fabricate with an optional :error value."
   (-> site.fabricate.prototype.kindly/Form
       (mu/merge
        [:map

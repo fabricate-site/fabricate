@@ -32,10 +32,10 @@
 
 (defn parse-eval
   [v]
-  #rtrace (->> v
-               parse
-               eval-all
-               get-form-vals))
+  (->> v
+       parse
+       eval-all
+       get-form-vals))
 
 (comment
   (form? {:code  ":foo"
