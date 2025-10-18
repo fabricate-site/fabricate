@@ -22,6 +22,14 @@
                                              :kindly/hide-code true
                                              :kindly/options {:hide-value false}
                                              :form '(+ 2 3)})))
+    (t/is
+     (match?
+      {:form '(inc "a")
+       :code "(inc \"a\")"
+       :error
+       {:cause
+        "class java.lang.String cannot be cast to class java.lang.Number (java.lang.String and java.lang.Number are in module java.base of loader 'bootstrap')"}}
+      (prototype.eval/eval-form {:form '(inc "a") :code "(inc \"a\")"})))
     (t/testing "custom namespaces"
       (let [test-ns (create-ns 'eval-test-ns)]
         (t/is (match?

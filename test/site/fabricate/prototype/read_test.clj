@@ -387,11 +387,16 @@
                             (parse-eval
                              "✳=[:em \"text\"]🔚, with a comma following")))
                     "<div><em>text</em>, with a comma following</div>")))
-    (t/testing ": error messages" (t/is false "put actual tests here"))))
+    (t/testing ": error messages"
+      (t/is (match? {:error {:type 'clojure.lang.ExceptionInfo
+                             :data {:msg "Unexpected EOF."}}}
+                    (first (parse "✳(+ 2 3🔚")))
+            "parsing errors should be surfaced by default"))))
 
 (t/deftest source-code-transforms)
 
 (comment
+  (parse "✳(+ 2 3🔚")
   (meta #'api/plan!)
   (-> 'site.fabricate.docs.readme/metadata
       resolve
