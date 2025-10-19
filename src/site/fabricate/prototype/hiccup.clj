@@ -1,11 +1,10 @@
 (ns site.fabricate.prototype.hiccup
-  "Functions for transforming Hiccup elements after processing."
-  (:require [site.fabricate.prototype.html :as html]
-            [site.fabricate.prototype.read.grammar :as grammar]
-            [site.fabricate.prototype.schema :as schema]
-            [clojure.data.finger-tree :as ftree :refer
-             [counted-double-list ft-split-at ft-concat]]
-            [clojure.string :as str]))
+  "Functions for processing and transforming Hiccup elements and documents."
+  (:require [clojure.data.finger-tree :as ftree :refer [counted-double-list]]
+            [clojure.java.io :as io]
+            [clojure.string :as str]
+            [hiccup.page]
+            [site.fabricate.prototype.html :as html]))
 
 (defn- reconstruct
   [s sequence-type]
@@ -187,27 +186,6 @@
              [t attr])))
        items))
 
-;; TODO: don't hardcode fabricate-related info into this namespace,
-;; make it generic instead
-(defn doc-header
-  "Returns a default header from a map with a post's metadata."
-  {:malli/schema [:=> [:cat :map] [:vector :any]]}
-  [{:keys [title page-style scripts] :as metadata}]
-  (let [page-meta (-> metadata
-                      (dissoc :title :page-style :scripts)
-                      (#(merge default-metadata-map %)))]
-    (into [:head [:title (str (:site-title page-meta) " | " title)]
-           [:link {:rel "stylesheet" :href "/css/normalize.css"}]
-           [:link {:rel "stylesheet" :href "/css/remedy.css"}]
-           [:link {:rel "stylesheet" :href "/css/patterns.css"}]
-           [:link {:rel "stylesheet" :href "/css/extras.css"}]
-           [:link {:rel "stylesheet" :href "/css/fabricate.css"}]]
-          (filter some?
-                  (concat (opengraph-enhance opengraph-properties
-                                             (map ->meta page-meta))
-                          default-metadata
-                          (if scripts scripts)
-                          (if page-style [[:style page-style]]))))))
 
 (defn- rename-meta
   [m]
@@ -225,3 +203,47 @@
   (reduce (fn [m v] (if (meta v) (merge m (rename-meta (meta v))) m))
           metadata
           (tree-seq sequential? identity page-contents)))
+
+;; Fabricate HTML defaults
+
+(def css-reset
+  "CSS reset for Fabricate pages"
+  (slurp (io/resource "site/fabricate/reset.css")))
+
+
+(def default-metadata
+  "Default metadata to add to page head elements"
+  (list [:meta {:charset "utf-8"}]
+        [:meta {:http-equiv "X-UA-Compatible" :content "IE-edge"}]
+        [:meta
+         {:name "viewport" :content "width=device-width, initial-scale=1.0"}]
+        [:style css-reset]))
+
+;; defaults
+(defn entry->hiccup-body
+  "Generate a HTML <body> Hiccup element from the entry."
+  ([{hiccup-data :site.fabricate.document/data :as entry} opts]
+   [:body [:main hiccup-data]])
+  ([entry] (entry->hiccup-body entry {})))
+
+(defn entry->hiccup-head
+  "Generate a HTML <head> Hiccup element from the entry."
+  ([{doc-title :site.fabricate.document/title :as entry} opts]
+   [:head [:title doc-title] [:meta {:charset "utf-8"}]
+    [:meta {:http-equiv "X-UA-Compatible" :content "IE-edge"}]
+    [:meta {:name "viewport" :content "width=device-width, initial-scale=1.0"}]
+    [:style css-reset]])
+  ([entry] (entry->hiccup-head entry {})))
+
+
+(defn hiccup-entry->html-entry
+  "Generate an entry with a HTML5 string from the given Hiccup entry.
+
+Pass a function as the `:entry->head` key in the options map to generate a header from the contents of the entry. Pass a function as the `:entry->body` key to generate the body from the entry (including the data)"
+  [{hiccup-data :site.fabricate.document/data :as entry}
+   {:keys [entry->body entry->head]
+    :or   {entry->head entry->hiccup-head entry->body entry->hiccup-body}
+    :as   opts}]
+  (let [html (hiccup.page/html5 [:html (entry->head entry opts)
+                                 (entry->body entry opts)])]
+    (assoc entry :site.fabricate.page/data html)))
