@@ -1,8 +1,6 @@
 (ns site.fabricate.source
   "Default sources for Fabricate"
   (:require [site.fabricate.api :as api]
-            [site.fabricate.prototype.source.clojure :as clj]
-            [site.fabricate.prototype.source.fabricate :as fabricate]
             [babashka.fs :as fs])
   (:import [java.time ZonedDateTime ZoneId]))
 
@@ -45,7 +43,7 @@
   (let [fabricate-templates (fs/glob source-location src)]
     (mapv (fn template->entry [p]
             (merge (file-times p)
-                   {::format     ::fabricate/v0
+                   {::format     :fabricate/v0
                     ::file       (fs/file p)
                     ::api/source src
                     ::location   (fs/file p)
