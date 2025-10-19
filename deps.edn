@@ -1,4 +1,5 @@
-{:aliases {:runner   {:exec-args {:excludes [:performance]
+{:aliases {:dev      {:extra-paths ["dev"]}
+           :runner   {:exec-args {:excludes [:performance]
                                   :patterns ["^(?!.*performance).*$"]}
                       :exec-fn cognitect.test-runner.api/test
                       :extra-deps
