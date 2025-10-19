@@ -15,4 +15,4 @@
                                {:site.fabricate.source/location (fs/file ".")})]
       (doseq [e entries]
         (t/testing (:site.fabricate.source/location e)
-          (t/is (m/validate api/entry-schema e)))))))
+          (t/is (m/validate api/Entry e)))))))

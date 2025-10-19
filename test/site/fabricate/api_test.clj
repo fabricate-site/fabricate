@@ -8,12 +8,15 @@
             [site.fabricate.prototype.html]
             [site.fabricate.prototype.hiccup]
             [site.fabricate.prototype.check]
+            [site.fabricate.prototype.kindly]
             [site.fabricate.source :as source]
             [site.fabricate.document :as document]
             [site.fabricate.prototype.schema :as s]
             [malli.core :as m]
             [malli.util :as mu]
             [malli.error :as me]
+            [matcher-combinators.test]
+            [matcher-combinators.matchers :as matchers]
             [babashka.fs :as fs]
             [clojure.java.io :as io]))
 
@@ -49,8 +52,20 @@
 
 
 
-(def valid-entry? (m/validator api/entry-schema))
-(def explain-entry (m/explainer api/entry-schema))
+(def valid-entry? (m/validator api/Entry))
+(def explain-entry (m/explainer api/Entry))
+
+
+(t/deftest functions
+  (t/testing "form evaluation"
+    (t/is (= 3
+             (-> {:code "(+ 1 2)" :form '(+ 1 2) :kind :code}
+                 (api/eval-form)
+                 :value)))
+    (t/is (map? (-> {:code "(inc \"a\")" :form '(inc "a") :kind :code}
+                    (api/eval-form)
+                    :error)))))
+
 
 
 (defmethod api/produce! [:clojure/edn :clojure/edn]
@@ -93,7 +108,7 @@
       (t/testing "for individual entries"
         (doseq [e entries]
           (let [built (api/build e {})
-                _ (do (t/is (some? (api/produce-dispatch built {}))))]
+                _ (do (t/is (some? (#'api/produce-dispatch built {}))))]
             (when-not (= :clojure/deps (:site.fabricate.source/format e))
               (let [{:keys [site.fabricate.page/output] :as produced}
                     (api/produce! built {})]
@@ -137,8 +152,8 @@
           :site.fabricate.page/output]
          [:site.fabricate.document/data {:optional true}
           :site.fabricate.document/data]
-         [:site.fabricate.document/format {:optional true}
-          :site.fabricate.document/format]
+         #_[:site.fabricate.document/format {:optional true}
+            :site.fabricate.document/format]
          [:site.fabricate.source/format :site.fabricate.source/format]
          [:site.fabricate.page/format {:optional true}
           :site.fabricate.page/format]
@@ -151,6 +166,8 @@
           :site.fabricate.page/description]
          [:site.fabricate.page/author {:optional true}
           :site.fabricate.page/author]
+         [:site.fabricate.document/format {:optional true}
+          :site.fabricate.document/format]
          [:site.fabricate.page/language {:optional true}
           :site.fabricate.page/language]
          [:site.fabricate.page/locale {:optional true}
@@ -311,7 +328,14 @@
   (doseq [[v schema] api-contracts]
     (t/testing (str v)
       (let [var-schema (:malli/schema (meta v))]
-        (t/is (mu/equals schema var-schema) "API contract must be stable.")))))
+        ;; use the AST of the schemas to make order of map entry
+        ;; schemas irrelevant to the equality checks
+        (t/is (match? (matchers/match-with
+                       ;; order is encoded in the AST, so dissoc it
+                       [(fn [v] (and (map? v) (contains? v :order)))
+                        (fn [expected] (dissoc expected :order))]
+                       (m/ast schema))
+                      (m/ast var-schema)))))))
 
 (defn test-namespace
   [nmspc]
@@ -334,6 +358,7 @@
                           (not (re-find #"^site\.fabricate\.dev" ns-str))
                           (not (re-find #"^site\.fabricate.*test" ns-str))
                           (not (re-find #"^site\.fabricate.example" ns-str))
+                          (not (re-find #"^site\.fabricate.*ephemeral" ns-str))
                           (not (re-find #"^site\.fabricate.*docs" ns-str))
                           (not (re-find #"^site\.fabricate.*time" ns-str))))))
          (run! test-namespace))))

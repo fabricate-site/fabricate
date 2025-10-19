@@ -26,8 +26,7 @@
       ::document/format :hiccup/article}])
 
 
-(def post-build-entry
-  (m/schema (mu/required-keys api/entry-schema [::document/data])))
+(def post-build-entry (m/schema (mu/required-keys api/Entry [::document/data])))
 
 (def skip-files
   {(fs/file "test/site/fabricate/prototype/html_test.clj")
@@ -44,7 +43,13 @@
     (when-not (skip-files location)
       (t/testing (str "example entry at " location
                       " " [source-format document-format])
-        (let [built-entry (api/build entry {})
+        (let [built-entry (try (api/build entry {})
+                               (catch Exception e
+                                 (throw (-> e
+                                            Throwable->map
+                                            (assoc :context entry)
+                                            (#(ex-info "Error building entry"
+                                                       %))))))
               valid-entry (m/validate post-build-entry built-entry)]
           (when-not valid-entry
             (println (me/humanize (m/explain post-build-entry built-entry))))

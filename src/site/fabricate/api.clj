@@ -3,6 +3,8 @@
 
   This contains the core set of operations that Fabricate uses to produce a website from input files."
   (:require [site.fabricate.prototype.schema :as s]
+            [site.fabricate.prototype.kindly]
+            [site.fabricate.prototype.eval :as eval]
             [malli.core :as m]
             [malli.util :as mu]
             [clojure.java.io :as io]
@@ -11,6 +13,8 @@
   (:import [java.io File]
            [java.net URI]
            [java.time ZonedDateTime Instant ZoneId]))
+
+
 
 
 (def glossary
@@ -98,7 +102,10 @@
     :type [:or :string [:fn uuid?] :symbol :namespace]}
    {:doc  "The Clojure namespace of an entry."
     :term :site.fabricate.entry/namespace
-    :type :namespace}])
+    :type :namespace}
+   {:doc  "The map used by Kindly to represent Clojure forms"
+    :term :site.fabricate.prototype.kindly/form
+    :type site.fabricate.prototype.kindly/Form}])
 
 ;; register schema components and bind them to a registry var
 (def registry
@@ -112,27 +119,33 @@
               [term schema])))))
 
 
-(def entry-schema
-  "Malli schema describing entries."
-  (mu/required-keys
-   (mu/optional-keys
-    (m/schema [:map :site.fabricate.api/source :site.fabricate.source/location
-               :site.fabricate.page/output :site.fabricate.document/data
-               :site.fabricate.document/format :site.fabricate.source/format
-               :site.fabricate.page/format :site.fabricate.page/uri
-               :site.fabricate.page/title :site.fabricate.page/permalink
-               :site.fabricate.page/description :site.fabricate.page/author
-               :site.fabricate.page/language :site.fabricate.page/locale
-               :site.fabricate.page/image :me.ogp/type
-               :site.fabricate.page/published-time
-               #_:site.fabricate.document/metadata
-               :site.fabricate.page/publish-dir :site.fabricate.source/created
-               :site.fabricate.source/modified
-               :site.fabricate.page/modified-time :site.fabricate.page/tags
-               :site.fabricate.entry/id :site.fabricate.entry/namespace]))
-   ;; entries ultimately have to come from somewhere.
-   [:site.fabricate.api/source :site.fabricate.source/location
-    :site.fabricate.source/format]))
+(def Entry
+  "A map representing a page before, during, and after the assemble and produce steps.
+
+One source may produce multiple entries."
+  (->
+    (m/schema
+     [:map
+      {:description
+       "A map representing a component of a page before, during, and after the assemble and produce operations. One source may produce multiple entries."}
+      :site.fabricate.api/source :site.fabricate.source/location
+      :site.fabricate.page/output :site.fabricate.document/data
+      :site.fabricate.document/format :site.fabricate.source/format
+      :site.fabricate.page/format :site.fabricate.page/uri
+      :site.fabricate.page/title :site.fabricate.page/permalink
+      :site.fabricate.page/description :site.fabricate.page/author
+      :site.fabricate.page/language :site.fabricate.page/locale
+      :site.fabricate.page/image :me.ogp/type
+      :site.fabricate.page/published-time #_:site.fabricate.document/metadata
+      :site.fabricate.page/publish-dir :site.fabricate.source/created
+      :site.fabricate.source/modified :site.fabricate.page/modified-time
+      :site.fabricate.page/tags :site.fabricate.entry/id
+      :site.fabricate.entry/namespace])
+    (mu/optional-keys)
+    (mu/required-keys
+     ;; entries ultimately have to come from somewhere.
+     [:site.fabricate.api/source :site.fabricate.source/location
+      :site.fabricate.source/format])))
 
 
 (defn collect-dispatch
@@ -152,9 +165,11 @@
   "Malli schema describing the contents of a Fabricate site.
 
 A site is the primary map passed between the 3 core API functions: plan!, assemble, and construct!"
-  (m/schema [:map [:site.fabricate.api/entries [:* entry-schema]]
+  (m/schema [:map [:site.fabricate.api/entries [:* Entry]]
              [:site.fabricate.api/options :map]]))
 
+
+;; TODO: decide whether this should be part of the public API
 (def site-fn-schema
   "Function schema for functions that operate on a site"
   (m/schema [:schema
@@ -167,13 +182,6 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
                                       [:schema site-schema]]}} ::site-fn]))
 
 
-;; question: should this actually be exactly the same signature /
-;; implementation as the other functions in the API? Making it different
-;; - by simply executing each setup task for its side effects rather than
-;; for returning an updated site - encourages keeping the initial setup
-;; simpler, and makes the API somewhat more orthogonal. I think this
-;; question is better answered through use while the API continues to
-;; stabilize.
 
 (defn plan!
   "Execute all the given `setup-tasks`, then `collect` the list of entries from each source.
@@ -205,9 +213,10 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
 
 (defn build-dispatch
   "Return the source and document formats for an entry."
-  {:malli/schema (m/schema [:=> [:cat entry-schema :map]
+  {:malli/schema (m/schema [:=> [:cat Entry :map]
                             [:tuple :site.fabricate.source/format
-                             :site.fabricate.document/format]])}
+                             :site.fabricate.document/format]])
+   :private      true}
   [entry options]
   [(:site.fabricate.source/format entry)
    (:site.fabricate.document/format entry)])
@@ -244,9 +253,10 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
 
 (defn produce-dispatch
   "Return the document and page format for an entry."
-  {:malli/schema (m/schema [:=> [:cat entry-schema :map]
+  {:malli/schema (m/schema [:=> [:cat Entry :map]
                             [:tuple :site.fabricate.document/format
-                             :site.fabricate.page/format]])}
+                             :site.fabricate.page/format]])
+   :private      true}
   [entry options]
   [(:site.fabricate.document/format entry) (:site.fabricate.page/format entry)])
 
@@ -275,4 +285,63 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
             sorted-tasks)))
 
 
-(comment)
+(comment
+  (ns-unmap *ns* 'entry-schema))
+
+
+(defn eval-form
+  "Evaluate the Clojure form and add the result to the map."
+  {:malli/schema [:=> [:cat Entry] Entry]}
+  [form]
+  (eval/eval-form form))
+
+(defn value->form
+  "Convert the Clojure value into a Kindly form map."
+  {:malli/schema [:=> [:cat :any] Entry]}
+  [form]
+  nil)
+
+;;TODO: figure out how to specify the dispatch
+(defn display-form-dispatch
+  "Dispatch for display-form multimethod."
+  {:private true}
+  ([form
+    {:keys [site.fabricate.page/format] :or {format :hiccup/html} :as opts}]
+   [(:kind form) format])
+  ([form] (display-form-dispatch form {})))
+
+(defmulti display-form
+  "Multimethod to convert a Kindly form into an output format. Dispatches on the kindly kind and the output format."
+  {#_:malli/schema}
+  display-form-dispatch)
+
+
+(comment
+ ;; for now, assume that :kind :code means "code block" and then create a
+ ;; different kind for inline code elements (e.g. in templates).
+)
+
+
+;; render-form relies upon/defers to display-form while
+;; ensuring the ancillary cases of :hide-code and :hide-value
+;; options are handled. there may have been a way to make render-form
+;; completely recursive, but I don't think (at this stage) that it would have
+;; been worth some potentially confusing self-referential loops.
+(defn render-form
+  "Render the form based on the Kindly options."
+  {:malli/schema (m/schema [:-> site.fabricate.prototype.kindly/Form :map
+                            :any])}
+  ([form options]
+   (let [hide-value  (true? (get-in form [:kindly/options :hide-value] false))
+         hide-code   (true? (or
+                             (:kindly/hide-code form)
+                             (get-in form [:kindly/options :hide-code] true)))
+         form-code   (when-not hide-code (or (:form form) (:code form)))
+         page-format (or (:site.fabricate.page/format options)
+                         (:site.fabricate.page/format form))]
+     (case [hide-code hide-value]
+       [true true]   nil
+       [false true]  (display-form form options)
+       [true false]  (display-form {:kind :code :value form-code} options)
+       [false false] (list (display-form {:kind :code :value form-code} options)
+                           (display-form form options))))))

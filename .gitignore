@@ -27,3 +27,4 @@ docs/**/*.woff2
 
 # example HTML outputs
 test-resources/html/*.html
+/dev/scratch.clj

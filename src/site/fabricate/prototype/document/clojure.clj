@@ -318,6 +318,7 @@ If passed a file or string path pointing to an existing file, will read from the
       [:break :code-block]    (apply list
                                      (trim-newlines prev-element)
                                      (code-block next-form))
+      [:break :newlines]      (list (trim-newlines prev-element))
       [:p :comment]           (list (into (conj (trim-newlines prev-element)
                                                 " ")
                                           (:clojure.comment/text next-form)))
