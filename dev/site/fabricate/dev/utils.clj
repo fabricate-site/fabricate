@@ -1,20 +1,17 @@
 (ns site.fabricate.dev.utils
   "Dev-time utilities"
-  (:require [clojure.test]
-            [site.fabricate.api]
-            [site.fabricate.prototype.read]
-            [site.fabricate.prototype.html]
-            [site.fabricate.prototype.hiccup]
-            [site.fabricate.prototype.eval]
-            [site.fabricate.prototype.kindly]
-            [site.fabricate.prototype.schema]
-            [site.fabricate.prototype.schema]
-            [site.fabricate.prototype.source.clojure]
-            [site.fabricate.prototype.source.fabricate]
-            [site.fabricate.prototype.document.clojure]
-            [site.fabricate.prototype.document.fabricate]
-            [site.fabricate.prototype.page.hiccup]))
-
+  (:require
+   [clojure.test]
+   [site.fabricate.api]
+   [site.fabricate.prototype.clojure]
+   [site.fabricate.prototype.eval]
+   [site.fabricate.prototype.hiccup]
+   [site.fabricate.prototype.html]
+   [site.fabricate.prototype.kindly]
+   [site.fabricate.prototype.page.hiccup]
+   [site.fabricate.prototype.read]
+   [site.fabricate.prototype.schema]
+   [site.fabricate.prototype.template]))
 
 (defn fabricate-vars
   "Get a seq of every public var in Fabricate"

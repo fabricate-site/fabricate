@@ -1,4 +1,4 @@
-(ns site.fabricate.prototype.document.fabricate
+(ns site.fabricate.prototype.template
   "Generate documents from Fabricate source templates"
   (:require [site.fabricate.prototype.read :as read]
             [site.fabricate.prototype.read.grammar :as grammar]

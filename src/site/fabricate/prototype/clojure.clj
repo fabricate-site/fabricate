@@ -1,4 +1,4 @@
-(ns site.fabricate.prototype.document.clojure
+(ns site.fabricate.prototype.clojure
   "Prototype namespace for generating Hiccup and Kindly values from Clojure forms."
   (:require [site.fabricate.adorn :as adorn]
             [clojure.string :as str]

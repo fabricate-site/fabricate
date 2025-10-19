@@ -2,7 +2,7 @@
   (:require [clojure.test :as t]
             [site.fabricate.api :as api]
             ;; refer the dev ns to ensure multimethods have impls
-            [site.fabricate.dev.build]
+            #_[site.fabricate.dev.build]
             [site.fabricate.prototype.test-utils :refer [with-instrumentation]]
             [site.fabricate.prototype.read]
             [site.fabricate.prototype.html]

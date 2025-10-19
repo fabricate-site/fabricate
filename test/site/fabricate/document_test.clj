@@ -1,16 +1,16 @@
 (ns site.fabricate.document-test
   "Testing default build methods for documents"
-  (:require [site.fabricate.api :as api]
-            [site.fabricate.source :as source]
-            [site.fabricate.document :as document]
-            [site.fabricate.prototype.document.clojure :as clj]
-            [site.fabricate.prototype.document.fabricate :as fabricate]
-            [babashka.fs :as fs]
-            [malli.core :as m]
-            [malli.util :as mu]
-            [malli.error :as me]
-            [clojure.test :as t]))
-
+  (:require
+   [babashka.fs :as fs]
+   [clojure.test :as t]
+   [malli.core :as m]
+   [malli.error :as me]
+   [malli.util :as mu]
+   [site.fabricate.api :as api]
+   [site.fabricate.document :as document]
+   [site.fabricate.prototype.clojure :as clj]
+   [site.fabricate.prototype.template :as fabricate]
+   [site.fabricate.source :as source]))
 
 (def example-entries
   [{::source/location (fs/file "test-resources/site/fabricate/example.clj")
@@ -22,7 +22,7 @@
     ::api/source      "example"
     ::document/format :kind/fragment}
    #_{::source/location ""
-      ::source/format   ::fabricate/v0
+      ::source/format   :fabricate/v0
       ::document/format :hiccup/article}])
 
 

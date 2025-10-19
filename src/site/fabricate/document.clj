@@ -1,13 +1,13 @@
 (ns site.fabricate.document
   "Default methods for building documents from sources"
-  (:require [site.fabricate.api :as api]
-            [site.fabricate.prototype.document.clojure :as clj]
-            [site.fabricate.prototype.document.fabricate :as fabricate]))
-
+  (:require
+   [site.fabricate.api :as api]
+   [site.fabricate.prototype.clojure :as clj]
+   [site.fabricate.prototype.template :as fabricate]))
 
 (def defaults "Default options for documents" {})
 
-(defmethod api/build [::fabricate/v0 :hiccup/article]
+(defmethod api/build [:fabricate/v0 :hiccup/article]
   [entry opts]
   (let [article          (fabricate/entry->hiccup-article entry opts)
         article-attrs    (nth article 1)

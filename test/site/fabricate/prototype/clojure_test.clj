@@ -1,14 +1,15 @@
-(ns site.fabricate.prototype.document.clojure-test
-  (:require [site.fabricate.prototype.document.clojure :as clj]
-            [site.fabricate.adorn :as adorn]
-            [babashka.fs :as fs]
-            [rewrite-clj.parser :as parser]
-            [rewrite-clj.node :as node]
-            [malli.core :as malli]
-            [malli.error :as me]
-            [matcher-combinators.test]
-            [matcher-combinators.matchers :as m]
-            [clojure.test :as t]))
+(ns site.fabricate.prototype.clojure-test
+  (:require
+   [babashka.fs :as fs]
+   [clojure.test :as t]
+   [malli.core :as malli]
+   [malli.error :as me]
+   [matcher-combinators.matchers :as m]
+   [matcher-combinators.test]
+   [rewrite-clj.node :as node]
+   [rewrite-clj.parser :as parser]
+   [site.fabricate.adorn :as adorn]
+   [site.fabricate.prototype.clojure :as clj]))
 
 (def example-file "test-resources/site/fabricate/example.clj")
 
