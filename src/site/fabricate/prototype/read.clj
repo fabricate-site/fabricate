@@ -12,6 +12,7 @@
             [malli.generator :as mg]
             [malli.transform :as mt]
             [site.fabricate.adorn :as adorn]
+            [site.fabricate.prototype.hiccup :as hiccup]
             [site.fabricate.prototype.schema :as schema]
             [site.fabricate.prototype.kindly :as kindly]
             [site.fabricate.prototype.eval :as prototype.eval]
@@ -362,3 +363,22 @@
            (map #(update-form % {:file filename})
                 (rest (template-encoder parsed))))))
   ([src] (parse src {})))
+
+
+
+(defn entry->hiccup-article
+  "Return a Hiccup article for the document by parsing and evaluating the document's Fabricate template."
+  [entry opts]
+  (let [parsed-page    (parse (slurp (:site.fabricate.source/location entry)))
+        evaluated-page (eval-all parsed-page)
+        page-metadata  (hiccup/lift-metadata evaluated-page
+                                             (let [m (:metadata
+                                                      (meta evaluated-page))]
+                                               ;; TODO: better handling of
+                                               ;; unbound metadata vars
+                                               (if (map? m) m {})))]
+    (with-meta (into [:article
+                      {:lang  "en-us"
+                       :title (:site.fabricate.page/title page-metadata)}]
+                     (hiccup/parse-paragraphs evaluated-page))
+               page-metadata)))

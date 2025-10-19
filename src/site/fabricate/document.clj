@@ -1,9 +1,8 @@
 (ns site.fabricate.document
   "Default methods for building documents from sources"
-  (:require
-   [site.fabricate.api :as api]
-   [site.fabricate.prototype.clojure :as clj]
-   [site.fabricate.prototype.template :as fabricate]))
+  (:require [site.fabricate.api :as api]
+            [site.fabricate.prototype.clojure :as clj]
+            [site.fabricate.prototype.read :as fabricate]))
 
 (def defaults "Default options for documents" {})
 

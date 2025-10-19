@@ -1,16 +1,15 @@
 (ns site.fabricate.document-test
   "Testing default build methods for documents"
-  (:require
-   [babashka.fs :as fs]
-   [clojure.test :as t]
-   [malli.core :as m]
-   [malli.error :as me]
-   [malli.util :as mu]
-   [site.fabricate.api :as api]
-   [site.fabricate.document :as document]
-   [site.fabricate.prototype.clojure :as clj]
-   [site.fabricate.prototype.template :as fabricate]
-   [site.fabricate.source :as source]))
+  (:require [babashka.fs :as fs]
+            [clojure.test :as t]
+            [malli.core :as m]
+            [malli.error :as me]
+            [malli.util :as mu]
+            [site.fabricate.api :as api]
+            [site.fabricate.document :as document]
+            [site.fabricate.prototype.clojure :as clj]
+            [site.fabricate.prototype.read :as fabricate]
+            [site.fabricate.source :as source]))
 
 (def example-entries
   [{::source/location (fs/file "test-resources/site/fabricate/example.clj")
