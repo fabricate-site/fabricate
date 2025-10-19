@@ -222,12 +222,14 @@
 ;; defaults
 (defn entry->hiccup-body
   "Generate a HTML <body> Hiccup element from the entry."
+  {:malli/schema [:-> #'site.fabricate.api/Entry [:vector :any]]}
   ([{hiccup-data :site.fabricate.document/data :as entry} opts]
    [:body [:main hiccup-data]])
   ([entry] (entry->hiccup-body entry {})))
 
 (defn entry->hiccup-head
   "Generate a HTML <head> Hiccup element from the entry."
+  {:malli/schema [:-> #'site.fabricate.api/Entry [:vector :any]]}
   ([{doc-title :site.fabricate.document/title :as entry} opts]
    [:head [:title doc-title] [:meta {:charset "utf-8"}]
     [:meta {:http-equiv "X-UA-Compatible" :content "IE-edge"}]
@@ -240,6 +242,7 @@
   "Generate an entry with a HTML5 string from the given Hiccup entry.
 
 Pass a function as the `:entry->head` key in the options map to generate a header from the contents of the entry. Pass a function as the `:entry->body` key to generate the body from the entry (including the data)"
+  {:malli/schema [:-> #'site.fabricate.api/Entry #'site.fabricate.api/Entry]}
   [{hiccup-data :site.fabricate.document/data :as entry}
    {:keys [entry->body entry->head]
     :or   {entry->head entry->hiccup-head entry->body entry->hiccup-body}

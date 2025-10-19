@@ -14,6 +14,7 @@
 (mr/set-default-registry! (mr/composite-registry (m/default-schemas)
                                                  (mt/schemas)
                                                  (mu/schemas)
+                                                 (mr/var-registry)
                                                  (mr/mutable-registry
                                                   registry)))
 
