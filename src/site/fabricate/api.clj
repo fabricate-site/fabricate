@@ -322,7 +322,7 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
 )
 
 
-;; render-form relies upon defers to display-form while
+;; render-form relies upon/defers to display-form while
 ;; ensuring the ancillary cases of :hide-code and :hide-value
 ;; options are handled. there may have been a way to make render-form
 ;; completely recursive, but I don't think (at this stage) that it would have

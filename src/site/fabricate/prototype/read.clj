@@ -76,7 +76,7 @@
                      (= delims "()") (concat () parsed-front-matter forms))
                (meta ext-form))))
 
-(def template-schema
+(def Template
   "Malli schema describing the elements of a fabricate template after it has been parsed by the Instaparse grammar."
   (m/schema [:schema
              {:registry
@@ -98,7 +98,7 @@
 
 (defn read-template
   "Parses the given template and adds line and column metadata to the forms."
-  {:malli/schema [:=> [:cat :string] template-schema]}
+  {:malli/schema [:=> [:cat :string] Template]}
   [template-txt]
   (let [attempt (template template-txt)]
     (if (insta/failure? attempt)
@@ -130,7 +130,7 @@
                              "-" (:instaparse.gll/end-column form-meta)]))]
     (concat line-info [", "] column-info)))
 
-(def error-form-schema
+(def Error-Hiccup-Form
   "Malli schema describing Hiccup forms that contain error messages"
   (m/schema [:tuple [:= :div] [:maybe [:map [:class [:= "fabricate-error"]]]]
              [:= [:h6 "Error"]] [:schema [:cat [:= :dl] [:* :any]]]
@@ -146,7 +146,7 @@
 ;; TODO: should this be a multimethod?
 (defn error->hiccup
   "Return a Hiccup form with context for the error."
-  {:malli/schema [:=> [:cat prototype.eval/Parsed-Form] error-form-schema]}
+  {:malli/schema [:=> [:cat prototype.eval/Parsed-Form] Error-Hiccup-Form]}
   [{:keys [expr-src exec expr error result display] :as parsed-expr}]
   [:div {:class "fabricate-error"} [:h6 "Error"]
    [:dl {:class "fabricate-error-info"} [:dt "Error type"]
@@ -168,7 +168,7 @@
   "If the form has no errors, return its results.
   Otherwise, create a hiccup form describing the error."
   {:malli/schema [:=> [:cat prototype.eval/Parsed-Form]
-                  [:or error-form-schema :any]]}
+                  [:or Error-Hiccup-Form :any]]}
   [{:keys [expr-src exec expr error result display] :as parsed-expr}]
   (cond error   (error->hiccup parsed-expr)
         display (list [:pre
@@ -233,8 +233,7 @@
 
 (defn yank-ns
   "Pulls the namespace form out of the first expression in the parse tree."
-  {:malli/schema [:=> [:cat #_template-schema :any]
-                  [:or [:sequential :any] :symbol]]}
+  {:malli/schema [:=> [:cat #_Template :any] [:or [:sequential :any] :symbol]]}
   [expr-tree]
   (let [first-expr (->> expr-tree
                         (tree-seq vector? identity)
@@ -251,7 +250,7 @@
 
 (defn get-metadata
   "Get the metadata form from the parse tree."
-  {:malli/schema [:=> [:cat template-schema] [:map]]}
+  {:malli/schema [:=> [:cat Template] [:map]]}
   [expr-tree]
   (->> expr-tree
        (tree-seq vector? identity)
@@ -268,11 +267,9 @@
   "Walks the parsed template and evaluates all the embedded expressions within it. Returns a Hiccup form."
   {:malli/schema
    (m/schema
-    [:function
-     [:=> [:cat #_[:schema template-schema] [:vector :any]] [:vector :any]]
-     [:=> [:cat #_[:schema template-schema] [:vector :any] :boolean]
-      [:vector :any]]
-     [:=> [:cat #_[:schema template-schema] [:vector :any] :boolean :symbol]
+    [:function [:=> [:cat #_[:schema Template] [:vector :any]] [:vector :any]]
+     [:=> [:cat #_[:schema Template] [:vector :any] :boolean] [:vector :any]]
+     [:=> [:cat #_[:schema Template] [:vector :any] :boolean :symbol]
       [:vector :any]]])}
   ([parsed-form simplify? nmspc]
    (let [form-nmspc (or (yank-ns parsed-form) nmspc)
@@ -330,7 +327,7 @@
 
 
 (def ^:private template-encoder
-  (m/encoder template-schema (mt/transformer {:name :get})))
+  (m/encoder Template (mt/transformer {:name :get})))
 
 (def ^:private meta-key-mapping
   {:instaparse.gll/start-index  :file/start-index

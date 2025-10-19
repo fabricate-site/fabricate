@@ -178,7 +178,7 @@
                                  [:form-contents [:txt "some text"]] "]"])))
     (t/is
      (valid-schema?
-      template-schema
+      Template
       (template
        "✳//[:div
 ✳+=(let [s \"output\"]
@@ -214,12 +214,12 @@
                     (get-in parsed [0 :file]))))))
 
 (comment
-  (-> (m/explain template-schema (parse "✳(ns test-ns)🔚"))
+  (-> (m/explain Template (parse "✳(ns test-ns)🔚"))
       (me/humanize)))
 
 (t/deftest parsed-content-transforms
   (t/testing "schema conformance"
-    #_(t/is (valid-schema? template-schema (parse "✳(ns test-ns)🔚")))
+    #_(t/is (valid-schema? Template (parse "✳(ns test-ns)🔚")))
     (t/is (every? #(m/validate prototype.eval/Parsed-Form %)
                   (parse "✳(ns test-ns)🔚"))))
   (t/testing "namespace retrieval"
@@ -284,7 +284,7 @@
          "Results of forms should display properly alongside source expressions")
         (t/is
          (m/validate
-          error-form-schema
+          Error-Hiccup-Form
           [:div {:class "fabricate-error"} [:h6 "Error"]
            [:dl [:dt "Error type"] [:dd [:code "clojure.lang.ExceptionInfo"]]
             [:dt "Error message"]

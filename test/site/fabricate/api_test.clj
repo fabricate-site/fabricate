@@ -32,7 +32,7 @@
          :site.fabricate.page/title title
          :site.fabricate.page/id    id))
 
-#_(t/use-fixtures :once with-instrumentation)
+(t/use-fixtures :once with-instrumentation)
 
 (defmethod api/collect "deps.edn"
   [src opts]
@@ -358,6 +358,7 @@
                           (not (re-find #"^site\.fabricate\.dev" ns-str))
                           (not (re-find #"^site\.fabricate.*test" ns-str))
                           (not (re-find #"^site\.fabricate.example" ns-str))
+                          (not (re-find #"^site\.fabricate.*ephemeral" ns-str))
                           (not (re-find #"^site\.fabricate.*docs" ns-str))
                           (not (re-find #"^site\.fabricate.*time" ns-str))))))
          (run! test-namespace))))
