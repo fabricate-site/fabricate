@@ -312,35 +312,41 @@ If passed a file or string path pointing to an existing file, will read from the
                                 :default (throw (ex-info "Unmatched form type"
                                                          {:clojure/form
                                                           next-form})))]
-    (case [prev-element-type next-form-type]
-      [:break :comment]       (list (trim-newlines prev-element)
-                                    (new-paragraph next-form))
-      [:break :code-block]    (apply list
-                                     (trim-newlines prev-element)
-                                     (code-block next-form))
-      [:break :newlines]      (list (trim-newlines prev-element))
-      [:p :comment]           (list (into (conj (trim-newlines prev-element)
-                                                " ")
-                                          (:clojure.comment/text next-form)))
-      [:p :newlines]          (list (into prev-element (->newlines next-form)))
-      [:p :whitespace]        (list (into prev-element
-                                          (:clojure/whitespace next-form)))
-      [:p :code-block]        (apply list
-                                     (trim-newlines prev-element)
-                                     (code-block next-form))
-      [:pre :comment]         (list (trim-newlines prev-element)
-                                    (new-paragraph next-form))
-      [:pre :code-block]      (apply list prev-element (code-block next-form))
-      [:pre :newlines]        (list prev-element)
-      [:pre :whitespace]      (list prev-element)
-      [:attr-map :comment]    (list prev-element (new-paragraph next-form))
-      [:attr-map :code-block] (apply list prev-element (code-block next-form))
-      [:attr-map :newlines]   (list prev-element)
-      [:hiccup :newlines]     (list prev-element)
-      [:hiccup :comment]      (list prev-element (new-paragraph next-form))
-      [:hiccup :code-block]   (apply list prev-element (code-block next-form))
-      ;; uneval always gets discarded
-      [:any :uneval]          (list prev-element))))
+    (try
+      (case [prev-element-type next-form-type]
+        [:break :comment]       (list (trim-newlines prev-element)
+                                      (new-paragraph next-form))
+        [:break :code-block]    (apply list
+                                       (trim-newlines prev-element)
+                                       (code-block next-form))
+        [:break :newlines]      (list (trim-newlines prev-element))
+        [:p :comment]           (list (into (conj (trim-newlines prev-element)
+                                                  " ")
+                                            (:clojure.comment/text next-form)))
+        [:p :newlines]          (list (into prev-element
+                                            (->newlines next-form)))
+        [:p :whitespace]        (list (into prev-element
+                                            (:clojure/whitespace next-form)))
+        [:p :code-block]        (apply list
+                                       (trim-newlines prev-element)
+                                       (code-block next-form))
+        [:pre :comment]         (list (trim-newlines prev-element)
+                                      (new-paragraph next-form))
+        [:pre :code-block]      (apply list prev-element (code-block next-form))
+        [:pre :newlines]        (list prev-element)
+        [:pre :whitespace]      (list prev-element)
+        [:attr-map :comment]    (list prev-element (new-paragraph next-form))
+        [:attr-map :code-block] (apply list prev-element (code-block next-form))
+        [:attr-map :newlines]   (list prev-element)
+        [:hiccup :newlines]     (list prev-element)
+        [:hiccup :comment]      (list prev-element (new-paragraph next-form))
+        [:hiccup :code-block]   (apply list prev-element (code-block next-form))
+        ;; uneval always gets discarded
+        [:any :uneval]          (list prev-element))
+      (catch java.lang.IllegalArgumentException ex
+        (throw (ex-info "Unmatched element pair"
+                        {:data {:prev-element prev-element
+                                :next-form    next-form}}))))))
 
 
 (defn forms->hiccup
