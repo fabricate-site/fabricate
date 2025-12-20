@@ -1,31 +1,34 @@
 {:aliases
- {:runner
-  {:exec-args  {:excludes [:performance] :patterns ["^(?!.*performance).*$"]}
-   :exec-fn    cognitect.test-runner.api/test
-   :extra-deps {io.github.cognitect-labs/test-runner
-                {:git/url "https://github.com/cognitect-labs/test-runner"
-                 :sha     "7284cda41fb9edc0f3bc6b6185cfb7138fc8a023"}}
-   :jvm-opts   ["-Dclojure.main.report=stderr"]
-   :main-opts  ["-m" "cognitect.test-runner"]}
-  :test
-  {:extra-deps     {babashka/babashka.curl {:mvn/version "0.1.2"}
-                    com.brunobonacci/mulog {:mvn/version "0.9.0"}
-                    com.gfredericks/test.chuck {:mvn/version "0.2.14"}
-                    nu.validator/validator {:mvn/version "20.7.2"}
-                    nubank/matcher-combinators {:mvn/version "3.9.1"}
-                    org.clojure/test.check {:mvn/version "1.1.1"}
-                    org.scicloj/kindly {:mvn/version "4-beta18"}
-                    org.scicloj/kindly-render {:mvn/version "0.1.5-alpha"}
-                    site.fabricate/manual
-                    {:git/sha
-                     ;; branch
-                     "7de3a591998ce876c3614be8ee796ba689ccdf9a"
-                     ;; main "3867a5eabcf62c7c0a10eef9a5dda735b3377c3b
-                     :git/url "https://github.com/fabricate-site/manual.git"
-                     ;; avoid circular/conflicting deps
-                     #_#_:exclusions [site.fabricate/fabricate]}}
-   :extra-paths    ["test"]
-   :resource-paths ["test-resources"]}
+ {:runner   {:exec-args  {:excludes [:performance]
+                          :patterns ["^(?!.*performance).*$"]}
+             :exec-fn    cognitect.test-runner.api/test
+             :extra-deps {io.github.cognitect-labs/test-runner
+                          {:git/url
+                           "https://github.com/cognitect-labs/test-runner"
+                           :sha "7284cda41fb9edc0f3bc6b6185cfb7138fc8a023"}}
+             :jvm-opts   ["-Dclojure.main.report=stderr"]
+             :main-opts  ["-m" "cognitect.test-runner"]}
+  :test     {:extra-deps     {babashka/babashka.curl {:mvn/version "0.1.2"}
+                              com.brunobonacci/mulog {:mvn/version "0.9.0"}
+                              com.gfredericks/test.chuck {:mvn/version "0.2.14"}
+                              nu.validator/validator {:mvn/version "20.7.2"}
+                              nubank/matcher-combinators {:mvn/version "3.9.1"}
+                              org.clojure/test.check {:mvn/version "1.1.1"}
+                              org.scicloj/kindly {:mvn/version "4-beta18"}
+                              org.scicloj/kindly-render {:mvn/version
+                                                         "0.1.5-alpha"}
+                              site.fabricate/manual
+                              {:git/sha
+                               ;; branch
+                               "7de3a591998ce876c3614be8ee796ba689ccdf9a"
+                               ;; main
+                               ;; "3867a5eabcf62c7c0a10eef9a5dda735b3377c3b
+                               :git/url
+                               "https://github.com/fabricate-site/manual.git"
+                               ;; avoid circular/conflicting deps
+                               :exclusions [site.fabricate/fabricate]}}
+             :extra-paths    ["test"]
+             :resource-paths ["test-resources"]}
   :validate {:exec-args {:dirs ["docs/"]}
              :exec-fn   site.fabricate.prototype.check/html}}
  :deps
