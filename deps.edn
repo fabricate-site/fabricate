@@ -20,7 +20,7 @@
                               site.fabricate/manual
                               {:git/sha
                                ;; branch
-                               "dde58a8132cc8ed9a6e1513f992d4eca913efd76"
+                               "5737ba0ae6e5d452b2ac48855ba8f0ee9691d2cf"
                                ;; main
                                ;; "3867a5eabcf62c7c0a10eef9a5dda735b3377c3b
                                :git/url
