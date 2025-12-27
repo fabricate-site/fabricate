@@ -64,7 +64,14 @@
                  :value)))
     (t/is (map? (-> {:code "(inc \"a\")" :form '(inc "a") :kind :code}
                     (api/eval-form)
-                    :error)))))
+                    :error))))
+  (t/testing "form rendering"
+    #_(t/is (some? (-> {:code "(+ 1 2)" :form '(+ 1 2) :kind :code}
+                       (api/eval-form)
+                       api/render-form)))
+    (t/is (some? (-> {:code "(+ 1 2)" :form '(+ 1 2) :kind :code}
+                     (api/eval-form)
+                     (api/render-form {}))))))
 
 
 

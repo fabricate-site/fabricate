@@ -261,7 +261,10 @@
 
 (defn- process-form?
   [i]
-  (if (fabricate-expr? i) (prototype.eval/eval-form i) i))
+  (if (fabricate-expr? i)
+    ;; set default form - this will later be superseded by kindly-advice
+    (update (prototype.eval/eval-form i) :kindly/kind #(or % :kind/hiccup))
+    i))
 
 (defn eval-all
   "Walks the parsed template and evaluates all the embedded expressions within it. Returns a Hiccup form."
