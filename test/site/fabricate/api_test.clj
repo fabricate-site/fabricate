@@ -12,12 +12,19 @@
             [site.fabricate.source :as source]
             [site.fabricate.document :as document]
             [site.fabricate.prototype.schema :as s]
+            [site.fabricate.prototype.html-test.generators :as html-gen]
+            [hiccup.core]
             [malli.core :as m]
             [malli.util :as mu]
             [malli.error :as me]
             [matcher-combinators.test]
             [matcher-combinators.matchers :as matchers]
+            [scicloj.kindly.v4.api :as kindly]
             [babashka.fs :as fs]
+            [clojure.test.check :as check]
+            [clojure.test.check.generators :as gen]
+            [clojure.test.check.clojure-test :as test-check]
+            [clojure.test.check.properties :as prop]
             [clojure.java.io :as io]))
 
 ;; ensure registry is available
@@ -55,6 +62,68 @@
 (def valid-entry? (m/validator api/Entry))
 (def explain-entry (m/explainer api/Entry))
 
+(def kind-generators
+  #:kind{:edn                  (gen/one-of
+                                [(gen/map (gen/one-of
+                                           [gen/keyword gen/keyword-ns
+                                            gen/symbol-ns gen/symbol])
+                                          gen/any-printable-equatable)
+                                 (gen/vector gen/any-printable-equatable)
+                                 (gen/list gen/any-printable-equatable)
+                                 (gen/set gen/any-printable-equatable)])
+         :code                 (gen/list gen/any-printable-equatable)
+         :vega                 nil
+         :smile-model          nil
+         :image                nil
+         :plotly               nil
+         :println              nil
+         :echarts              nil
+         :map                  (gen/map gen/any-printable-equatable
+                                        gen/any-printable-equatable)
+         :portal               nil
+         :test                 nil
+         :dataset              nil
+         :vega-lite            nil
+         :html                 (gen/fmap #(hiccup.core/html %) html-gen/element)
+         :cytoscape            nil
+         :set                  (gen/set gen/any-printable-equatable)
+         :reagent              nil
+         :var                  nil
+         :hidden               nil
+         :hiccup               html-gen/element
+         :md                   gen/string-alphanumeric
+         :tex                  nil
+         :seq                  (gen/one-of
+                                [(gen/list gen/any-printable-equatable)
+                                 (gen/vector gen/any-printable-equatable)])
+         :htmlwidgets-plotly   nil
+         :video                nil
+         :observable           nil
+         :emmy-viewers         nil
+         :pprint               nil
+         :highcharts           nil
+         :table                nil
+         :fn                   nil
+         :vector               (gen/vector gen/any-printable-equatable)
+         :htmlwidgets-ggplotly nil
+         :fragment             nil
+         :scittle              nil
+         :test-last            nil})
+
+(def context-map-generator
+  (let [kind-gens (filterv (fn [[k v]] (some? v)) kind-generators)]
+    (gen/let [[kind kind-gen] (gen/elements kind-gens)]
+      (gen/hash-map :value kind-gen :kindly/kind (gen/return kind)))))
+
+
+(comment
+  (gen/sample html-gen/element))
+(gen/sample context-map-generator)
+
+(test-check/defspec arbitrary-form-rendering
+                    (prop/for-all [context-map context-map-generator]
+                                  (t/is (some? (api/render-form context-map
+                                                                {})))))
 
 (t/deftest functions
   (t/testing "form evaluation"
@@ -65,6 +134,13 @@
     (t/is (map? (-> {:code "(inc \"a\")" :form '(inc "a") :kind :code}
                     (api/eval-form)
                     :error))))
+  (t/testing "form display"
+    (t/is (some? (-> {:code "(+ 1 2)" :form '(+ 1 2) :kind :code}
+                     (api/eval-form)
+                     (api/display-form))))
+    (t/is (some? (-> {:code "(+ 1 2)" :form '(+ 1 2) :kind :code}
+                     (api/eval-form)
+                     (api/display-form {})))))
   (t/testing "form rendering"
     #_(t/is (some? (-> {:code "(+ 1 2)" :form '(+ 1 2) :kind :code}
                        (api/eval-form)
