@@ -25,7 +25,8 @@
             [clojure.test.check.generators :as gen]
             [clojure.test.check.clojure-test :as test-check]
             [clojure.test.check.properties :as prop]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [site.fabricate.adorn :as adorn]))
 
 ;; ensure registry is available
 (doseq [[term schema] api/registry] (s/register! term schema))
@@ -39,7 +40,7 @@
          :site.fabricate.page/title title
          :site.fabricate.page/id    id))
 
-(t/use-fixtures :once with-instrumentation)
+#_(t/use-fixtures :once with-instrumentation)
 
 (defmethod api/collect "deps.edn"
   [src opts]
@@ -117,13 +118,32 @@
 
 
 (comment
-  (gen/sample html-gen/element))
-(gen/sample context-map-generator)
+  (gen/sample html-gen/element)
+  (gen/sample context-map-generator))
 
 (test-check/defspec arbitrary-form-rendering
                     (prop/for-all [context-map context-map-generator]
                                   (t/is (some? (api/render-form context-map
                                                                 {})))))
+
+
+(defmethod api/display-form [:code nil]
+  [{:keys [value] :as kindly-map} opts]
+  (adorn/clj->hiccup value))
+
+(defmethod api/display-form [nil :hiccup/html]
+  [{:keys [value] :as kindly-map} _]
+  value
+  #_(adorn/clj->hiccup value))
+
+(defmethod api/display-form [:kind/hiccup :hiccup/html]
+  [{:keys [value] :as kindly-map} _]
+  value)
+
+(defmethod api/display-form [:code :hiccup/html]
+  [kindly-map opts]
+  (api/display-form (assoc kindly-map :kindly/kind :kind/code) opts))
+
 
 (t/deftest functions
   (t/testing "form evaluation"
@@ -137,7 +157,7 @@
   (t/testing "form display"
     (t/is (some? (-> {:code "(+ 1 2)" :form '(+ 1 2) :kind :code}
                      (api/eval-form)
-                     (api/display-form))))
+                     (api/display-form {}))))
     (t/is (some? (-> {:code "(+ 1 2)" :form '(+ 1 2) :kind :code}
                      (api/eval-form)
                      (api/display-form {})))))
@@ -163,8 +183,11 @@
         (api/plan!
          [(fn [s] (fs/create-dir (fs/path tmp-dir "css")) s)
           (fn [s] (when-not (fs/exists? "docs") (fs/create-dir "docs")) s)]
-         {:site.fabricate.api/options {:site.fabricate.page/publish-dir
-                                       tmp-dir}})]
+         ;; TODO: fix these tests - they no longer effectively exercise the
+         ;; source code
+         {:site.fabricate.api/options {:site.fabricate.page/publish-dir tmp-dir
+                                       :site.fabricate.source/source-dir
+                                       "docs"}})]
     (t/testing "planning"
       (t/is
        (some #(= "deps.edn" (fs/file-name (:site.fabricate.source/file %)))

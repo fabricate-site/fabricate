@@ -251,6 +251,7 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
             (assoc site :site.fabricate.api/entries doc-entries)
             tasks)))
 
+
 (defn produce-dispatch
   "Return the document and page format for an entry."
   {:malli/schema (m/schema [:=> [:cat Entry :map]
@@ -301,14 +302,15 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
   [form]
   nil)
 
-;;TODO: figure out how to specify the dispatch
 (defn display-form-dispatch
   "Dispatch for display-form multimethod."
   {:private true}
-  ([form
-    {:keys [site.fabricate.page/format] :or {format :hiccup/html} :as opts}]
-   [(:kind form) format])
-  ([form] (display-form-dispatch form {})))
+  ([form format-or-opts]
+   (let [format (cond (keyword? (first format-or-opts)) format-or-opts
+                      (map? format-or-opts) (:site.fabricate.page/format
+                                             format-or-opts)
+                      :default :hiccup/html)]
+     [(:kind form) format])))
 
 (defmulti display-form
   "Multimethod to convert a Kindly form into an output format. Dispatches on the kindly kind and the output format."

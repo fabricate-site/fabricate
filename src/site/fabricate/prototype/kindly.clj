@@ -60,6 +60,7 @@
   (kind/fragment [(kind/code 'a) (kind/hiccup [:div "example"])]))
 
 (defn metadata-annotation?
+  "Check whether the value has been annotated with kindly metadata"
   [v]
   (let [value-meta (meta v)]
     (or (contains? value-meta :kind)
