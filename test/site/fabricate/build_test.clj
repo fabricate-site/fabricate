@@ -54,42 +54,33 @@
     (mapv path->site-config (str/split test-sites #","))
     []))
 
-(defmethod api/collect (str test-dir "/**/*.fab")
-  [pattern {:keys [site.fabricate.source/dir] :as opts}]
-  (t/testing (str pattern ":")
-    (let [pattern (str (fs/file "**" (fs/file-name pattern)))
-          results (mapv (fn [p]
-                          ;; using namespace-specific formats ensures that
-                          ;; the tests never clash with other default
-                          ;; multimethods
-                          {:site.fabricate.source/format ::fabricate
-                           :site.fabricate.document/format ::hiccup
-                           :site.fabricate.page/format ::hiccup-html
-                           ::api/source pattern
-                           :site.fabricate.source/original-location
-                           (:site.fabricate.source/original-location opts)
-                           :site.fabricate.source/location (fs/file p)})
-                        (fs/glob dir pattern))]
-      (t/is (every? fs/exists? (map :site.fabricate.source/location results))
-            (str "every collected entry should exist"))
-      results)))
+(def pattern-formats
+  {(str test-dir "/**/*.fab") ::fabricate (str test-dir "/**/*.clj") ::clojure})
 
-(defmethod api/collect (str test-dir "/**/*.clj")
-  [pattern {:keys [site.fabricate.source/dir] :as opts}]
-  (t/testing (str pattern ": ")
-    (let [pattern (str (fs/file "**" (fs/file-name pattern)))
-          results (mapv (fn [p]
-                          {:site.fabricate.source/format ::clojure
-                           :site.fabricate.document/format ::hiccup
-                           :site.fabricate.page/format ::hiccup-html
-                           ::api/source pattern
-                           :site.fabricate.source/original-location
-                           (:site.fabricate.source/original-location opts)
-                           :site.fabricate.source/location (fs/file p)})
-                        (fs/glob dir pattern))]
-      (t/is (every? fs/exists? (map :site.fabricate.source/location results))
-            (str "every collected entry should exist"))
-      results)))
+(defn register-collect-methods!
+  ([pattern-formats]
+   (doseq [[pattern fmt] pattern-formats]
+     (defmethod api/collect pattern
+       [pattern {:keys [site.fabricate.source/dir] :as opts}]
+       (t/testing (str pattern ":")
+         (let [pattern (str (fs/file "**" (fs/file-name pattern)))
+               results (mapv (fn [p]
+                               ;; using namespace-specific formats ensures
+                               ;; that the tests never clash with other
+                               ;; default multimethods
+                               {:site.fabricate.source/format fmt
+                                :site.fabricate.document/format ::hiccup
+                                :site.fabricate.page/format ::hiccup-html
+                                ::api/source pattern
+                                :site.fabricate.source/original-location
+                                (:site.fabricate.source/original-location opts)
+                                :site.fabricate.source/location (fs/file p)})
+                             (fs/glob dir pattern))]
+           (t/is (every? fs/exists?
+                         (map :site.fabricate.source/location results))
+                 (str "every collected entry should exist"))
+           results)))))
+  ([] (register-collect-methods! pattern-formats)))
 
 (def entry? (m/validator api/Entry))
 
@@ -125,4 +116,9 @@
                  ;; `api/produce!` using the HTML namespace
       ))))
 
-(t/deftest sites (run! test-site (into [manual-site-config] additional-sites)))
+(t/deftest sites
+  ;; only define the multimethods at runtime
+  (register-collect-methods!)
+  (run! test-site (into [manual-site-config] additional-sites))
+  ;; clean up + unmap test-specific multimethod impls
+  (run! (partial remove-method api/collect) (keys pattern-formats)))
