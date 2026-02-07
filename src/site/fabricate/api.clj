@@ -306,7 +306,7 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
   "Dispatch for display-form multimethod."
   {:private true}
   ([form format-or-opts]
-   (let [format (cond (keyword? (first format-or-opts)) format-or-opts
+   (let [format (cond (keyword? format-or-opts) format-or-opts
                       (map? format-or-opts) (:site.fabricate.page/format
                                              format-or-opts)
                       :default :hiccup/html)]

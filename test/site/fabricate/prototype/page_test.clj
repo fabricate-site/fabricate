@@ -22,5 +22,5 @@
                                                :hiccup/html}))))))
   (t/testing "hiccup"
     (doseq [hiccup [[:span "text"] [:code "(map dec (range 29 58 2))"]]]
-      (t/is (valid-element? (api/display-form {:kind  :hiccup
-                                               :value hiccup}))))))
+      (t/is (valid-element? (api/display-form {:kind :hiccup :value hiccup}
+                                              :hiccup/html))))))

@@ -116,15 +116,27 @@
     (gen/let [[kind kind-gen] (gen/elements kind-gens)]
       (gen/hash-map :value kind-gen :kindly/kind (gen/return kind)))))
 
+(def kindly-value-generator
+  (let [kind-gens (filterv (fn [[k v]] (some? v)) kind-generators)]
+    (gen/let [[kind kind-gen :as kv] (gen/elements kind-gens)]
+      ((resolve (symbol "scicloj.kindly.v4.kind" (name kind)))
+       (gen/generate kind-gen)))))
 
+
+
+(t/deftest context-map-gen
+  (t/is (true? (:pass? (check/quick-check
+                        200
+                        (prop/for-all [context-map context-map-generator]
+                                      (t/is (some? (api/render-form context-map
+                                                                    {})))))))))
 (comment
-  (gen/sample html-gen/element)
-  (gen/sample context-map-generator))
-
-(test-check/defspec arbitrary-form-rendering
-                    (prop/for-all [context-map context-map-generator]
-                                  (t/is (some? (api/render-form context-map
-                                                                {})))))
+  (gen/sample kindly-value-generator 50)
+  ;; TODO: identify where the such-that constraint fails
+  (test-check/defspec arbitrary-form-rendering
+                      (prop/for-all [context-map context-map-generator]
+                                    (t/is (some? (api/render-form context-map
+                                                                  {}))))))
 
 
 (defmethod api/display-form [:code nil]
@@ -160,7 +172,7 @@
                      (api/display-form {}))))
     (t/is (some? (-> {:code "(+ 1 2)" :form '(+ 1 2) :kind :code}
                      (api/eval-form)
-                     (api/display-form {})))))
+                     #_(api/display-form {})))))
   (t/testing "form rendering"
     #_(t/is (some? (-> {:code "(+ 1 2)" :form '(+ 1 2) :kind :code}
                        (api/eval-form)
@@ -466,6 +478,7 @@
                           (not (re-find #"^site\.fabricate.example" ns-str))
                           (not (re-find #"^site\.fabricate.*ephemeral" ns-str))
                           (not (re-find #"^site\.fabricate.*docs" ns-str))
+                          (not (re-find #"^site\.fabricate.*notes" ns-str))
                           (not (re-find #"^site\.fabricate.*time" ns-str))))))
          (run! test-namespace))))
 

@@ -6,7 +6,8 @@
             [rewrite-clj.zip :as zip]
             [rewrite-clj.parser :as parser]
             [malli.core :as m]
-            [babashka.fs :as fs]))
+            [babashka.fs :as fs]
+            [clojure.java.io :as io]))
 
 ;; Refactor: the source -> forms functions from the
 ;; site.fabricate.prototype.document.clojure ns
@@ -441,7 +442,8 @@ for documentation about the fragment kind."
 (comment
   ;; crazy idea: return hidden DOM elements????
   (-> "test-resources/site/fabricate/example.clj"
-      file->forms
+      io/file
+      read-forms
       eval-forms
       forms->fragment)
   (scicloj.kindly.v4.api/attach-meta-to-value 2 {:type :test})

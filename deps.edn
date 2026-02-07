@@ -1,6 +1,5 @@
 {:aliases
- {:runner   {:exec-args  {:excludes [:performance]
-                          :patterns ["^(?!.*performance).*$"]}
+ {:runner   {:exec-args  {:excludes [:performance]}
              :exec-fn    cognitect.test-runner.api/test
              :extra-deps {io.github.cognitect-labs/test-runner
                           {:git/url
@@ -10,7 +9,11 @@
              :main-opts  ["-m" "cognitect.test-runner"]}
   :test     {:extra-deps     {babashka/babashka.curl {:mvn/version "0.1.2"}
                               com.brunobonacci/mulog {:mvn/version "0.9.0"}
+                              com.clojure-goes-fast/clj-async-profiler
+                              {:mvn/version "2.0.0-beta1"}
                               com.gfredericks/test.chuck {:mvn/version "0.2.14"}
+                              com.taoensso/tufte {:mvn/version "3.0.2"}
+                              criterium/criterium {:mvn/version "0.4.6"}
                               nu.validator/validator {:mvn/version "20.7.2"}
                               nubank/matcher-combinators {:mvn/version "3.9.1"}
                               org.clojure/test.check {:mvn/version "1.1.1"}
@@ -18,14 +21,14 @@
                               org.scicloj/kindly-render {:mvn/version
                                                          "0.1.5-alpha"}
                               site.fabricate/manual
-                              {:git/sha
-                               ;; branch
-                               "5737ba0ae6e5d452b2ac48855ba8f0ee9691d2cf"
+                              {;; :git/sha branch
+                               ;; "5737ba0ae6e5d452b2ac48855ba8f0ee9691d2cf"
                                ;; main
                                ;; "3867a5eabcf62c7c0a10eef9a5dda735b3377c3b
-                               :git/url
-                               "https://github.com/fabricate-site/manual.git"
+                               ;; :git/url
+                               ;;  "https://github.com/fabricate-site/manual.git"
                                ;; avoid circular/conflicting deps
+                               :local/root "../fabricate-manual"
                                :exclusions [site.fabricate/fabricate]}}
              :extra-paths    ["test"]
              :resource-paths ["test-resources"]}
