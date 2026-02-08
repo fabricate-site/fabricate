@@ -1,9 +1,14 @@
 (ns site.fabricate.build-test
   (:require [clojure.test :as t]
+            [matcher-combinators.test]
+            [matcher-combinators.matchers :as match]
+            [matcher-combinators.config :as match-config]
             [clojure.string :as str]
             [site.fabricate.api :as api]
             [site.fabricate.dev.build :as build]
             [site.fabricate.prototype.html :as html]
+            [site.fabricate.prototype.document.clojure :as clj]
+            [site.fabricate.prototype.document.fabricate :as fab]
             [malli.core :as m]
             [babashka.fs :as fs]
             [clojure.java.io :as io]))
@@ -83,8 +88,8 @@
   ([] (register-collect-methods! pattern-formats)))
 
 (def entry? (m/validator api/Entry))
-
-(defn valid-fabricate-hiccup? [hiccup-data])
+(defn valid-fabricate-hiccup? [hiccup-data] vector?)
+(defn valid-output-hiccup? [hiccup-data] (html/element? hiccup-data))
 
 (defn build-fabricate
   "Build and test the entry from a Fabricate template"
@@ -92,10 +97,40 @@
   {:pre [(t/is (entry? entry))] :post [(t/is (and (entry? %)))]}
   entry)
 
-#_(defmethod api/build)
-#_(defmethod api/build)
+(defn build-clojure
+  "Build and test the entry from a Clojure source"
+  [entry]
+  {:pre [(t/is (entry? entry))] :post [(t/is (and (entry? %)))]}
+  entry)
 
-(defn valid-output-hiccup? [hiccup-data] (html/element? hiccup-data))
+(defn register-build-methods!
+  []
+  (defmethod api/build [::fabricate ::hiccup]
+    [{:keys [site.fabricate.source/location] :as entry} opts]
+    (let [hiccup-article (fab/entry->hiccup-article entry opts)]
+      (assoc entry :site.fabricate.document/data hiccup-article)))
+  (defmethod api/build [::clojure ::hiccup]
+    [{:keys [site.fabricate.source/location] :as entry} opts]
+    (let [data (-> location
+                   clj/read-forms
+                   clj/eval-forms
+                   clj/forms->hiccup)]
+      (assoc entry :site.fabricate.document/data data))))
+
+
+(defn check-hiccup-entries
+  [{:keys [site.fabricate.api/entries] :as site}]
+  (binding [*print-length* 10
+            *print-level*  5]
+    (doseq [{:keys [site.fabricate.source/location] :as e} entries]
+      (t/testing (str "\nentry: " location)
+        (t/is (match? {:site.fabricate.document/data
+                       (match/pred valid-fabricate-hiccup?
+                                   "Valid Hiccup with nested Kindly expected")}
+                      e)))))
+  site)
+
+(def assemble-tasks [check-hiccup-entries])
 
 (defn test-site
   [{:keys [site.fabricate.dev.build/setup-tasks site.fabricate.api/options]
@@ -108,7 +143,7 @@
           (t/is (= :done
                    (do (->> site-config
                             (#'site.fabricate.api/plan! setup-tasks)
-                            (#'site.fabricate.api/assemble [])
+                            (#'site.fabricate.api/assemble assemble-tasks)
                             (#'site.fabricate.api/construct! []))
                        :done)))))
       (t/testing "validity of generated page contents"
@@ -119,6 +154,9 @@
 (t/deftest sites
   ;; only define the multimethods at runtime
   (register-collect-methods!)
+  (register-build-methods!)
   (run! test-site (into [manual-site-config] additional-sites))
   ;; clean up + unmap test-specific multimethod impls
-  (run! (partial remove-method api/collect) (keys pattern-formats)))
+  (run! (partial remove-method api/collect) (keys pattern-formats))
+  (run! (partial remove-method api/build)
+        [[::fabricate ::hiccup] [::clojure ::hiccup]]))
