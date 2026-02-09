@@ -7,6 +7,7 @@
             [site.fabricate.api :as api]
             [site.fabricate.dev.build :as build]
             [site.fabricate.prototype.html :as html]
+            [site.fabricate.prototype.kindly :as kindly]
             [site.fabricate.prototype.document.clojure :as clj]
             [site.fabricate.prototype.document.fabricate :as fab]
             [malli.core :as m]
@@ -88,7 +89,19 @@
   ([] (register-collect-methods! pattern-formats)))
 
 (def entry? (m/validator api/Entry))
-(defn valid-fabricate-hiccup? [hiccup-data] vector?)
+
+
+(def fabricate-hiccup-schema
+  (m/schema [:schema
+             (assoc-in (m/properties html/element)
+              [:registry ::fabricate-hiccup]
+              [:cat :keyword [:? :map]
+               [:*
+                [:or [:schema [:ref ::html/element]] (m/schema kindly/Form)
+                 [:schema [:ref ::fabricate-hiccup]]]]]) ::fabricate-hiccup]))
+
+(def valid-fabricate-hiccup? (m/validator fabricate-hiccup-schema))
+
 (defn valid-output-hiccup? [hiccup-data] (html/element? hiccup-data))
 
 (defn build-fabricate
