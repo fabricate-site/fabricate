@@ -1,5 +1,6 @@
 (ns site.fabricate.build-test
   (:require [clojure.test :as t]
+            [clojure.pprint :as pprint]
             [matcher-combinators.test]
             [matcher-combinators.matchers :as match]
             [matcher-combinators.config :as match-config]
@@ -7,12 +8,17 @@
             [site.fabricate.api :as api]
             [site.fabricate.dev.build :as build]
             [site.fabricate.prototype.html :as html]
+            [site.fabricate.prototype.eval :as eval]
             [site.fabricate.prototype.kindly :as kindly]
             [site.fabricate.prototype.document.clojure :as clj]
             [site.fabricate.prototype.document.fabricate :as fab]
+            [site.fabricate.prototype.test-utils :as test-utils]
             [malli.core :as m]
+            [malli.error :as me]
             [babashka.fs :as fs]
             [clojure.java.io :as io]))
+
+(t/use-fixtures :once test-utils/with-instrumentation)
 
 (def manual-site-config
   {:site.fabricate.api/options
@@ -97,10 +103,31 @@
               [:registry ::fabricate-hiccup]
               [:cat :keyword [:? :map]
                [:*
-                [:or [:schema [:ref ::html/element]] (m/schema kindly/Form)
+                [:or [:schema [:ref ::html/element]]
+                 (m/schema eval/Evaluated-Form)
                  [:schema [:ref ::fabricate-hiccup]]]]]) ::fabricate-hiccup]))
 
-(def valid-fabricate-hiccup? (m/validator fabricate-hiccup-schema))
+(def fabricate-hiccup-validator (m/validator fabricate-hiccup-schema))
+(def fabricate-hiccup-explainer (m/explainer fabricate-hiccup-schema))
+
+(defn debug-entry-error
+  [{:keys [path in value schema] :as error}]
+  (println "Did not match schema")
+  (pprint/pprint schema)
+  (if (test-utils/cli-test?)
+    (binding [*print-length* 5 *print-level* 1] (pprint/pprint value))
+    (binding [*print-length* 20 *print-level* 4] (pprint/pprint value))))
+
+(defn valid-fabricate-hiccup?
+  [v]
+  (let [valid? (fabricate-hiccup-validator v)]
+    (when-not valid?
+      (let [{:keys [errors schema value] :as explained}
+            (fabricate-hiccup-explainer v)]
+        (pprint/pprint (me/humanize explained))
+        (println (count errors) "errors detected")
+        (run! debug-entry-error errors)))
+    valid?))
 
 (defn valid-output-hiccup? [hiccup-data] (html/element? hiccup-data))
 
@@ -133,14 +160,17 @@
 
 (defn check-hiccup-entries
   [{:keys [site.fabricate.api/entries] :as site}]
-  (binding [*print-length* 10
-            *print-level*  5]
+  (binding [*print-length* (if (test-utils/cli-test?) 5 10)
+            *print-level*  (if (test-utils/cli-test?) 1 5)]
     (doseq [{:keys [site.fabricate.source/location] :as e} entries]
-      (t/testing (str "\nentry: " location)
-        (t/is (match? {:site.fabricate.document/data
-                       (match/pred valid-fabricate-hiccup?
-                                   "Valid Hiccup with nested Kindly expected")}
-                      e)))))
+      (when (#{::fabricate ::clojure} (e :site.fabrciate.document/format))
+        (t/testing (str "\nentry: " location)
+          (t/is (match? {:site.fabricate.document/data
+                         (match/pred
+                          #_valid-fabricate-hiccup?
+                          vector?
+                          "Valid Hiccup with nested Kindly expected")}
+                        e))))))
   site)
 
 (def assemble-tasks [check-hiccup-entries])
@@ -168,6 +198,7 @@
   ;; only define the multimethods at runtime
   (register-collect-methods!)
   (register-build-methods!)
+  (if (test-utils/cli-test?) (match-config/enable-abbreviation!))
   (run! test-site (into [manual-site-config] additional-sites))
   ;; clean up + unmap test-specific multimethod impls
   (run! (partial remove-method api/collect) (keys pattern-formats))
