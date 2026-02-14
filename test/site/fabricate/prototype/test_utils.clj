@@ -3,14 +3,10 @@
             [malli.error :as me]
             [malli.instrument :as mi]
             [clojure.test :as t]
-            [clojure.pprint :as pprint]))
+            [clojure.pprint :as pprint]
+            [clojure.string :as str]))
 
-(defn with-instrumentation
-  [f]
-  (mi/collect!)
-  (mi/instrument!)
-  (f)
-  (mi/unstrument!))
+(defn cli-test? [] (= "cli.test" (System/getProperty "clojure.context")))
 
 (defmethod t/assert-expr 'valid-schema?
   [msg form]
@@ -18,16 +14,31 @@
          form#        (m/form schema#)
          data#        ~(nth form 2)
          result#      (m/validate schema# data#)
-         schema-name# (last form#)]
-     (t/do-report {:type     (if result# :pass :fail)
-                   :message  ~msg
-                   :expected (str (with-out-str (pprint/pprint data#))
-                                  " conforms to schema for "
-                                  schema-name#)
-                   :actual   (if (not result#)
-                               (me/humanize (m/explain schema# data#))
-                               result#)})
+         schema-name# (last form#)
+         desc#        (get (m/properties schema#) :description)]
+     (t/do-report {:type (if result# :pass :fail)
+                   :message ~msg
+                   :expected
+                   #_(str (with-out-str (pprint/pprint data#))
+                          " conforms to schema"
+                          (when desc# (str ": " desc#)))
+                   `(m/validate ~schema# ~data#)
+                   :actual (if (not result#)
+                             (me/humanize (m/explain schema# data#))
+                             result#)})
      result#))
+
+(defn with-instrumentation
+  "Test fixture enabling malli instrumentation to check function conformance to malli schemas"
+  [f]
+  (mi/collect!)
+  (mi/instrument!
+   {:report (fn report [key {:keys [output value] :as error-data}]
+              (when output
+                (t/is (valid-schema? output value)
+                      "Instrumented function didn't conform to schema")))})
+  (f)
+  (mi/unstrument!))
 
 (defn gather-test-meta
   "Obtain information about the current test as a map"
