@@ -18,6 +18,10 @@
 
 ;; TODO: should all the schemas live in... the schema namespace?
 
+(def ^:dynamic *default-kind*
+  "Default kind keyword - added if not specified in the form itself. "
+  :hiccup)
+
 (def Parsed-Form
   "A Kindly form that has been parsed but not evaluated, so lacks a :value entry."
   (-> site.fabricate.prototype.kindly/Form
@@ -57,20 +61,30 @@
 (defn eval-form
   "Evaluate the form in the given Map."
   {:malli/schema (m/schema [:-> Parsed-Form Evaluated-Form])}
-  [{:keys [form value ns] :as form-map}]
-  (if (contains? form-map :value)
-    form-map
-    (try (let [result (binding [*ns* (or ns *ns*)] (eval form))]
-           (cond (instance? IReference result)
-                 (let [result-meta     (meta result)
-                       new-result-meta (-> form-map
-                                           (set/rename-keys
-                                            {:file/start-line   :line
-                                             :file/start-column :column})
-                                           (select-keys [:ns :file :line
-                                                         :column]))]
-                   (alter-meta! result merge new-result-meta)))
-           (merge form-map
-                  {:value result}
-                  (when (meta result) {:meta (meta result)})))
-         (catch Exception e (assoc form-map :error (Throwable->map e))))))
+  [{:keys [kind form value ns code]
+    :or   {kind *default-kind* code (pr-str form)}
+    :as   form-map}]
+  (let [code (or code (pr-str form))]
+    (if (contains? form-map :value)
+      form-map
+      (try (let [result (binding [*ns* (or ns *ns*)] (eval form))]
+             (cond (instance? IReference result)
+                   (let [result-meta     (meta result)
+                         new-result-meta (-> form-map
+                                             (set/rename-keys
+                                              {:file/start-line   :line
+                                               :file/start-column :column})
+                                             (select-keys [:ns :file :line
+                                                           :column]))]
+                     (alter-meta! result merge new-result-meta)))
+             (merge form-map
+                    {:value result :kind kind :code code}
+                    (when (meta result) {:meta (meta result)})))
+           (catch Exception e
+             ;; treat errors simply as a different kind of evaluation
+             ;; result
+             (assoc form-map
+                    :error (Throwable->map e)
+                    :kind  :fabricate/error
+                    :code  code
+                    :value (Throwable->map e)))))))
