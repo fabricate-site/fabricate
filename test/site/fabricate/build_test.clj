@@ -5,6 +5,7 @@
             [matcher-combinators.matchers :as match]
             [matcher-combinators.config :as match-config]
             [clojure.string :as str]
+            [clojure.set :as set]
             [site.fabricate.api :as api]
             [site.fabricate.dev.build :as build]
             [site.fabricate.prototype.html :as html]
@@ -13,10 +14,19 @@
             [site.fabricate.prototype.document.clojure :as clj]
             [site.fabricate.prototype.document.fabricate :as fab]
             [site.fabricate.prototype.test-utils :as test-utils]
+            [dev.onionpancakes.chassis.core :as chassis]
             [malli.core :as m]
             [malli.error :as me]
             [babashka.fs :as fs]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [clojure.walk :as walk]
+            [clojure.data.json :as json])
+  (:import [nu.validator.validation SimpleDocumentValidator]
+           [nu.validator.client EmbeddedValidator]
+           [java.io ByteArrayInputStream]))
+
+
+
 
 (t/use-fixtures :once test-utils/with-instrumentation)
 
@@ -82,7 +92,7 @@
                                ;; default multimethods
                                {:site.fabricate.source/format fmt
                                 :site.fabricate.document/format ::hiccup
-                                :site.fabricate.page/format ::hiccup-html
+                                :site.fabricate.page/format :chassis/hiccup
                                 ::api/source pattern
                                 :site.fabricate.source/original-location
                                 (:site.fabricate.source/original-location opts)
@@ -175,6 +185,65 @@
 
 (def assemble-tasks [check-hiccup-entries])
 
+(def key-lookup
+  {:kind        :data-kind
+   :kindly/kind :data-kind
+   :kindly/hide-code :data-kindly-hide-code})
+(defn with-keys
+  [map kmap]
+  (-> map
+      (select-keys (keys kmap))
+      (set/rename-keys kmap)))
+
+(defn process-hiccup-form
+  [{:keys [kind value] :as form}]
+  (let [data-attrs (with-keys form key-lookup)]
+    (chassis/apply-normalized (fn add-data-attrs [tag attrs contents]
+                                (into [tag (merge attrs data-attrs)] contents))
+                              value)))
+
+(def kindly-map? (m/validator eval/Evaluated-Form))
+
+(defn process-kinds
+  [form page-format]
+  (walk/postwalk (fn [v] (if (kindly-map? v) (api/display-form v page-format)))
+                 form))
+
+(def html-validator
+  (doto (EmbeddedValidator.)
+    (.setOutputFormat nu.validator.client.EmbeddedValidator$OutputFormat/JSON)))
+
+(defn validate-html-string
+  [html-string]
+  (let [html-input-stream (ByteArrayInputStream. (.getBytes html-string))]
+    (try (let [validator-output (.validate html-validator html-input-stream)]
+           (if (empty? validator-output) {} (json/read-str validator-output)))
+         (catch Exception e (Throwable->map e)))))
+
+(comment
+  (validate-html-string (chassis/html [chassis/doctype-html5
+                                       [:head [:title "test"]] [:body]])))
+
+(defn register-produce-methods!
+  []
+  (defmethod api/display-form [:kind/hiccup :chassis/hiccup]
+    [form]
+    (process-hiccup-form form))
+  (defmethod api/produce! [::hiccup :chassis/hiccup]
+    [{:keys [site.fabricate.document/data] :as entry} opts]
+    (let [processed-hiccup  (process-kinds data :chassis/hiccup)
+          output-hiccup     [chassis/doctype-html5 [:head]
+                             [:body processed-hiccup]]
+          output-html       (chassis/html output-hiccup)
+          validation-result (validate-html-string output-html)]
+      (t/is (valid-schema? html/element processed-hiccup)
+            "api/produce should produce valid Hiccup elements")
+      (pprint/print-table ["type" "subType" "extract" "message"]
+                          (get validation-result "messages"))
+      (t/is (empty? (into []
+                          (filter #(= "error" (get % "type")))
+                          (get validation-result "messages")))))))
+
 (defn test-site
   [{:keys [site.fabricate.dev.build/setup-tasks site.fabricate.api/options]
     :or   {setup-tasks []}
@@ -198,9 +267,13 @@
   ;; only define the multimethods at runtime
   (register-collect-methods!)
   (register-build-methods!)
+  (register-produce-methods!)
   (if (test-utils/cli-test?) (match-config/enable-abbreviation!))
   (run! test-site (into [manual-site-config] additional-sites))
   ;; clean up + unmap test-specific multimethod impls
   (run! (partial remove-method api/collect) (keys pattern-formats))
   (run! (partial remove-method api/build)
-        [[::fabricate ::hiccup] [::clojure ::hiccup]]))
+        [[::fabricate ::hiccup] [::clojure ::hiccup]])
+  (run! (partial remove-method api/produce!) [[::hiccup :chassis/hiccup]])
+  (run! (partial remove-method api/display-form)
+        [[:kind/hiccup] :chassis/hiccup]))
