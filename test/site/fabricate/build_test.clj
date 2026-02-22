@@ -13,6 +13,7 @@
             [site.fabricate.prototype.kindly :as kindly]
             [site.fabricate.prototype.document.clojure :as clj]
             [site.fabricate.prototype.page.hiccup :as hiccup]
+            [site.fabricate.prototype.page :as page]
             [site.fabricate.prototype.hiccup :as prototype.hiccup]
             [site.fabricate.prototype.document.fabricate :as fab]
             [site.fabricate.prototype.test-utils :as test-utils]
@@ -209,22 +210,38 @@
 
 (defn process-hiccup-form
   [{:keys [kind value] :as form}]
-  (let [data-attrs (with-keys form key-lookup)]
-    (chassis/apply-normalized (fn add-data-attrs [tag attrs contents]
-                                (into [tag (merge attrs data-attrs)] contents))
-                              value)))
+  #_(when (nil? value)
+      (throw (ex-info "Hiccup element should not be nil" {:kindly-map form})))
+  (when value
+    (let [data-attrs (with-keys form key-lookup)]
+      (chassis/apply-normalized (fn add-data-attrs [tag attrs contents]
+                                  (into [tag (merge attrs data-attrs)]
+                                        contents))
+                                value))))
 
 (def kindly-map? (m/validator eval/Evaluated-Form))
 
+;; pre and post assertions for process-kinds
+;; 1. count the number of nil :values in the kindly forms + ensure the
+;; post-walked form has the same number of nils
+;; 2.
+
 (defn process-kinds
   [form page-format]
-  (walk/postwalk (fn [v]
-                   (if (kindly-map? v)
-                     (let [output (api/display-form v page-format)]
-                       #_(t/is (not (kindly-map? output))
-                               "All kindly maps should be transformed")
-                       output)))
-                 form))
+  (walk/postwalk
+   (fn [v]
+     (if (kindly-map? v)
+       (let [output (api/render-form
+                     (assoc v :site.fabricate.page/format page-format))
+             unexpected-nil-output? (and (nil? output) (some? (:value v)))]
+         (when unexpected-nil-output? (pprint/pprint v))
+         (t/is (not unexpected-nil-output?)
+               "Non-nil values should not be returned as nil after rendering")
+         (t/is (not (kindly-map? output))
+               "All kindly maps should be transformed")
+         output)
+       v))
+   form))
 
 (def html-validator
   (doto (EmbeddedValidator.)
@@ -246,31 +263,56 @@
   (defmethod api/display-form [:kind/hiccup :chassis/hiccup]
     [form]
     (process-hiccup-form form))
+  (defmethod api/display-form [:hiccup :hiccup/html]
+    [form]
+    (process-hiccup-form form))
+  (defmethod api/display-form [:code :hiccup/html]
+    [form]
+    (process-hiccup-form form))
   (defmethod api/produce! [::hiccup :chassis/hiccup]
-    [entry opts]
-    (let [{:keys [site.fabricate.document/data] :as processed-entry}
-          (update entry
-                  :site.fabricate.document/data
-                  #(process-kinds % :chassis/hiccup))
-          output-hiccup     [chassis/doctype-html5
-                             (hiccup/entry->hiccup-head processed-entry)
-                             (hiccup/entry->hiccup-body processed-entry)]
-          output-html       (chassis/html output-hiccup)
-          validation-result (validate-html-string output-html)]
-      #_(t/is (match? {:site.fabricate.document/title string?} processed-entry)
-              "Each entry should have a title")
-      (t/is (valid-schema? html/element data)
-            "api/produce should produce valid Hiccup elements")
-      (pprint/print-table ["type" "subType" "extract" "message"]
-                          (get validation-result "messages"))
-      (t/is (empty? (into []
-                          (filter #(and (= "error" (get % "type"))
-                                        ;; known bug: current version of
-                                        ;; validator detects CSS layer
-                                        ;; directive as invalid
-                                        (not (re-find #"CSS.*@layer"
-                                                      (get % "message")))))
-                          (get validation-result "messages")))))))
+    [{:keys [site.fabricate.document/title] :as entry} opts]
+    (t/testing (str title)
+      (let [{:keys [site.fabricate.document/data] :as processed-entry}
+            (update entry
+                    :site.fabricate.document/data
+                    #(process-kinds % :chassis/hiccup))
+            output-hiccup     [chassis/doctype-html5
+                               (hiccup/entry->hiccup-head processed-entry)
+                               (hiccup/entry->hiccup-body processed-entry)]
+            output-html       (chassis/html output-hiccup)
+            validation-result (validate-html-string output-html)]
+        #_(t/is (match? {:site.fabricate.document/title string?}
+                        processed-entry)
+                "Each entry should have a title")
+        ;; uncomment this when the schema supports lists/seqs of elements!
+        #_(t/is (valid-schema? html/element data)
+                "api/produce should produce valid Hiccup elements")
+        (pprint/print-table ["type" "subType" "extract" "message"]
+                            (get validation-result "messages"))
+        (t/is (empty? (into []
+                            (filter #(and (= "error" (get % "type"))
+                                          ;; known bug: current version of
+                                          ;; validator detects CSS layer
+                                          ;; directive as invalid
+                                          (not (re-find #"CSS.*@layer"
+                                                        (get % "message")))
+                                          ;; no support for CSS subgrid in
+                                          ;; 2026?
+                                          (not (re-find #"CSS.*subgrid"
+                                                        (get % "message")))))
+                            (get validation-result "messages"))))))))
+
+
+(defn unregister-multimethods!
+  "clean up + unmap test-specific multimethod impls"
+  [site]
+  (run! (partial remove-method api/collect) (keys pattern-formats))
+  (run! (partial remove-method api/build)
+        [[::fabricate ::hiccup] [::clojure ::hiccup]])
+  (run! (partial remove-method api/produce!) [[::hiccup :chassis/hiccup]])
+  (run! (partial remove-method api/display-form)
+        [[:kind/hiccup :chassis/hiccup]])
+  site)
 
 (defn test-site
   [{:keys [site.fabricate.dev.build/setup-tasks site.fabricate.api/options]
@@ -284,12 +326,14 @@
                    (do (->> site-config
                             (#'site.fabricate.api/plan! setup-tasks)
                             (#'site.fabricate.api/assemble assemble-tasks)
-                            (#'site.fabricate.api/construct! []))
+                            (#'site.fabricate.api/construct!
+                             [unregister-multimethods!]))
                        :done)))))
       (t/testing "validity of generated page contents"
                  ;; TODO: validate the Hiccup passed to Chassis during
                  ;; `api/produce!` using the HTML namespace
       ))))
+
 
 (t/deftest sites
   ;; only define the multimethods at runtime
@@ -297,11 +341,4 @@
   (register-build-methods!)
   (register-produce-methods!)
   (if (test-utils/cli-test?) (match-config/enable-abbreviation!))
-  (run! test-site (into [manual-site-config] additional-sites))
-  ;; clean up + unmap test-specific multimethod impls
-  (run! (partial remove-method api/collect) (keys pattern-formats))
-  (run! (partial remove-method api/build)
-        [[::fabricate ::hiccup] [::clojure ::hiccup]])
-  (run! (partial remove-method api/produce!) [[::hiccup :chassis/hiccup]])
-  (run! (partial remove-method api/display-form)
-        [[:kind/hiccup] :chassis/hiccup]))
+  (run! test-site (into [manual-site-config] additional-sites)))
