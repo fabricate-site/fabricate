@@ -13,12 +13,14 @@
   (doseq [value [:a '(+ 1 2 3) 45 {:b 3}]]
     (t/testing (str "value: " value)
       (t/testing "code"
-        (t/is (valid-block? (api/display-form {:kind :code :value value}
-                                              {:site.fabricate.page/format
+        (t/is (valid-block? (api/display-form {:kind  :code
+                                               :value value
+                                               :site.fabricate.page/format
                                                :hiccup/html}))))
       (t/testing "edn"
-        (t/is (valid-block? (api/display-form {:kind :edn :value value}
-                                              {:site.fabricate.page/format
+        (t/is (valid-block? (api/display-form {:kind  :edn
+                                               :value value
+                                               :site.fabricate.page/format
                                                :hiccup/html}))))))
   (t/testing "hiccup"
     (doseq [hiccup [[:span "text"] [:code "(map dec (range 29 58 2))"]]]

@@ -305,10 +305,8 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
 (defn display-form-dispatch
   "Dispatch for display-form multimethod."
   {:private true}
-  ([form
-    {:keys [site.fabricate.page/format] :or {format :hiccup/html} :as opts}]
-   [(:kind form) format])
-  ([form] (display-form-dispatch form {})))
+  [{:keys [site.fabricate.page/format kind] :or {format :hiccup/html} :as form}]
+  (let [kind (or kind (:kindly/kind form))] [kind format]))
 
 (defmulti display-form
   "Multimethod to convert a Kindly form into an output format. Dispatches on the kindly kind and the output format."
@@ -338,10 +336,17 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
                              (get-in form [:kindly/options :hide-code] true)))
          form-code   (when-not hide-code (or (:form form) (:code form)))
          page-format (or (:site.fabricate.page/format options)
-                         (:site.fabricate.page/format form))]
+                         (:site.fabricate.page/format form))
+         form        (if-not (contains? form :site.fabricate.page/format)
+                       (assoc form
+                              :site.fabricate.page/format
+                              (:site.fabricate.page/format options
+                                                           :hiccup/html))
+                       form)]
      (case [hide-code hide-value]
        [true true]   nil
-       [false true]  (display-form form options)
-       [true false]  (display-form {:kind :code :value form-code} options)
-       [false false] (list (display-form {:kind :code :value form-code} options)
-                           (display-form form options))))))
+       [false true]  (display-form form)
+       [true false]  (display-form {:kind :code :value form-code})
+       [false false] (list (display-form {:kind :code :value form-code})
+                           (display-form form)))))
+  ([form] (render-form form {})))
