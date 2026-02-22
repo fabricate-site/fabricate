@@ -12,6 +12,8 @@
             [site.fabricate.prototype.eval :as eval]
             [site.fabricate.prototype.kindly :as kindly]
             [site.fabricate.prototype.document.clojure :as clj]
+            [site.fabricate.prototype.page.hiccup :as hiccup]
+            [site.fabricate.prototype.hiccup :as prototype.hiccup]
             [site.fabricate.prototype.document.fabricate :as fab]
             [site.fabricate.prototype.test-utils :as test-utils]
             [dev.onionpancakes.chassis.core :as chassis]
@@ -157,15 +159,24 @@
   []
   (defmethod api/build [::fabricate ::hiccup]
     [{:keys [site.fabricate.source/location] :as entry} opts]
-    (let [hiccup-article (fab/entry->hiccup-article entry opts)]
-      (assoc entry :site.fabricate.document/data hiccup-article)))
+    (let [hiccup-article (fab/entry->hiccup-article entry opts)
+          page-metadata  (meta hiccup-article)]
+      (assoc entry
+             :site.fabricate.document/data  hiccup-article
+             :site.fabricate.document/title (:title page-metadata))))
   (defmethod api/build [::clojure ::hiccup]
     [{:keys [site.fabricate.source/location] :as entry} opts]
     (let [data (-> location
                    clj/read-forms
                    clj/eval-forms
-                   clj/forms->hiccup)]
-      (assoc entry :site.fabricate.document/data data))))
+                   clj/forms->hiccup)
+          page-metadata (-> data
+                            (get-in [1 :data-clojure-namespace])
+                            (find-ns)
+                            meta)]
+      (-> entry
+          (assoc :site.fabricate.document/data data)
+          (merge page-metadata)))))
 
 
 (defn check-hiccup-entries
@@ -173,13 +184,14 @@
   (binding [*print-length* (if (test-utils/cli-test?) 5 10)
             *print-level*  (if (test-utils/cli-test?) 1 5)]
     (doseq [{:keys [site.fabricate.source/location] :as e} entries]
-      (when (#{::fabricate ::clojure} (e :site.fabrciate.document/format))
+      (when (#{::hiccup} (e :site.fabricate.document/format))
         (t/testing (str "\nentry: " location)
           (t/is (match? {:site.fabricate.document/data
-                         (match/pred
-                          #_valid-fabricate-hiccup?
-                          vector?
-                          "Valid Hiccup with nested Kindly expected")}
+                         (match/pred #_valid-fabricate-hiccup?
+                                     vector?
+                                     "Valid Hiccup with nested Kindly expected")
+                         :site.fabricate.document/title
+                         (match/pred string? "Document title expected")}
                         e))))))
   site)
 
@@ -206,7 +218,12 @@
 
 (defn process-kinds
   [form page-format]
-  (walk/postwalk (fn [v] (if (kindly-map? v) (api/display-form v page-format)))
+  (walk/postwalk (fn [v]
+                   (if (kindly-map? v)
+                     (let [output (api/display-form v page-format)]
+                       #_(t/is (not (kindly-map? output))
+                               "All kindly maps should be transformed")
+                       output)))
                  form))
 
 (def html-validator
@@ -230,18 +247,29 @@
     [form]
     (process-hiccup-form form))
   (defmethod api/produce! [::hiccup :chassis/hiccup]
-    [{:keys [site.fabricate.document/data] :as entry} opts]
-    (let [processed-hiccup  (process-kinds data :chassis/hiccup)
-          output-hiccup     [chassis/doctype-html5 [:head]
-                             [:body processed-hiccup]]
+    [entry opts]
+    (let [{:keys [site.fabricate.document/data] :as processed-entry}
+          (update entry
+                  :site.fabricate.document/data
+                  #(process-kinds % :chassis/hiccup))
+          output-hiccup     [chassis/doctype-html5
+                             (hiccup/entry->hiccup-head processed-entry)
+                             (hiccup/entry->hiccup-body processed-entry)]
           output-html       (chassis/html output-hiccup)
           validation-result (validate-html-string output-html)]
-      (t/is (valid-schema? html/element processed-hiccup)
+      #_(t/is (match? {:site.fabricate.document/title string?} processed-entry)
+              "Each entry should have a title")
+      (t/is (valid-schema? html/element data)
             "api/produce should produce valid Hiccup elements")
       (pprint/print-table ["type" "subType" "extract" "message"]
                           (get validation-result "messages"))
       (t/is (empty? (into []
-                          (filter #(= "error" (get % "type")))
+                          (filter #(and (= "error" (get % "type"))
+                                        ;; known bug: current version of
+                                        ;; validator detects CSS layer
+                                        ;; directive as invalid
+                                        (not (re-find #"CSS.*@layer"
+                                                      (get % "message")))))
                           (get validation-result "messages")))))))
 
 (defn test-site
