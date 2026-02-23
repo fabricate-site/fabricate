@@ -64,7 +64,26 @@
                  :value)))
     (t/is (map? (-> {:code "(inc \"a\")" :form '(inc "a") :kind :code}
                     (api/eval-form)
-                    :error)))))
+                    :error))))
+  (t/testing "form rendering"
+    (let
+      [form
+       {:kindly/hide-code true
+        :site.fabricate.page/format :hiccup/html
+        :value [:pre {:class "shell"}
+                [:code "clojure -M:fabricate:clojure.main/main"]]
+        :kindly/hide-value false
+        :kind :hiccup
+        :code
+        "[:pre {:class \"shell\"} [:code  \"clojure -M:fabricate:clojure.main/main\"]]"
+        :form [:pre {:class "shell"}
+               [:code "clojure -M:fabricate:clojure.main/main"]]}]
+      (t/is
+       (apply =
+              (map #(update-in % [1] dissoc :data-kind :data-kindly-hide-code)
+                   [(:value form) (api/display-form form)
+                    (api/render-form form)]))
+       "Forms with :hide-value false and :hide-code true and :kind :hiccup should always be the :value"))))
 
 
 

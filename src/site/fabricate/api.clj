@@ -345,8 +345,8 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
                        form)]
      (case [hide-code hide-value]
        [true true]   nil
-       [false true]  (display-form form)
-       [true false]  (display-form {:kind :code :value form-code})
+       [true false]  (display-form form)
+       [false true]  (display-form {:kind :code :value form-code})
        [false false] (list (display-form {:kind :code :value form-code})
                            (display-form form)))))
   ([form] (render-form form {})))
