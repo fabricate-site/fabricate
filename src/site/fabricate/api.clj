@@ -159,7 +159,7 @@ One source may produce multiple entries."
 (defmulti collect
   "Generate the input entries from a source."
   {:malli/schema (:malli/schema (meta #'collect-dispatch))}
-  collect-dispatch)
+  #'collect-dispatch)
 
 (def site-schema
   "Malli schema describing the contents of a Fabricate site.
@@ -224,7 +224,7 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
 (defmulti build
   "Generate structured (EDN) document content for an entry from a source format. Takes an entry and returns a document (entry)."
   {:malli/schema (:malli/schema (meta #'build-dispatch))}
-  build-dispatch)
+  #'build-dispatch)
 
 ;; if no build method is implemented for this entry, just pass it through
 ;; unaltered
@@ -267,7 +267,7 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
    {:source (URI. "https://www.merriam-webster.com/dictionary/produce")
     :definition
     "to make available for public exhibition or dissemination; to cause to have existence or to happen; to give being, form, or shape to; to compose, create, or bring out by intellectual or physical effort; to bear, make, or yield something"}}
-  produce-dispatch)
+  #'produce-dispatch)
 
 (defmethod produce! :default [entry _opts] entry)
 
@@ -311,7 +311,7 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
 (defmulti display-form
   "Multimethod to convert a Kindly form into an output format. Dispatches on the kindly kind and the output format."
   {#_:malli/schema}
-  display-form-dispatch)
+  #'display-form-dispatch)
 
 
 (comment
