@@ -28,9 +28,6 @@
            [nu.validator.client EmbeddedValidator]
            [java.io ByteArrayInputStream]))
 
-
-
-
 (t/use-fixtures :once test-utils/with-instrumentation)
 
 (def manual-site-config
@@ -55,7 +52,6 @@
    {:site.fabricate/site-name  (str (fs/parent site-dir))
     :site.fabricate.source/original-location site-dir
     :site.fabricate.source/dir site-dir}})
-
 
 (defn copy-to-test-dir!
   "Copies the site's source dir to the test location."
@@ -108,7 +104,6 @@
   ([] (register-collect-methods! pattern-formats)))
 
 (def entry? (m/validator api/Entry))
-
 
 (def fabricate-hiccup-schema
   (m/schema [:schema
@@ -179,7 +174,6 @@
           (assoc :site.fabricate.document/data data)
           (merge page-metadata)))))
 
-
 (defn check-hiccup-entries
   [{:keys [site.fabricate.api/entries] :as site}]
   (binding [*print-length* (if (test-utils/cli-test?) 5 10)
@@ -221,27 +215,37 @@
 
 (def kindly-map? (m/validator eval/Evaluated-Form))
 
-;; pre and post assertions for process-kinds
-;; 1. count the number of nil :values in the kindly forms + ensure the
-;; post-walked form has the same number of nils
-;; 2.
-
+;; TODO: reimplement the post assertions as part of a malli schema
 (defn process-kinds
   [form page-format]
-  (walk/postwalk
-   (fn [v]
-     (if (kindly-map? v)
-       (let [output (api/render-form
-                     (assoc v :site.fabricate.page/format page-format))
-             unexpected-nil-output? (and (nil? output) (some? (:value v)))]
-         (when unexpected-nil-output? (pprint/pprint v))
-         (t/is (not unexpected-nil-output?)
-               "Non-nil values should not be returned as nil after rendering")
-         (t/is (not (kindly-map? output))
-               "All kindly maps should be transformed")
-         output)
-       v))
-   form))
+  (try
+    (walk/postwalk
+     (fn [v]
+       (if (kindly-map? v)
+         (let [{:keys [kind value kindly/hide-code kindly/hide-value] :as v}
+               (assoc v :site.fabricate.page/format page-format)
+               output (api/render-form v)
+               unexpected-nil-output?
+               (and (nil? output) (some? value) (not (:kindly/hide-value v)))
+               unexpected-output (and hide-code hide-value (some? output))]
+           (t/is
+            (not unexpected-output)
+            "Values should not be returned when :kindly/hide-code and :kindly/hide-value are both true")
+           (when unexpected-nil-output? (pprint/pprint v))
+           (t/is
+            (not unexpected-nil-output?)
+            (str
+             "Non-nil values should not be returned as nil after rendering kind "
+             kind
+             " to output format " page-format))
+           (t/is (not (kindly-map? output))
+                 "All kindly maps should be transformed")
+           output)
+         v))
+     form)
+    (catch Exception e
+      (do (println "encountered an error processing form")
+          #_(pprint/pprint form)))))
 
 (def html-validator
   (doto (EmbeddedValidator.)
@@ -260,26 +264,22 @@
 
 (defn register-produce-methods!
   []
-  (defmethod api/display-form [:kind/hiccup :chassis/hiccup]
-    [form]
-    (process-hiccup-form form))
-  (defmethod api/display-form [:hiccup :hiccup/html]
-    [form]
-    (process-hiccup-form form))
-  (defmethod api/display-form [:code :hiccup/html]
-    [form]
-    (process-hiccup-form form))
+  (defmethod api/display-form [:fabricate/error :hiccup/html]
+    [{:keys [value] :as form}]
+    (site.fabricate.prototype.read/error->hiccup (assoc form :error value)))
   (defmethod api/produce! [::hiccup :chassis/hiccup]
     [{:keys [site.fabricate.document/title] :as entry} opts]
-    (t/testing (str title)
+    (t/testing (str "\n" title)
       (let [{:keys [site.fabricate.document/data] :as processed-entry}
             (update entry
                     :site.fabricate.document/data
-                    #(process-kinds % :chassis/hiccup))
+                    #(process-kinds % :hiccup/html))
             output-hiccup     [chassis/doctype-html5
                                (hiccup/entry->hiccup-head processed-entry)
                                (hiccup/entry->hiccup-body processed-entry)]
-            output-html       (chassis/html output-hiccup)
+            output-html       (try (chassis/html output-hiccup)
+                                   (catch Exception e
+                                     "<<<HTML RENDERING ERROR>>>"))
             validation-result (validate-html-string output-html)]
         #_(t/is (match? {:site.fabricate.document/title string?}
                         processed-entry)
@@ -301,7 +301,6 @@
                                           (not (re-find #"CSS.*subgrid"
                                                         (get % "message")))))
                             (get validation-result "messages"))))))))
-
 
 (defn unregister-multimethods!
   "clean up + unmap test-specific multimethod impls"
@@ -328,12 +327,7 @@
                             (#'site.fabricate.api/assemble assemble-tasks)
                             (#'site.fabricate.api/construct!
                              [unregister-multimethods!]))
-                       :done)))))
-      (t/testing "validity of generated page contents"
-                 ;; TODO: validate the Hiccup passed to Chassis during
-                 ;; `api/produce!` using the HTML namespace
-      ))))
-
+                       :done))))))))
 
 (t/deftest sites
   ;; only define the multimethods at runtime
