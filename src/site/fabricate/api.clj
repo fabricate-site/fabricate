@@ -330,7 +330,9 @@ A site is the primary map passed between the 3 core API functions: plan!, assemb
   {:malli/schema (m/schema [:-> site.fabricate.prototype.kindly/Form :map
                             :any])}
   ([form options]
-   (let [hide-value  (true? (get-in form [:kindly/options :hide-value] false))
+   (let [hide-value  (true? (or
+                             (:kindly/hide-value form)
+                             (get-in form [:kindly/options :hide-value] false)))
          hide-code   (true? (or
                              (:kindly/hide-code form)
                              (get-in form [:kindly/options :hide-code] true)))

@@ -83,7 +83,10 @@
               (map #(update-in % [1] dissoc :data-kind :data-kindly-hide-code)
                    [(:value form) (api/display-form form)
                     (api/render-form form)]))
-       "Forms with :hide-value false and :hide-code true and :kind :hiccup should always be the :value"))))
+       "Forms with :kindly/hide-value false and :kindly/hide-code true and :kind :hiccup should always be the :value")
+      (t/is
+       (nil? (api/render-form (assoc form :kindly/hide-value true)))
+       "Forms with :kindly/hide-value and :kindly/hide-code should return nil"))))
 
 
 
