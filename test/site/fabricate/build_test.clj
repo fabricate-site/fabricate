@@ -255,14 +255,15 @@
         ;; uncomment this when the schema supports lists/seqs of elements!
         #_(t/is (valid-schema? html/element data)
                 "api/produce should produce valid Hiccup elements")
-        (binding [pprint/*print-miser-width*  60
-                  pprint/*print-right-margin* 75]
+        (binding [pprint/*print-miser-width* 60
+                  pprint/*print-right-margin* 75
+                  *print-length* 10
+                  *print-level* 7]
           (pprint/pprint
            (mapv #(select-keys % ["type" "subType" "extract" "message"])
-                 (get validation-result "messages"))))
-        (t/is (valid-schema? html-check/ValidHTMLOutput validation-result))))))
-
-
+                 (get validation-result "messages")))
+          (t/is (valid-schema? html-check/ValidHTMLOutput
+                               validation-result)))))))
 
 (defn unregister-multimethods!
   "clean up + unmap test-specific multimethod impls"

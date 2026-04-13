@@ -20,7 +20,7 @@
                        site.fabricate/manual
                        {:git/url "https://github.com/fabricate-site/manual.git"
                         :sha     "0285311b5517b806dca43360235bc0fff4970728"}}
-                      :extra-paths ["test"]
+                      :extra-paths ["dev" "test"]
                       :resource-paths ["test-resources"]}
            :validate {:exec-args {:dirs ["docs/"]}
                       :exec-fn   site.fabricate.prototype.check/html}}

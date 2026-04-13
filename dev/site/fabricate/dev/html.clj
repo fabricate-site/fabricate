@@ -2,7 +2,8 @@
   "Dev-time checks for HTML. Requires the optional `nu.validator` library (see the :dev alias in deps.edn)"
   (:require [clojure.data.json :as json]
             [malli.core :as m]
-            [malli.util :as mu])
+            [malli.util :as mu]
+            [clojure.string :as str])
   (:import [nu.validator.validation SimpleDocumentValidator]
            [nu.validator.client EmbeddedValidator]
            [java.io ByteArrayInputStream]))
@@ -20,8 +21,8 @@
            (if (empty? validator-output) {} (json/read-str validator-output)))
          (catch Exception e (Throwable->map e)))))
 
-(def ignored-warnings
-  "A set of warning messages to ignore due to outdated validation rules in nu.validator"
+(def ignored-errors
+  "A set of error messages to ignore due to outdated validation rules in nu.validator"
   {:html/dl-child-div
    (m/schema
     [:re
@@ -34,14 +35,17 @@
 (defn- debug-error-msg [v _] (let [error-str (:value v)] error-str))
 
 (def IgnorableErrorMessage
-  (m/schema [:map ["type" [:= "error"]]
-             ["message"
-              [:and {:error/fn debug-error-msg} :string
-               ;; a string that only matches one of the 'ignored errors'
-               (into [:or]
-                     (map
-                      #(mu/update-properties % assoc :error/fn debug-error-msg))
-                     (vals ignored-warnings))]]]))
+  (m/schema
+   [:map ["type" [:= "error"]]
+    ["message"
+     [:re
+      {:error/fn      debug-error-msg
+       :error/message "Unhandled error in nu.validator output"}
+      ;; a string that only matches one of the 'ignored errors'
+      (re-pattern (str/join "|" (map #(last (m/form %)) (vals ignored-errors))))
+      #_(into [:or]
+              (map #(mu/update-properties % assoc :error/fn debug-error-msg))
+              (vals ignored-errors))]]]))
 
 (def ValidHTMLOutput
   (m/schema
