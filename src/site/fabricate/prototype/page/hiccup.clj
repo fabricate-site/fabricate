@@ -2,7 +2,12 @@
   "Default API methods for converting Hiccup documents into pages."
   (:require [hiccup2.core :as hiccup]
             [hiccup.page :as hiccup-page]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [clojure.walk :as walk]
+            [site.fabricate.prototype.kindly :as kindly]
+            [site.fabricate.prototype.eval :as eval]
+            [malli.core :as m]
+            [site.fabricate.api :as api]))
 
 (def css-reset
   "CSS reset for Fabricate pages"
@@ -16,6 +21,15 @@
          {:name "viewport" :content "width=device-width, initial-scale=1.0"}]
         [:style css-reset]))
 
+(def kindly-map?
+  "Returns true if the value matches the schema for an evaluated Kindly form map"
+  (m/validator eval/Evaluated-Form))
+
+(defn render-all-forms
+  "Walk all the forms in the given page data and render them."
+  [page-data]
+  (walk/postwalk (fn display? [v] (if (kindly-map? v) (api/render-form v)))))
+
 ;; defaults
 (defn entry->hiccup-body
   "Generate a HTML <body> Hiccup element from the entry."
@@ -27,7 +41,7 @@
   "Generate a HTML <head> Hiccup element from the entry."
   ([{doc-title :site.fabricate.document/title :as entry} opts]
    [:head [:title doc-title] [:meta {:charset "utf-8"}]
-    [:meta {:http-equiv "X-UA-Compatible" :content "IE-edge"}]
+    [:meta {:http-equiv "X-UA-Compatible" :content "IE=edge"}]
     [:meta {:name "viewport" :content "width=device-width, initial-scale=1.0"}]
     [:style css-reset]])
   ([entry] (entry->hiccup-head entry {})))

@@ -32,7 +32,8 @@
 
 (def manual-site-config
   {:site.fabricate.api/options
-   {:site.fabricate.page/publish-dir (fs/create-temp-dir)
+   {:html/debug? false
+    :site.fabricate.page/publish-dir (fs/create-temp-dir)
     :site.fabricate.build-test/setup-tasks
     (drop-last 3 site.fabricate.dev.build/setup-tasks)
     ;; eventually the manual should provide pages to the library
@@ -109,32 +110,34 @@
            results)))))
   ([] (register-collect-methods! pattern-formats)))
 
-
-(def entry? (m/validator api/Entry))
-
-
-(defn debug-entry-error
-  [{:keys [path in value schema] :as error}]
-  (println "Did not match schema")
-  (pprint/pprint schema)
-  (if (test-utils/cli-test?)
-    (binding [*print-length* 5 *print-level* 1] (pprint/pprint value))
-    (binding [*print-length* 20 *print-level* 4] (pprint/pprint value))))
-
-
-(defn valid-output-hiccup? [hiccup-data] (html/element? hiccup-data))
-
 (defn build-fabricate
   "Build and test the entry from a Fabricate template"
-  [entry]
-  {:pre [(t/is (entry? entry))] :post [(t/is (and (entry? %)))]}
-  entry)
+  [{:keys [site.fabricate.source/location site.fabricate.source/file] :as entry}
+   opts]
+  {:pre  [(t/is (valid-schema? props/CollectedEntry entry))]
+   :post [(t/is (valid-schema? props/FabricateHiccupEntry %))]}
+  (let [hiccup-article (fab/entry->hiccup-article entry opts)
+        page-metadata  (meta hiccup-article)]
+    (assoc entry
+           :site.fabricate.document/data  hiccup-article
+           :site.fabricate.document/title (:title page-metadata))))
 
 (defn build-clojure
   "Build and test the entry from a Clojure source"
-  [entry]
-  {:pre [(t/is (entry? entry))] :post [(t/is (and (entry? %)))]}
-  entry)
+  [{:keys [site.fabricate.source/location] :as entry} opts]
+  {:pre  [(t/is (valid-schema? props/CollectedEntry entry))]
+   :post [(t/is (valid-schema? props/FabricateHiccupEntry %))]}
+  (let [data (-> location
+                 clj/read-forms
+                 clj/eval-forms
+                 clj/forms->hiccup)
+        page-metadata (-> data
+                          (get-in [1 :data-clojure-namespace])
+                          (find-ns)
+                          meta)]
+    (-> entry
+        (assoc :site.fabricate.document/data data)
+        (merge page-metadata))))
 
 (defn register-build-methods!
   []
@@ -147,30 +150,10 @@
              :site.fabricate.document/data  hiccup-article
              :site.fabricate.document/title (:title page-metadata))))
   (defmethod api/build [::clojure ::hiccup]
-    [{:keys [site.fabricate.source/location] :as entry} opts]
-    (let [data (-> location
-                   clj/read-forms
-                   clj/eval-forms
-                   clj/forms->hiccup)
-          page-metadata (-> data
-                            (get-in [1 :data-clojure-namespace])
-                            (find-ns)
-                            meta)]
-      (-> entry
-          (assoc :site.fabricate.document/data data)
-          (merge page-metadata)))))
+    [entry opts]
+    (build-clojure entry opts)))
 
-(defn check-hiccup-entries
-  [{:keys [site.fabricate.api/entries] :as site}]
-  (binding [*print-length* (if (test-utils/cli-test?) 5 10)
-            *print-level*  (if (test-utils/cli-test?) 1 5)]
-    (doseq [{:keys [site.fabricate.source/location] :as e} entries]
-      (when (#{::hiccup} (e :site.fabricate.document/format))
-        (t/testing (str "\nentry: " location)
-          (t/is (valid-schema? props/FabricateHiccupEntry e))))))
-  site)
-
-(def assemble-tasks [check-hiccup-entries])
+(def assemble-tasks [])
 
 (def key-lookup
   {:kind        :data-kind
@@ -195,40 +178,20 @@
 
 (def kindly-map? (m/validator eval/Evaluated-Form))
 
-;; TODO: reimplement the post assertions as part of a malli schema
+(defn render-kindly
+  "Render the kindly form into an output format"
+  {:malli/schema props/=>RenderForm}
+  [v]
+  {:post [(t/is (= :ok (props/classify-render-output v %)))]}
+  (api/render-form v))
+
 (defn process-kinds
   [form page-format]
-  (try
-    (walk/postwalk
-     (fn [v]
-       (if (kindly-map? v)
-         (let [{:keys [kind value kindly/hide-code kindly/hide-value] :as v}
-               (assoc v :site.fabricate.page/format page-format)
-               output (api/render-form v)
-               unexpected-nil-output?
-               (and (nil? output) (some? value) (not (:kindly/hide-value v)))
-               unexpected-output (and hide-code hide-value (some? output))]
-           (t/is
-            (not unexpected-output)
-            "Values should not be returned when :kindly/hide-code and :kindly/hide-value are both true")
-           (when unexpected-nil-output? (pprint/pprint v))
-           (t/is
-            (not unexpected-nil-output?)
-            (str
-             "Non-nil values should not be returned as nil after rendering kind "
-             kind
-             " to output format " page-format))
-           (t/is (not (kindly-map? output))
-                 "All kindly maps should be transformed")
-           output)
-         v))
-     form)
-    (catch Exception e
-      (do (println "encountered an error processing form")
-          #_(pprint/pprint form)))))
-
-
-
+  (try (walk/postwalk (fn process? [v] (if (kindly-map? v) (render-kindly v) v))
+                      form)
+       (catch Exception e
+         (do (println "encountered an error processing form")
+             #_(pprint/pprint form)))))
 
 (defn register-produce-methods!
   []
@@ -249,9 +212,6 @@
                                    (catch Exception e
                                      "<<<HTML RENDERING ERROR>>>"))
             validation-result (html-check/validate-html-string output-html)]
-        #_(t/is (match? {:site.fabricate.document/title string?}
-                        processed-entry)
-                "Each entry should have a title")
         ;; uncomment this when the schema supports lists/seqs of elements!
         #_(t/is (valid-schema? html/element data)
                 "api/produce should produce valid Hiccup elements")
@@ -259,9 +219,10 @@
                   pprint/*print-right-margin* 75
                   *print-length* 10
                   *print-level* 7]
-          (pprint/pprint
-           (mapv #(select-keys % ["type" "subType" "extract" "message"])
-                 (get validation-result "messages")))
+          ;; make this configurable, eventually
+          #_(pprint/pprint
+             (mapv #(select-keys % ["type" "subType" "extract" "message"])
+                   (get validation-result "messages")))
           (t/is (valid-schema? html-check/ValidHTMLOutput
                                validation-result)))))))
 
