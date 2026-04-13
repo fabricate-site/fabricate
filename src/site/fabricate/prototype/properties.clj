@@ -7,6 +7,7 @@
             [malli.error :as me]
             [malli.registry :as mr]
             [site.fabricate.prototype.eval :as eval]
+            [site.fabricate.prototype.html :as html]
             [matcher-combinators.matchers :as match]
             [matcher-combinators.test]))
 
@@ -64,6 +65,16 @@
              [:site.fabricate.source/location #'AbsoluteFile]
              [:site.fabricate.source/directory #'AbsoluteDirectory]]))
 
+#_(def FabricateHiccup
+    (m/schema [:schema
+               (assoc-in (m/properties html/element)
+                [:registry ::fabricate-hiccup]
+                [:cat :keyword [:? :map]
+                 [:*
+                  [:or [:schema [:ref ::html/element]]
+                   (m/schema eval/Evaluated-Form)
+                   [:schema [:ref ::fabricate-hiccup]]]]]) ::fabricate-hiccup]))
+
 (def BuiltEntry
   "schema for Fabricate entry returned from site.fabricate.api/build"
   (mu/merge CollectedEntry
@@ -74,9 +85,24 @@
              [:site.fabricate.document/title :string]
              [:site.fabricate.document/data :any]]))
 
+(def FabricateHiccupEntry
+  "schema for Fabricate entry consisting of Hiccup data with embedded Kindly maps"
+  (mu/merge BuiltEntry
+            [:map
+             {:title "Built Hiccup entry"
+              :description
+              "Fabricate Hiccup entry returned from site.fabricate.api/build"}
+             [:site.fabricate.document/data [:vector :any]
+              #_[:ref #'FabricateHiccup]]]))
+
 (def ProducedEntry
   "schema for Fabricate entry returned from site.fabricate.api/produce!"
-  nil)
+  (mu/merge BuiltEntry
+            [:map
+             {:title "Produced entry"
+              :description
+              "Fabricate entry returned from site.fabricate.api/produce"}
+             [:site.fabricate.page/data :any]]))
 
 (def evaluated-kindly-map?
   "returns true if the value is an evaluated Kindly map."
@@ -108,7 +134,7 @@
   (get render-error-messages (classify-render-output form output)))
 
 (def =>RenderForm
-  "function schema for site.fabricate.api/render-form output"
+  "function schema for site.fabricate.api/render-form implementations"
   (m/schema [:=> [:cat eval/Evaluated-Form :map] :any
              [:fn {:error/fn render-output-error-fn} valid-render-output?]]))
 

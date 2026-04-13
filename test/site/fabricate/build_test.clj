@@ -25,7 +25,8 @@
             [babashka.fs :as fs]
             [clojure.java.io :as io]
             [clojure.walk :as walk]
-            [clojure.data.json :as json])
+            [clojure.data.json :as json]
+            [malli.util :as mu])
   (:import [nu.validator.validation SimpleDocumentValidator]
            [nu.validator.client EmbeddedValidator]
            [java.io ByteArrayInputStream]))
@@ -111,24 +112,9 @@
            results)))))
   ([] (register-collect-methods! pattern-formats)))
 
-(comment
-  (fs/parent (fs/path "../something"))
-  (fs/directory? (fs/canonicalize (fs/absolutize (fs/path "../something")))))
 
 (def entry? (m/validator api/Entry))
 
-(def fabricate-hiccup-schema
-  (m/schema [:schema
-             (assoc-in (m/properties html/element)
-              [:registry ::fabricate-hiccup]
-              [:cat :keyword [:? :map]
-               [:*
-                [:or [:schema [:ref ::html/element]]
-                 (m/schema eval/Evaluated-Form)
-                 [:schema [:ref ::fabricate-hiccup]]]]]) ::fabricate-hiccup]))
-
-(def fabricate-hiccup-validator (m/validator fabricate-hiccup-schema))
-(def fabricate-hiccup-explainer (m/explainer fabricate-hiccup-schema))
 
 (defn debug-entry-error
   [{:keys [path in value schema] :as error}]
@@ -138,18 +124,6 @@
     (binding [*print-length* 5 *print-level* 1] (pprint/pprint value))
     (binding [*print-length* 20 *print-level* 4] (pprint/pprint value))))
 
-
-(defn valid-fabricate-hiccup?
-  [v]
-  (nil? (mp/explain fabricate-hiccup-schema v))
-  #_(let [valid? (fabricate-hiccup-validator v)]
-      (when-not valid?
-        (let [{:keys [errors schema value] :as explained}
-              (fabricate-hiccup-explainer v)]
-          (pprint/pprint (me/humanize explained))
-          (println (count errors) "errors detected")
-          (run! debug-entry-error errors)))
-      valid?))
 
 (defn valid-output-hiccup? [hiccup-data] (html/element? hiccup-data))
 
@@ -196,13 +170,7 @@
     (doseq [{:keys [site.fabricate.source/location] :as e} entries]
       (when (#{::hiccup} (e :site.fabricate.document/format))
         (t/testing (str "\nentry: " location)
-          (t/is (match? {:site.fabricate.document/data
-                         (match/pred #_valid-fabricate-hiccup?
-                                     vector?
-                                     "Valid Hiccup with nested Kindly expected")
-                         :site.fabricate.document/title
-                         (match/pred string? "Document title expected")}
-                        e))))))
+          (t/is (valid-schema? props/FabricateHiccupEntry e))))))
   site)
 
 (def assemble-tasks [check-hiccup-entries])
