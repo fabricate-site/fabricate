@@ -8,6 +8,7 @@
             [clojure.set :as set]
             [site.fabricate.api :as api]
             [site.fabricate.dev.build :as build]
+            [site.fabricate.dev.html :as html-check]
             [site.fabricate.prototype.html :as html]
             [site.fabricate.prototype.eval :as eval]
             [site.fabricate.prototype.kindly :as kindly]
@@ -25,11 +26,7 @@
             [babashka.fs :as fs]
             [clojure.java.io :as io]
             [clojure.walk :as walk]
-            [clojure.data.json :as json]
-            [malli.util :as mu])
-  (:import [nu.validator.validation SimpleDocumentValidator]
-           [nu.validator.client EmbeddedValidator]
-           [java.io ByteArrayInputStream]))
+            [malli.util :as mu]))
 
 (t/use-fixtures :once test-utils/with-instrumentation)
 
@@ -230,20 +227,8 @@
       (do (println "encountered an error processing form")
           #_(pprint/pprint form)))))
 
-(def html-validator
-  (doto (EmbeddedValidator.)
-    (.setOutputFormat nu.validator.client.EmbeddedValidator$OutputFormat/JSON)))
 
-(defn validate-html-string
-  [html-string]
-  (let [html-input-stream (ByteArrayInputStream. (.getBytes html-string))]
-    (try (let [validator-output (.validate html-validator html-input-stream)]
-           (if (empty? validator-output) {} (json/read-str validator-output)))
-         (catch Exception e (Throwable->map e)))))
 
-(comment
-  (validate-html-string (chassis/html [chassis/doctype-html5
-                                       [:head [:title "test"]] [:body]])))
 
 (defn register-produce-methods!
   []
@@ -263,7 +248,7 @@
             output-html       (try (chassis/html output-hiccup)
                                    (catch Exception e
                                      "<<<HTML RENDERING ERROR>>>"))
-            validation-result (validate-html-string output-html)]
+            validation-result (html-check/validate-html-string output-html)]
         #_(t/is (match? {:site.fabricate.document/title string?}
                         processed-entry)
                 "Each entry should have a title")
