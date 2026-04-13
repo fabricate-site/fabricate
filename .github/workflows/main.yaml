@@ -6,15 +6,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2.2
-      - uses: actions/cache@v4.2.2
+        uses: actions/checkout@v6.0.2
+      - uses: actions/cache@v5.0.5
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
       - name: Install clojure tools-deps
-        uses: DeLaGuardo/setup-clojure@13.2
+        uses: DeLaGuardo/setup-clojure@13.6.0
         with:
           cli: 1.12.0.1530
       - name: Run Tests
