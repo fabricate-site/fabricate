@@ -16,9 +16,11 @@
                                                       (meta evaluated-page))]
                                                ;; TODO: better handling of
                                                ;; unbound metadata vars
-                                               (if (map? m) m {})))]
-    (with-meta (into [:article
-                      {:lang  "en-us"
-                       :title (:site.fabricate.page/title page-metadata)}]
-                     (hiccup/parse-paragraphs evaluated-page))
-               page-metadata)))
+                                               (if (map? m) m {})))
+        page-title     (or (:site.fabricate.page/title page-metadata)
+                           (:site.fabricate.document/title page-metadata)
+                           (:title page-metadata))]
+    (with-meta
+      (into [:article {:lang "en-us" :title page-title}]
+            (hiccup/parse-paragraphs evaluated-page))
+      (assoc page-metadata :site.fabricate.document/title page-title))))

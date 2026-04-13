@@ -5,21 +5,22 @@
                       {io.github.cognitect-labs/test-runner
                        {:git/url "https://github.com/cognitect-labs/test-runner"
                         :sha     "7284cda41fb9edc0f3bc6b6185cfb7138fc8a023"}}
-                      :jvm-opts ["-Dclojure.main.report=stderr"]
+                      :jvm-opts ["-Dclojure.main.report=stderr"
+                                 "-Dclojure.context=cli.test"]
                       :main-opts ["-m" "cognitect.test-runner"]}
            :test     {:extra-deps
                       {babashka/babashka.curl {:mvn/version "0.1.2"}
                        com.brunobonacci/mulog {:mvn/version "0.9.0"}
                        com.gfredericks/test.chuck {:mvn/version "0.2.14"}
-                       nu.validator/validator {:mvn/version "20.7.2"}
-                       nubank/matcher-combinators {:mvn/version "3.9.1"}
+                       nu.validator/validator {:mvn/version "26.2.19"}
+                       nubank/matcher-combinators {:mvn/version "3.10.0"}
                        org.clojure/test.check {:mvn/version "1.1.1"}
                        org.scicloj/kindly {:mvn/version "4-beta18"}
                        org.scicloj/kindly-render {:mvn/version "0.1.5-alpha"}
                        site.fabricate/manual
                        {:git/url "https://github.com/fabricate-site/manual.git"
                         :sha     "0285311b5517b806dca43360235bc0fff4970728"}}
-                      :extra-paths ["test"]
+                      :extra-paths ["dev" "test"]
                       :resource-paths ["test-resources"]}
            :validate {:exec-args {:dirs ["docs/"]}
                       :exec-fn   site.fabricate.prototype.check/html}}
@@ -27,7 +28,7 @@
            hiccup/hiccup           {:mvn/version "2.0.0-RC2"}
            instaparse/instaparse   {:mvn/version "1.4.12"}
            metosin/malli           {:mvn/version "0.17.0"}
-           org.clojure/clojure     {:mvn/version "1.11.3"}
+           org.clojure/clojure     {:mvn/version "1.12.4"}
            org.clojure/data.finger-tree {:mvn/version "0.0.3"}
            org.scicloj/kindly      {:mvn/version "4-alpha16"}
            rewrite-clj/rewrite-clj {:mvn/version "1.1.47"}

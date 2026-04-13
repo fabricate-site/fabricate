@@ -1,9 +1,14 @@
 (ns site.fabricate.prototype.eval-test
   (:require [site.fabricate.prototype.eval :as prototype.eval]
+            [site.fabricate.prototype.kindly :as kindly]
             [site.fabricate.adorn :as adorn]
             [matcher-combinators.test]
             [matcher-combinators.matchers :as matchers]
-            [clojure.test :as t]))
+            [site.fabricate.prototype.test-utils :as test-utils]
+            [clojure.test :as t]
+            [malli.core :as m]))
+
+(t/use-fixtures :once test-utils/with-instrumentation)
 
 (t/deftest evaluation
   (t/testing ": single exprs"
@@ -48,5 +53,9 @@
                              :code "[^{:key :value} [1]]"
                              :ns   test-ns})]
         (println (meta (:value evaluated-form)))
+        (t/is (m/validate prototype.eval/Evaluated-Form evaluated-form)
+              "Form should have all required keys populated")
+        (t/is (m/validate kindly/Form evaluated-form)
+              "Form should conform to kindly map specification")
         (t/is (match? (:ns var-form) (:ns (meta (:value evaluated-form)))))
         (t/is (match? {:key :value} (meta (first (:value metadata-form)))))))))
