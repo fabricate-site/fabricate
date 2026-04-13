@@ -260,30 +260,7 @@
           (pprint/pprint
            (mapv #(select-keys % ["type" "subType" "extract" "message"])
                  (get validation-result "messages"))))
-        (t/is
-         (empty?
-          (into
-           []
-           (remove
-            #(or
-              (#{"info" "warning"} (get % "type"))
-              (and
-               (= "error" (get % "type"))
-               (or
-                ;; <dt> within <div> elements within <dl> elements have
-                ;; been valid HTML since 2017 (HTML5.2)
-                (re-find
-                 #"Element “dt” not allowed as child of element “div” in this context."
-                 (get % "message"))
-                (re-find #"skipping \d heading levels" (get % "message"))
-                ;; known bug: current version of
-                ;; validator detects CSS layer
-                ;; directive as invalid
-                (re-find #"CSS.*layer" (get % "message"))
-                ;; no support for CSS subgrid in 2026?
-                (re-find #"CSS.*subgrid" (get % "message"))
-                (re-find #"CSS.*" (get % "message"))))))
-           (get validation-result "messages"))))))))
+        (t/is (valid-schema? html-check/ValidHTMLOutput validation-result))))))
 
 
 
