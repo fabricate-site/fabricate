@@ -16,6 +16,7 @@
             [site.fabricate.prototype.page :as page]
             [site.fabricate.prototype.hiccup :as prototype.hiccup]
             [site.fabricate.prototype.document.fabricate :as fab]
+            [site.fabricate.prototype.properties :as props]
             [site.fabricate.prototype.test-utils :as test-utils]
             [dev.onionpancakes.chassis.core :as chassis]
             [malli.core :as m]
@@ -79,6 +80,8 @@
 (def pattern-formats
   {(str test-dir "/**/*.fab") ::fabricate (str test-dir "/**/*.clj") ::clojure})
 
+(defn build-test-collect [] nil)
+
 (defn register-collect-methods!
   ([pattern-formats]
    (doseq [[pattern fmt] pattern-formats]
@@ -86,23 +89,31 @@
        [pattern {:keys [site.fabricate.source/dir] :as opts}]
        (t/testing (str pattern ":")
          (let [pattern (str (fs/file "**" (fs/file-name pattern)))
-               results (mapv (fn [p]
+               results (mapv (fn collect-entry [p]
                                ;; using namespace-specific formats ensures
                                ;; that the tests never clash with other
                                ;; default multimethods
-                               {:site.fabricate.source/format fmt
+                               {:site.fabricate.source/file
+                                (fs/file (fs/canonicalize (fs/absolutize p)))
+                                :site.fabricate.source/format fmt
                                 :site.fabricate.document/format ::hiccup
                                 :site.fabricate.page/format :chassis/hiccup
                                 ::api/source pattern
                                 :site.fabricate.source/original-location
                                 (:site.fabricate.source/original-location opts)
-                                :site.fabricate.source/location (fs/file p)})
+                                :site.fabricate.source/directory
+                                (fs/parent (fs/canonicalize (fs/absolutize p)))
+                                :site.fabricate.source/location
+                                (fs/file (fs/canonicalize (fs/absolutize p)))})
                              (fs/glob dir pattern))]
-           (t/is (every? fs/exists?
-                         (map :site.fabricate.source/location results))
-                 (str "every collected entry should exist"))
+           (t/is (valid-schema? (m/schema [:* props/CollectedEntry]) results)
+                 (str "every collected entry should match expected schema"))
            results)))))
   ([] (register-collect-methods! pattern-formats)))
+
+(comment
+  (fs/parent (fs/path "../something"))
+  (fs/directory? (fs/canonicalize (fs/absolutize (fs/path "../something")))))
 
 (def entry? (m/validator api/Entry))
 
@@ -157,7 +168,8 @@
 (defn register-build-methods!
   []
   (defmethod api/build [::fabricate ::hiccup]
-    [{:keys [site.fabricate.source/location] :as entry} opts]
+    [{:keys [site.fabricate.source/location site.fabricate.source/file]
+      :as   entry} opts]
     (let [hiccup-article (fab/entry->hiccup-article entry opts)
           page-metadata  (meta hiccup-article)]
       (assoc entry
