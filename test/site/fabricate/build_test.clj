@@ -280,6 +280,10 @@
   [{:keys [site.fabricate.dev.build/setup-tasks site.fabricate.api/options]
     :or   {setup-tasks []}
     :as   site-config}]
+  ;; only define the multimethods at runtime
+  (register-collect-methods!)
+  (register-build-methods!)
+  (register-produce-methods!)
   (let [{:keys [site.fabricate.source/dir]} options]
     (when (fs/exists? dir)
       (t/testing (str dir ":")
@@ -293,9 +297,5 @@
                        :done))))))))
 
 (t/deftest sites
-  ;; only define the multimethods at runtime
-  (register-collect-methods!)
-  (register-build-methods!)
-  (register-produce-methods!)
   (if (test-utils/cli-test?) (match-config/enable-abbreviation!))
   (run! test-site (into [manual-site-config] additional-sites)))
