@@ -1,4 +1,4 @@
-(ns site.fabricate.prototype.performance-test
+(ns ^:performance site.fabricate.prototype.performance-test
   (:require [clojure.test :as t]
             [criterium.core :as bench]
             [clj-async-profiler.core :as profiler]

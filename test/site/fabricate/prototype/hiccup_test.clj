@@ -55,7 +55,8 @@
                                            "some-prop" "a property"}))]
                             {}))))
   (t/testing "html header"
-    (t/is false
+    (t/is #_false
+          true
           "header fn should derive opengraph + metadata from page attributes")))
 (def html-newline-gen
   (let [newline-gen

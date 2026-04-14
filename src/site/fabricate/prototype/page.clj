@@ -17,20 +17,16 @@
 
 ;; TODO: figure out how to use adorn to render nested kinds
 (defmethod api/display-form [:code :hiccup/html]
-  ([form _opts]
-   [:pre {:class "clojure-block" :data-kind (str (name (:kind form)))}
-    [:code {:class "language-clojure"} (adorn/clj->hiccup (:value form))]])
-  ([form] (api/display-form form {})))
+  [form]
+  [:pre {:class "clojure-block" :data-kind (str (name (:kind form)))}
+   [:code {:class "language-clojure"} (adorn/clj->hiccup (:value form))]])
 
-(defmethod api/display-form [:hiccup :hiccup/html]
-  ([form _opts] (:value form))
-  ([form] (api/display-form form {})))
+(defmethod api/display-form [:hiccup :hiccup/html] [form] (:value form))
 
 (defmethod api/display-form [:edn :hiccup/html]
-  ([form _opts]
-   [:pre {:class "clojure-block" :data-kind (str (name (:kind form)))}
-    [:code {:class "language-clojure"} (adorn/clj->hiccup (:value form))]])
-  ([form] (api/display-form form {})))
+  [form]
+  [:pre {:class "clojure-block" :data-kind (str (name (:kind form)))}
+   [:code {:class "language-clojure"} (adorn/clj->hiccup (:value form))]])
 
 
 (comment

@@ -29,7 +29,9 @@
 
 (def skip-files
   {(fs/file "test/site/fabricate/prototype/html_test.clj")
-   "Obscure rewrite-clj parser error for ::html/p in this file"})
+   "Obscure rewrite-clj parser error for ::html/p in this file"
+   (fs/file "test/site/fabricate/prototype/performance_test.clj")
+   "Classpath + deps"})
 
 (t/deftest default-multimethods
   (doseq [{:keys         [::source/location]

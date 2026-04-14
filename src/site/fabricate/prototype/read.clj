@@ -368,6 +368,7 @@
 
 (defn entry->hiccup-article
   "Return a Hiccup article for the document by parsing and evaluating the document's Fabricate template."
+  {:malli/schema (m/schema [:=> [:cat :map :map] [:vector :any]])}
   [entry opts]
   (let [parsed-page    (parse (slurp (:site.fabricate.source/location entry)))
         evaluated-page (eval-all parsed-page)

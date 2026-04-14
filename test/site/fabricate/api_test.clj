@@ -3,7 +3,8 @@
             [site.fabricate.api :as api]
             ;; refer the dev ns to ensure multimethods have impls
             #_[site.fabricate.dev.build]
-            [site.fabricate.prototype.test-utils :refer [with-instrumentation]]
+            [site.fabricate.prototype.test-utils :as test-utils :refer
+             [with-instrumentation]]
             [site.fabricate.prototype.read]
             [site.fabricate.prototype.html]
             [site.fabricate.prototype.hiccup]
@@ -32,28 +33,51 @@
          :site.fabricate.page/title title
          :site.fabricate.page/id    id))
 
-(t/use-fixtures :once with-instrumentation)
-
-(defmethod api/collect "deps.edn"
-  [src opts]
-  (let [loc (fs/file (System/getProperty "user.dir"))]
-    [{:site.fabricate.source/location (fs/file loc src)
-      :site.fabricate.source/file     (fs/file loc src)
-      :site.fabricate.api/source      src
-      :site.fabricate.source/format   :clojure/deps
-      :site.fabricate.document/format :clojure/edn
-      :site.fabricate.page/format     :clojure/edn}]))
-
-(defmethod api/build [:clojure/deps :clojure/edn]
-  [{:keys [site.fabricate.source/file] :as entry} _opts]
-  (assoc entry
-         :site.fabricate.document/data
-         (clojure.edn/read-string (slurp file))))
-
-
-
 (def valid-entry? (m/validator api/Entry))
 (def explain-entry (m/explainer api/Entry))
+
+
+(defn register-methods!
+  []
+  (defmethod api/collect "deps.edn"
+    [src opts]
+    (let [loc (fs/file (System/getProperty "user.dir"))]
+      [{:site.fabricate.source/location (fs/file loc src)
+        :site.fabricate.source/file     (fs/file loc src)
+        :site.fabricate.api/source      src
+        :site.fabricate.source/format   :clojure/deps
+        :site.fabricate.document/format :clojure/edn
+        :site.fabricate.page/format     :clojure/edn}]))
+  (defmethod api/build [:clojure/deps :clojure/edn]
+    [{:keys [site.fabricate.source/file] :as entry} _opts]
+    (assoc entry
+           :site.fabricate.document/data
+           (clojure.edn/read-string (slurp file))))
+  (defmethod api/display-form [:hiccup :hiccup/html] [{:keys [value]}] value)
+  (defmethod api/produce! [:clojure/edn :clojure/edn]
+    [entry _opts]
+    (t/is (valid-entry? entry))
+    (assoc entry :site.fabricate.page/output "test")))
+
+(defn unregister-methods!
+  []
+  (remove-method api/collect "deps.edn")
+  (remove-method api/build [:clojure/deps :clojure/edn])
+  (remove-method api/display-form [:hiccup :hiccup/html])
+  (remove-method api/produce! [:clojure/edn :clojure/edn]))
+
+(defn method-fixture
+  [f]
+  ;; remove the manual's method impls
+  (run! (partial remove-method api/collect)
+        ["*/**.fab" "docs/**.clj" "docs/posts/*.md"])
+  (register-methods!)
+  (f)
+  (unregister-methods!)
+  #_(test-utils/unregister-multimethods! nil))
+
+(t/use-fixtures :once with-instrumentation method-fixture)
+
 
 
 (t/deftest functions
@@ -64,14 +88,32 @@
                  :value)))
     (t/is (map? (-> {:code "(inc \"a\")" :form '(inc "a") :kind :code}
                     (api/eval-form)
-                    :error)))))
+                    :error))))
+  (t/testing "form rendering"
+    (let
+      [form
+       {:kindly/hide-code true
+        :site.fabricate.page/format :hiccup/html
+        :value [:pre {:class "shell"}
+                [:code "clojure -M:fabricate:clojure.main/main"]]
+        :kindly/hide-value false
+        :kind :hiccup
+        :code
+        "[:pre {:class \"shell\"} [:code  \"clojure -M:fabricate:clojure.main/main\"]]"
+        :form [:pre {:class "shell"}
+               [:code "clojure -M:fabricate:clojure.main/main"]]}]
+      (t/is
+       (apply =
+              (map #(update-in % [1] dissoc :data-kind :data-kindly-hide-code)
+                   [(:value form) (api/display-form form)
+                    (api/render-form form)]))
+       "Forms with :kindly/hide-value false and :kindly/hide-code true and :kind :hiccup should always be the :value")
+      (t/is
+       (nil? (api/render-form (assoc form :kindly/hide-value true)))
+       "Forms with :kindly/hide-value and :kindly/hide-code should return nil"))))
 
 
 
-(defmethod api/produce! [:clojure/edn :clojure/edn]
-  [entry _opts]
-  (t/is (valid-entry? entry))
-  (assoc entry :site.fabricate.page/output "test"))
 
 
 (t/deftest operations

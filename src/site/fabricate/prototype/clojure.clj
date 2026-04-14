@@ -298,6 +298,8 @@ If passed a file or string path pointing to an existing file, will read from the
                                          (count (trailing-newlines
                                                  prev-element))))
                                 :break
+                                ;; TODO: verify this
+                                (nil? prev-element) :break
                                 (vector? prev-element) (get-element-type
                                                         prev-element))
         next-form-type    (cond (:clojure/uneval next-form) :uneval
@@ -312,6 +314,8 @@ If passed a file or string path pointing to an existing file, will read from the
                                 :default (throw (ex-info "Unmatched form type"
                                                          {:clojure/form
                                                           next-form})))]
+    (when (nil? prev-element-type)
+      (throw (ex-info "nil element type" {:prev prev-element :next next-form})))
     (case [prev-element-type next-form-type]
       [:break :comment]       (list (trim-newlines prev-element)
                                     (new-paragraph next-form))

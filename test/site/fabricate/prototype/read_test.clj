@@ -66,7 +66,7 @@
        :message  ~msg
        :expected (str (with-out-str (pprint/pprint data#))
                       " conforms to schema for "
-                      schema-name#)
+                      schema#)
        :actual   (if (not result#) (m/explain schema# data#) result#)})
      result#))
 
@@ -331,6 +331,12 @@
                                 'var-test-ns)
             form-meta (meta evaluated)]
         (tap> form-meta)
+        (t/is (valid-schema? prototype.eval/Evaluated-Form (evaluated 0))
+              "Evaluation should produce valid Kindly forms")
+        (t/is (string? (evaluated 1)))
+        (t/is (valid-schema? prototype.eval/Evaluated-Form
+                             (evaluated 2)
+                             "Evaluation should produce valid Kindly forms"))
         (t/is (some? (:namespace form-meta))
               "Namespace information should be attached to evaluated form")
         (t/is (match? {:a 3} (:metadata form-meta))
