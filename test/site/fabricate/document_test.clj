@@ -5,6 +5,8 @@
             [site.fabricate.document :as document]
             [site.fabricate.prototype.document.clojure :as clj]
             [site.fabricate.prototype.document.fabricate :as fabricate]
+            [site.fabricate.prototype.properties :as props]
+            [site.fabricate.prototype.test-utils]
             [babashka.fs :as fs]
             [malli.core :as m]
             [malli.util :as mu]
@@ -47,13 +49,9 @@
                                             Throwable->map
                                             (assoc :context entry)
                                             (#(ex-info "Error building entry"
-                                                       %))))))
-              valid-entry (m/validate post-build-entry built-entry)]
-          (when-not valid-entry
-            (println (me/humanize (m/explain post-build-entry built-entry))))
-          (t/is valid-entry
-                (str "entry at "
-                     location
-                     " should produce a valid entry after building"))))
+                                                       %))))))]
+          (t/is (valid-schema? (malli.util/dissoc props/BuiltEntry
+                                :site.fabricate.document/title)
+                               built-entry))))
       (when-not (= "example.clj" (str (fs/file-name location)))
         (load-file (str location))))))
