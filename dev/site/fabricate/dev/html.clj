@@ -28,6 +28,11 @@
     [:re
      #"Element “dt” not allowed as child of element “div” in this context."])
    :html/heading-levels (m/schema [:re #"The heading .* skipping \d heading"])
+   ;; fix this upstream in the manual eventually
+   :html/code-ol
+   (m/schema
+    [:re
+     #"Element “ol” not allowed as child of element “code” in this context."])
    :css/layer (m/schema [:re #"CSS.*layer"])
    :css/subgrid (m/schema [:re #"CSS.*subgrid"])
    :css/any (m/schema [:re #"CSS.*"])})

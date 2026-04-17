@@ -1,7 +1,10 @@
 (ns site.fabricate.prototype.page
   "Namespace providing defaults for output HTML pages"
   (:require [site.fabricate.api :as api]
-            [site.fabricate.adorn :as adorn]))
+            [site.fabricate.prototype.eval :as eval]
+            [site.fabricate.adorn :as adorn]
+            [clojure.walk :as walk]
+            [malli.core :as m]))
 
 (def display-defaults
   "Default options for each kind"
@@ -27,6 +30,19 @@
   [form]
   [:pre {:class "clojure-block" :data-kind (str (name (:kind form)))}
    [:code {:class "language-clojure"} (adorn/clj->hiccup (:value form))]])
+
+
+(def kindly-map?
+  "Returns true if the value is an evaluated Kindly map"
+  (m/validator eval/Evaluated-Form))
+
+(defn process-kinds
+  "Walk the given form and use api/render-form to produce output values for all embedded Kindly maps"
+  [form page-format]
+  (walk/postwalk (fn process? [v] (if (kindly-map? v) (api/render-form v) v))
+                 form))
+
+#_(defn render-hiccup [entry opts] nil)
 
 
 (comment

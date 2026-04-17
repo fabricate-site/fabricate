@@ -4,6 +4,7 @@
             [site.fabricate.api :as api]
             [malli.core :as m]
             [malli.error :as me]
+            [babashka.fs :as fs]
             [clojure.test :as t]))
 
 (def valid-block? (::html/pre html/element-validators))
@@ -26,3 +27,14 @@
     (doseq [hiccup [[:span "text"] [:code "(map dec (range 29 58 2))"]]]
       (t/is (valid-element? (api/display-form {:kind  :hiccup
                                                :value hiccup}))))))
+
+(t/deftest post-processing
+  (t/testing "Rendering kindly forms"
+    (t/testing "Fabricate templates"
+      (doseq [e (api/collect "**/*.fab"
+                             {:site.fabricate.source/location (fs/file ".")})]
+        (let [built-entry (api/build e)]
+          (t/testing (str "entry " (:site.fabricate.source/location e))
+            (t/is (some? (page/process-kinds (:site.fabricate.document/data e)
+                                             :hiccup/html)))))))))
+
