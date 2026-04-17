@@ -1,5 +1,6 @@
 (ns site.fabricate.prototype.html-test
   (:require [site.fabricate.prototype.html :as html :refer :all]
+            [site.fabricate.prototype.test-utils]
             [site.fabricate.prototype.schema :as schema]
             [site.fabricate.prototype.html-test.generators :as html-gen]
             [malli.core :as m]
@@ -9,22 +10,6 @@
             [clojure.pprint :as pprint]
             [clojure.test :as t]
             [clojure.test.check.generators :as gen]))
-
-(defmethod t/assert-expr 'valid-schema?
-  [msg form]
-  `(let [schema#      ~(nth form 1)
-         form#        (m/form schema#)
-         data#        ~(nth form 2)
-         result#      (m/validate schema# data#)
-         schema-name# (last form#)]
-     (t/do-report
-      {:type     (if result# :pass :fail)
-       :message  ~msg
-       :expected (str (with-out-str (pprint/pprint data#))
-                      " conforms to schema for "
-                      schema-name#)
-       :actual   (if (not result#) (m/explain schema# data#) result#)})
-     result#))
 
 (def example-forms
   "Some forms used to test the validity of the HTML schema"

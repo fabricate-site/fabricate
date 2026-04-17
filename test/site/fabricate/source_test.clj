@@ -2,6 +2,7 @@
   (:require [clojure.test :as t]
             [site.fabricate.api :as api]
             [site.fabricate.source :as source]
+            [site.fabricate.prototype.properties :as props]
             [babashka.fs :as fs]
             [malli.core :as m]
             [malli.util :as mu]
@@ -15,4 +16,4 @@
                                {:site.fabricate.source/location (fs/file ".")})]
       (doseq [e entries]
         (t/testing (:site.fabricate.source/location e)
-          (t/is (m/validate api/Entry e)))))))
+          (t/is (m/validate props/CollectedEntry e)))))))

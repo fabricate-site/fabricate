@@ -28,9 +28,7 @@
 
 (def post-build-entry (m/schema (mu/required-keys api/Entry [::document/data])))
 
-(def skip-files
-  {(fs/file "test/site/fabricate/prototype/html_test.clj")
-   "Obscure rewrite-clj parser error for ::html/p in this file"})
+(def skip-files {})
 
 (t/deftest default-multimethods
   (doseq [{:keys         [::source/location]

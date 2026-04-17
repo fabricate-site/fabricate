@@ -15,11 +15,14 @@
   [ft]
   (ZonedDateTime/ofInstant (fs/file-time->instant ft) (ZoneId/systemDefault)))
 
-(defn file-times
-  "Return a map with two ZonedDateTimes representing when the file was created and modified."
-  [f]
-  {::created  (filetime->zdt (fs/creation-time f))
-   ::modified (filetime->zdt (fs/last-modified-time f))})
+(defn path->entry-map
+  "Return components of an entry map with format-independent metadata"
+  {:malli/schema [:-> [:fn fs/exists?] :map]}
+  [p]
+  {::directory (fs/parent (fs/canonicalize (fs/absolutize p)))
+   ::location  (fs/file (fs/canonicalize (fs/absolutize p)))
+   ::created   (filetime->zdt (fs/creation-time p))
+   ::modified  (filetime->zdt (fs/last-modified-time p))})
 
 (defmethod api/collect "**/*.clj"
   [src
@@ -28,13 +31,11 @@
     :as opts}]
   (let [clj-files (fs/glob source-location src)]
     (mapv (fn clj-path->entry [p]
-            (merge (file-times p)
-                   {::format     :clojure/file
-                    ::location   (fs/file p)
+            (merge (path->entry-map p)
+                   {::format :clojure/file
                     ::api/source src
                     :site.fabricate.document/format :hiccup/article
-                    :site.fabricate.page/format :html
-                    ::file       (fs/file p)}))
+                    :site.fabricate.page/format :html}))
           clj-files)))
 
 (defmethod api/collect "**/*.fab"
@@ -44,11 +45,9 @@
     :as opts}]
   (let [fabricate-templates (fs/glob source-location src)]
     (mapv (fn template->entry [p]
-            (merge (file-times p)
-                   {::format     ::fabricate/v0
-                    ::file       (fs/file p)
+            (merge (path->entry-map p)
+                   {::format ::fabricate/v0
                     ::api/source src
-                    ::location   (fs/file p)
                     :site.fabricate.document/format :hiccup
                     :site.fabricate.page/format :html}))
           fabricate-templates)))
