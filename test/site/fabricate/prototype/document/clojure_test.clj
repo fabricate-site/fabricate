@@ -26,6 +26,12 @@
 
 (t/deftest clj-read-eval
   (t/testing "source handling"
+    (t/testing "ns parsing"
+      (t/is (#'clj/ns-node? (parser/parse-string "(ns example-ns)")))
+      (t/is (#'clj/ns-node?
+             (parser/parse-string
+              "^{:kindly/hide-result true} (ns example-ns)"))
+            "namespaces with metadata annotation should be found "))
     (t/testing "clojure comments"
       (t/is
        (=
@@ -68,14 +74,29 @@
                 (#'clj/meta-node->metadata-map (node/coerce [1 2 3 4])))
        "Nil/non-metadata nodes should throw an error when conversion is attempted")))
   (t/testing "individual forms"
-    (= [1 2 3]
-       (let [meta-example "^{:type :test} [1 2 3]"]
-         (-> meta-example
-             clj/read-forms
-             :clojure/forms
-             first
-             clj/eval-form
-             :clojure/result))))
+    ;; it is completely unclear why this is necessary
+    (binding [*ns* (find-ns 'site.fabricate.prototype.document.clojure-test)]
+      (t/is (= :site.fabricate.prototype.document.clojure-test/kw
+               (-> "::kw"
+                   clj/read-forms
+                   :clojure/forms
+                   first
+                   :clojure/form)))
+      (t/is (= :site.fabricate.prototype.document.clojure-test/kw
+               (-> "::kw"
+                   clj/read-forms
+                   :clojure/forms
+                   first
+                   clj/eval-form
+                   :clojure/result))))
+    (t/is (= [1 2 3]
+             (let [meta-example "^{:type :test} [1 2 3]"]
+               (-> meta-example
+                   clj/read-forms
+                   :clojure/forms
+                   first
+                   clj/eval-form
+                   :clojure/result)))))
   (t/testing "example file"
     (let [evaluated-results (-> example-file
                                 clj/read-forms
@@ -84,6 +105,9 @@
       (t/testing "result forms"
         (doseq [{clj-form :clojure/form :as result-form} (:clojure/forms
                                                           evaluated-results)]
+          (when-let [exp (:expected (:clojure/metadata result-form))]
+            (t/is (= exp (:clojure/result result-form))
+                  "forms with :expected metadata should match"))
           (t/is (match? (m/any-of {:clojure/form      any?
                                    :clojure/result    any?
                                    :clojure/namespace 'site.fabricate.example}
@@ -301,3 +325,7 @@
                    meta
                    :kindly/kind))
             "Document should be processed into kindly fragment"))))
+
+
+(comment
+  *ns*)
