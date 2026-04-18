@@ -19,10 +19,12 @@
   "Return components of an entry map with format-independent metadata"
   {:malli/schema [:-> [:fn fs/exists?] :map]}
   [p]
-  {::directory (fs/parent (fs/canonicalize (fs/absolutize p)))
-   ::location  (fs/file (fs/canonicalize (fs/absolutize p)))
-   ::created   (filetime->zdt (fs/creation-time p))
-   ::modified  (filetime->zdt (fs/last-modified-time p))})
+  {:site.fabricate.source/directory (fs/parent (fs/canonicalize (fs/absolutize
+                                                                 p)))
+   :site.fabricate.source/location  (fs/file (fs/canonicalize (fs/absolutize
+                                                               p)))
+   :site.fabricate.source/created   (filetime->zdt (fs/creation-time p))
+   :site.fabricate.source/modified  (filetime->zdt (fs/last-modified-time p))})
 
 (defmethod api/collect "**/*.clj"
   [src
@@ -32,22 +34,23 @@
   (let [clj-files (fs/glob source-location src)]
     (mapv (fn clj-path->entry [p]
             (merge (path->entry-map p)
-                   {::format :clojure/file
-                    ::api/source src
+                   {:site.fabricate.source/format   :clojure/file
+                    :site.fabricate.api/source      src
                     :site.fabricate.document/format :hiccup/article
-                    :site.fabricate.page/format :html}))
+                    :site.fabricate.page/format     :html}))
           clj-files)))
 
 (defmethod api/collect "**/*.fab"
   [src
-   {source-location ::location
-    :or {source-location (::location defaults)}
+   {source-location :site.fabricate.source/location
+    :or {source-location (:site.fabricate.source/location defaults)}
     :as opts}]
   (let [fabricate-templates (fs/glob source-location src)]
     (mapv (fn template->entry [p]
             (merge (path->entry-map p)
-                   {::format ::fabricate/v0
-                    ::api/source src
+                   {:site.fabricate.source/format
+                    :site.fabricate.prototype.source.fabricate/v0
+                    :site.fabricate.api/source src
                     :site.fabricate.document/format :hiccup
                     :site.fabricate.page/format :html}))
           fabricate-templates)))

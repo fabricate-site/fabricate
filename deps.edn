@@ -31,7 +31,7 @@
            org.clojure/clojure     {:mvn/version "1.12.4"}
            org.clojure/data.finger-tree {:mvn/version "0.0.3"}
            org.scicloj/kindly      {:mvn/version "4-alpha16"}
-           rewrite-clj/rewrite-clj {:mvn/version "1.1.47"}
+           rewrite-clj/rewrite-clj {:mvn/version "1.2.53"}
            site.fabricate/adorn    {:git/tag "v0.1.131-alpha"
                                     :git/url
                                     "https://github.com/fabricate-site/adorn"

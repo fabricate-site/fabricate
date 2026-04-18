@@ -16,4 +16,10 @@
                                {:site.fabricate.source/location (fs/file ".")})]
       (doseq [e entries]
         (t/testing (:site.fabricate.source/location e)
+          (t/is (m/validate props/CollectedEntry e))))))
+  (t/testing "collecting fabricate sources"
+    (let [entries (api/collect "**/*.fab"
+                               {:site.fabricate.source/location (fs/file ".")})]
+      (doseq [e entries]
+        (t/testing (:site.fabricate.source/location e)
           (t/is (m/validate props/CollectedEntry e)))))))

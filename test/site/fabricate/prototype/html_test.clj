@@ -109,7 +109,7 @@
         (t/testing (str "validator for element: " elem-tag)
           (t/is (elem-validator v)))
         (t/testing (str "parser for element: " elem-tag)
-          (t/is (not= ::m/invalid (elem-parser v)))))))
+          (t/is (not= :malli.core/invalid (elem-parser v)))))))
   (t/testing "page structure"
     (doseq [[tag element] example-forms]
       (let [example-page [:html [:head] [:body element]]]

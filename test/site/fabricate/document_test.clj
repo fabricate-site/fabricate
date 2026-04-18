@@ -15,27 +15,30 @@
 
 
 (def example-entries
-  [{::source/location (fs/file "test-resources/site/fabricate/example.clj")
-    ::api/source      "example"
-    ::source/format   :clojure/file
-    ::document/format :hiccup/article}
-   {::source/location (fs/file "test-resources/site/fabricate/example.clj")
-    ::source/format   :clojure/file
-    ::api/source      "example"
-    ::document/format :kind/fragment}
-   #_{::source/location ""
-      ::source/format   ::fabricate/v0
-      ::document/format :hiccup/article}])
+  [{:site.fabricate.source/location
+    (fs/file "test-resources/site/fabricate/example.clj")
+    :site.fabricate.api/source "example"
+    :site.fabricate.source/format :clojure/file
+    :site.fabricate.document/format :hiccup/article}
+   {:site.fabricate.source/location
+    (fs/file "test-resources/site/fabricate/example.clj")
+    :site.fabricate.source/format :clojure/file
+    :site.fabricate.api/source "example"
+    :site.fabricate.document/format :kind/fragment}
+   #_{:source/location ""
+      :source/format   :fabricate/v0
+      :document/format :hiccup/article}])
 
 
-(def post-build-entry (m/schema (mu/required-keys api/Entry [::document/data])))
+(def post-build-entry
+  (m/schema (mu/required-keys api/Entry [:site.fabricate.document/data])))
 
 (def skip-files {})
 
 (t/deftest default-multimethods
-  (doseq [{:keys         [::source/location]
-           source-format ::source/format
-           document-format ::document/format
+  (doseq [{:keys         [:site.fabricate.source/location]
+           source-format :site.fabricate.source/format
+           document-format :site.fabricate.document/format
            :as           entry}
           #_example-entries
           (api/collect "**/*.clj"

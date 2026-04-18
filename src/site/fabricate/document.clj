@@ -19,7 +19,8 @@
             :site.fabricate.page/title        (:title article-attrs)
             :site.fabricate.document/metadata article-metadata})))
 
-(defmethod api/build [::fabricate/v0 :hiccup/article]
+(defmethod api/build [:site.fabricate.prototype.document.fabricate/v0
+                      :hiccup/article]
   [entry opts]
   (build-fabricate-article entry opts))
 
@@ -56,7 +57,8 @@
            {:site.fabricate.document/metadata (merge ns-meta (meta fragment))
             :site.fabricate.document/data     fragment})))
 
-(defmethod api/build [:clojure/file ::clj/forms]
+(defmethod api/build [:clojure/file
+                      :site.fabricate.prototype.document.clojure/forms]
   [{:keys [site.fabricate.source/location] :as entry} opts]
   (let [forms    (-> location
                      clj/read-forms
