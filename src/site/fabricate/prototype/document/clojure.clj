@@ -211,6 +211,10 @@ Will evaluate the namespace form"
   (parser/parse-string "::html/p")
   (read-string "::html/p"))
 
+(def ^:dynamic *parse-fallback?*
+  "Dynamic var controlling when to fall back to the reader when encountering form evaluation errors"
+  true)
+
 (defn eval-form
   "Evaluate the Clojure form contained in the given map."
   {:malli/schema (m/schema [:-> form-schema form-schema])}
@@ -233,27 +237,29 @@ Will evaluate the namespace form"
             ;; parsing step mostly because it requires
             ;; evaluation to see whether it's failed
             (catch Exception e
-              ;; (println (.getMessage e))
-              ;; (clojure.pprint/pprint clojure-form)
-              #_{:clojure/error (Throwable->map e)}
-              (try (if (string? clj-str)
-                     {:clojure/result (if clj-ns
-                                        (binding [*ns* (find-ns clj-ns)]
-                                          (eval (parse-fallback clj-str
-                                                                {:auto-resolve
-                                                                 {:current
-                                                                  clj-ns}})))
-                                        (eval (parse-fallback clj-str {})))
-                      :clojure.eval/duration (- (System/currentTimeMillis)
-                                                start-time)
-                      :context        :fallback}
-                     {:clojure/error (Throwable->map e)})
-                   (catch Exception ee
-                     {:clojure/error (Throwable->map ee)
-                      :context       :fallback
-                      :clojure/form  (parse-fallback clj-str
-                                                     {:auto-resolve
-                                                      {:current clj-ns}})}))))]
+              ;; (clojure.pprint/pprint (Throwable->map e))
+              ;; (clojure.pprint/pprint unevaluated-form)
+              (if-not *parse-fallback?*
+                {:clojure/error (Throwable->map e) :context :fabricate-parsing}
+                (try (if (string? clj-str)
+                       {:clojure/result (if clj-ns
+                                          (binding [*ns* (find-ns clj-ns)]
+                                            (eval (parse-fallback clj-str
+                                                                  {:auto-resolve
+                                                                   {:current
+                                                                    clj-ns}})))
+                                          (eval (parse-fallback clj-str {})))
+                        :clojure.eval/duration (- (System/currentTimeMillis)
+                                                  start-time)
+                        :context        :fallback}
+                       {:clojure/error (Throwable->map e)})
+                     (catch Exception ee
+                       {:clojure/error (Throwable->map ee)
+                        :context       :fallback
+                        :clojure/form  (parse-fallback clj-str
+                                                       {:auto-resolve
+                                                        {:current
+                                                         clj-ns}})})))))]
       (merge unevaluated-form eval-output))
     unevaluated-form))
 

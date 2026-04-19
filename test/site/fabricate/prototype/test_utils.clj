@@ -8,7 +8,7 @@
 
 (defn cli-test? [] (= "cli.test" (System/getProperty "clojure.context")))
 
-(defmethod t/assert-expr 'valid-schema?
+(defn assert-valid-schema
   [msg form]
   `(let [schema#      ~(nth form 1)
          form#        (m/form schema#)
@@ -27,6 +27,10 @@
                              (me/humanize (m/explain schema# data#))
                              result#)})
      result#))
+
+(defmethod t/assert-expr 'valid-schema?
+  [msg form]
+  (assert-valid-schema msg form))
 
 (defn with-instrumentation
   "Test fixture enabling malli instrumentation to check function conformance to malli schemas"

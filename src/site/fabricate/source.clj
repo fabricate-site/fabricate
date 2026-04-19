@@ -19,12 +19,10 @@
   "Return components of an entry map with format-independent metadata"
   {:malli/schema [:-> [:fn fs/exists?] :map]}
   [p]
-  {:site.fabricate.source/directory (fs/parent (fs/canonicalize (fs/absolutize
-                                                                 p)))
-   :site.fabricate.source/location  (fs/file (fs/canonicalize (fs/absolutize
-                                                               p)))
-   :site.fabricate.source/created   (filetime->zdt (fs/creation-time p))
-   :site.fabricate.source/modified  (filetime->zdt (fs/last-modified-time p))})
+  {::directory (fs/parent (fs/canonicalize (fs/absolutize p)))
+   ::location  (fs/file (fs/canonicalize (fs/absolutize p)))
+   ::created   (filetime->zdt (fs/creation-time p))
+   ::modified  (filetime->zdt (fs/last-modified-time p))})
 
 (defmethod api/collect "**/*.clj"
   [src

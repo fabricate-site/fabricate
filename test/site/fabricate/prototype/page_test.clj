@@ -4,6 +4,9 @@
             [site.fabricate.api :as api]
             [site.fabricate.source-test]
             [site.fabricate.document-test]
+            ;; macros can cause absolutely bonkers non-local parsing and
+            ;; evaluation errors, so be careful about this!
+            [site.fabricate.prototype.test-utils :as test-utils]
             [malli.core :as m]
             [malli.error :as me]
             [babashka.fs :as fs]
