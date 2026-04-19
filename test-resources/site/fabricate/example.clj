@@ -42,6 +42,11 @@
 
 (kind/fragment (kind/hiccup [:div "fragment 1"]) (kind/md "fragment 2"))
 
+
+^{:expected {:clojure.string/example       "string"
+             :site.fabricate.example/ns-kw :abc}}
+{::str/example "string" ::ns-kw :abc}
+
 ;; macro example
 (defmacro unless [pred a b] `(if (not ~pred) ~a ~b))
 

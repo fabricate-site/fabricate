@@ -7,8 +7,10 @@
 
 (def defaults "Default options for documents" {})
 
-(defmethod api/build [::fabricate/v0 :hiccup/article]
+(defn build-fabricate-article
+  "Evaluate the Fabricate template at the location specified by the entry and assoc the results into the entry map."
   [entry opts]
+  {:malli/schema [:-> api/Entry api/Entry]}
   (let [article          (fabricate/entry->hiccup-article entry opts)
         article-attrs    (nth article 1)
         article-metadata (meta article)]
@@ -17,7 +19,14 @@
             :site.fabricate.page/title        (:title article-attrs)
             :site.fabricate.document/metadata article-metadata})))
 
-(defmethod api/build [:clojure/file :hiccup/article]
+(defmethod api/build [:site.fabricate.prototype.document.fabricate/v0
+                      :hiccup/article]
+  [entry opts]
+  (build-fabricate-article entry opts))
+
+(defn build-clj-article
+  "Evaluate the Clojure forms at the location specified by the entry and assoc the results into the entry map."
+  {:malli/schema [:-> api/Entry api/Entry]}
   [{:keys [site.fabricate.source/location] :as entry} opts]
   (let [article          (-> location
                              clj/read-forms
@@ -33,6 +42,10 @@
             :site.fabricate.document/metadata article-metadata
             :site.fabricate.document/data     article})))
 
+(defmethod api/build [:clojure/file :hiccup/article]
+  [entry opts]
+  (build-clj-article entry opts))
+
 (defmethod api/build [:clojure/file :kind/fragment]
   [{:keys [site.fabricate.source/location] :as entry} opts]
   (let [fragment (-> location
@@ -44,7 +57,8 @@
            {:site.fabricate.document/metadata (merge ns-meta (meta fragment))
             :site.fabricate.document/data     fragment})))
 
-(defmethod api/build [:clojure/file ::clj/forms]
+(defmethod api/build [:clojure/file
+                      :site.fabricate.prototype.document.clojure/forms]
   [{:keys [site.fabricate.source/location] :as entry} opts]
   (let [forms    (-> location
                      clj/read-forms

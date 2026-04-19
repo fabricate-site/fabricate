@@ -1,5 +1,6 @@
 (ns site.fabricate.prototype.html-test
   (:require [site.fabricate.prototype.html :as html :refer :all]
+            [site.fabricate.prototype.test-utils :as tu]
             [site.fabricate.prototype.schema :as schema]
             [site.fabricate.prototype.html-test.generators :as html-gen]
             [malli.core :as m]
@@ -9,22 +10,6 @@
             [clojure.pprint :as pprint]
             [clojure.test :as t]
             [clojure.test.check.generators :as gen]))
-
-(defmethod t/assert-expr 'valid-schema?
-  [msg form]
-  `(let [schema#      ~(nth form 1)
-         form#        (m/form schema#)
-         data#        ~(nth form 2)
-         result#      (m/validate schema# data#)
-         schema-name# (last form#)]
-     (t/do-report
-      {:type     (if result# :pass :fail)
-       :message  ~msg
-       :expected (str (with-out-str (pprint/pprint data#))
-                      " conforms to schema for "
-                      schema-name#)
-       :actual   (if (not result#) (m/explain schema# data#) result#)})
-     result#))
 
 (def example-forms
   "Some forms used to test the validity of the HTML schema"
@@ -61,57 +46,56 @@
 
 (t/deftest schema
   (t/testing "content schemas"
-    (t/is (valid-schema? (#'site.fabricate.prototype.html/->hiccup-schema
-                          :p
-                          global-attributes
-                          [:* atomic-element])
-                         [:p {:id "something"} "text in a paragraph"]))
-    (t/is (valid-schema? (schema/subschema html ::html/p)
-                         [:p "something"
-                          [:a {:href "https://link.com"} "text"]])
-          "Phrasing subtags should be respected.")
-    (t/is (valid-schema? (schema/subschema html "a-phrasing")
-                         [:a {:href "https://something.com"}
-                          [:ins "something"
-                           [:del "something" [:em "something else"]]]])
-          "Phrasing subtags should be respected.")
-    (t/is (valid-schema? (schema/subschema html "ins-phrasing")
-                         [:ins [:ins [:ins [:em "text"]]]])
-          "Phrasing subtags should be respected")
-    (t/is (valid-schema? (schema/subschema html "ins-phrasing")
-                         [:ins [:ins "text"]])
-          "Phrasing subtags should be respected")
-    (t/is (valid-schema? (schema/subschema html "del-phrasing")
-                         [:del [:em "text"]])
-          "Phrasing subtags should be respected")
-    (t/is (valid-schema? (schema/subschema html ::html/em)
-                         [:em [:ins [:ins [:em "text"]]]])
-          "Phrasing subtags should be respected")
-    (t/is (valid-schema? (schema/subschema html ::html/em)
-                         [:em [:a {:href "https://archive.org"}] "something"])
-          "Phrasing subtags should be respected")
+    (tu/check-schema (#'site.fabricate.prototype.html/->hiccup-schema
+                      :p
+                      global-attributes
+                      [:* atomic-element])
+                     [:p {:id "something"} "text in a paragraph"])
+    (tu/check-schema (schema/subschema html ::html/p)
+                     [:p "something" [:a {:href "https://link.com"} "text"]]
+                     "Phrasing subtags should be respected.")
+    (tu/check-schema (schema/subschema html "a-phrasing")
+                     [:a {:href "https://something.com"}
+                      [:ins "something"
+                       [:del "something" [:em "something else"]]]]
+                     "Phrasing subtags should be respected.")
+    (tu/check-schema (schema/subschema html "ins-phrasing")
+                     [:ins [:ins [:ins [:em "text"]]]]
+                     "Phrasing subtags should be respected")
+    (tu/check-schema (schema/subschema html "ins-phrasing")
+                     [:ins [:ins "text"]]
+                     "Phrasing subtags should be respected")
+    (tu/check-schema (schema/subschema html "del-phrasing")
+                     [:del [:em "text"]]
+                     "Phrasing subtags should be respected")
+    (tu/check-schema (schema/subschema html ::html/em)
+                     [:em [:ins [:ins [:em "text"]]]]
+                     "Phrasing subtags should be respected")
+    (tu/check-schema (schema/subschema html ::html/em)
+                     [:em [:a {:href "https://archive.org"}] "something"]
+                     "Phrasing subtags should be respected")
     (t/is (not (m/validate (schema/subschema html "ins-phrasing")
                            [:ins [:ins [:ins [:p "text"]]]])))
-    (t/is (valid-schema? (schema/subschema html "a-phrasing")
-                         [:a {:href "https://example.com"} "link" [:em "text"]])
-          "Phrasing subtags should be respected")
-    (t/is (valid-schema? (schema/subschema html ::html/p)
-                         [:p "text" [:img {:src "/picture.jpg"}]]))
-    (t/is (valid-schema? (schema/subschema html ::html/em)
-                         [:em "text" [:br] "more text"]))
-    (t/is (valid-schema? (schema/subschema html ::html/em)
-                         [:em {:id "something"} "text" "more text"]))
+    (tu/check-schema (schema/subschema html "a-phrasing")
+                     [:a {:href "https://example.com"} "link" [:em "text"]]
+                     "Phrasing subtags should be respected")
+    (tu/check-schema (schema/subschema html ::html/p)
+                     [:p "text" [:img {:src "/picture.jpg"}]])
+    (tu/check-schema (schema/subschema html ::html/em)
+                     [:em "text" [:br] "more text"])
+    (tu/check-schema (schema/subschema html ::html/em)
+                     [:em {:id "something"} "text" "more text"])
     (doseq [elem (set/union flow-tags phrasing-tags heading-tags)]
       (t/testing (str "schema for element: <" (name elem) ">")
         (let [data   (get example-forms elem [elem "sample string"])
               schema (schema/subschema html
                                        (ns-kw 'site.fabricate.prototype.html
                                               elem))]
-          (t/is (valid-schema? schema data)))))
+          (tu/check-schema schema data))))
     (t/is (palpable? [:p "text"]))
     (t/is (not (palpable? [:p])))
-    (t/is (valid-schema? (schema/subschema html ::html/element)
-                         [:div [:div [:div [:p "text"]]]])))
+    (tu/check-schema (schema/subschema html ::html/element)
+                     [:div [:div [:div [:p "text"]]]]))
   (t/testing "example forms"
     (doseq [[k v] example-forms]
       (let [qualified-kw   (ns-kw 'site.fabricate.prototype.html k)
@@ -120,18 +104,18 @@
             elem-validator (get element-validators qualified-kw)
             elem-tag       (str "<" (symbol k) ">")]
         (t/testing (str "subschema for element: " elem-tag)
-          (t/is (valid-schema? subschema v)))
+          (tu/check-schema subschema v))
         (t/testing (str "validator for element: " elem-tag)
           (t/is (elem-validator v)))
         (t/testing (str "parser for element: " elem-tag)
-          (t/is (not= ::m/invalid (elem-parser v)))))))
+          (t/is (not= :malli.core/invalid (elem-parser v)))))))
   (t/testing "page structure"
     (doseq [[tag element] example-forms]
       (let [example-page [:html [:head] [:body element]]]
         (t/testing (str "schema for element: <" (symbol tag) ">")
-          (when (not= :head tag) (t/is (valid-schema? html example-page)))))))
+          (when (not= :head tag) (tu/check-schema html example-page))))))
   (comment
-    (map (fn [[k v]] [k (valid-schema? htmls v)]) example-forms))
+    (map (fn [[k v]] [k (tu/check-schema htmls v)]) example-forms))
   (t/testing "atomic elements"
     (t/is (m/validate global-attributes {:class "a" :href "http://google.com"}))
     (t/is (m/validate global-attributes

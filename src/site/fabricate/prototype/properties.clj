@@ -8,8 +8,7 @@
             [malli.registry :as mr]
             [site.fabricate.prototype.eval :as eval]
             [site.fabricate.prototype.html :as html]
-            [matcher-combinators.matchers :as match]
-            [matcher-combinators.test]))
+            [clojure.pprint :as pprint]))
 
 ;; (defn dir-exists? [_] false)
 ;; (defn file-exists? [_] false)
@@ -107,6 +106,22 @@
 (def evaluated-kindly-map?
   "returns true if the value is an evaluated Kindly map."
   (m/validator eval/Evaluated-Form))
+
+(def EvaluatedClojureForm
+  "schema for site.fabricate.prototype.document.clojure form maps"
+  (m/schema [:and {:title "Evaluated form"}
+             [:map [:clojure/form {:optional true} :any] [:clojure/node :any]]
+             [:not
+              {:error/message "Encountered an error evaluating form map"
+               :error/fn      (fn [{:keys [value]} _]
+                                (str "Encountered an error evaluating:\n"
+                                     (with-out-str (pprint/pprint
+                                                    (select-keys
+                                                     value
+                                                     [:clojure/error
+                                                      :clojure/form])))))}
+              [:map [:clojure/error :any] [:context [:= :fallback]]]]]))
+
 
 (defn classify-render-output
   "Determine whether the render output has the expected components based on Kindly metadata"

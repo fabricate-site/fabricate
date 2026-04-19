@@ -18,7 +18,6 @@
             [site.fabricate.prototype.hiccup :as prototype.hiccup]
             [site.fabricate.prototype.document.fabricate :as fab]
             [site.fabricate.prototype.properties :as props]
-            [site.fabricate.prototype.test-utils :as test-utils]
             [dev.onionpancakes.chassis.core :as chassis]
             [malli.core :as m]
             [malli.dev.pretty :as mp]
@@ -26,9 +25,10 @@
             [babashka.fs :as fs]
             [clojure.java.io :as io]
             [clojure.walk :as walk]
-            [malli.util :as mu]))
+            [malli.util :as mu]
+            [site.fabricate.prototype.test-utils :as tu]))
 
-(t/use-fixtures :once test-utils/with-instrumentation)
+(t/use-fixtures :once tu/with-instrumentation)
 
 (def manual-site-config
   {:site.fabricate.api/options
@@ -105,8 +105,10 @@
                                 :site.fabricate.source/location
                                 (fs/file (fs/canonicalize (fs/absolutize p)))})
                              (fs/glob dir pattern))]
-           (t/is (valid-schema? (m/schema [:* props/CollectedEntry]) results)
-                 (str "every collected entry should match expected schema"))
+           (tu/check-schema
+            (m/schema [:* props/CollectedEntry])
+            results
+            (str "every collected entry should match expected schema"))
            results)))))
   ([] (register-collect-methods! pattern-formats)))
 
@@ -114,8 +116,8 @@
   "Build and test the entry from a Fabricate template"
   [{:keys [site.fabricate.source/location site.fabricate.source/file] :as entry}
    opts]
-  {:pre  [(t/is (valid-schema? props/CollectedEntry entry))]
-   :post [(t/is (valid-schema? props/FabricateHiccupEntry %))]}
+  {:pre  [(tu/check-schema props/CollectedEntry entry)]
+   :post [(tu/check-schema props/FabricateHiccupEntry %)]}
   (let [hiccup-article (fab/entry->hiccup-article entry opts)
         page-metadata  (meta hiccup-article)]
     (assoc entry
@@ -125,8 +127,8 @@
 (defn build-clojure
   "Build and test the entry from a Clojure source"
   [{:keys [site.fabricate.source/location] :as entry} opts]
-  {:pre  [(t/is (valid-schema? props/CollectedEntry entry))]
-   :post [(t/is (valid-schema? props/FabricateHiccupEntry %))]}
+  {:pre  [(tu/check-schema props/CollectedEntry entry)]
+   :post [(tu/check-schema props/FabricateHiccupEntry %)]}
   (let [data (-> location
                  clj/read-forms
                  clj/eval-forms
@@ -182,16 +184,62 @@
   "Render the kindly form into an output format"
   {:malli/schema props/=>RenderForm}
   [v]
-  {:post [(t/is (= :ok (props/classify-render-output v %)))]}
+  {:pre  [(let [error? (contains? v :error)]
+            (when error?
+              (println "encountered an error with the form")
+              (clojure.pprint/pprint v))
+            (t/is (not error?) "form should not have evaluation errors")
+            true)]
+   :post [(t/is (= :ok (props/classify-render-output v %)))]}
   (api/render-form v))
 
+(defn process-kindly?
+  [v]
+  (if (kindly-map? v)
+    (try (render-kindly v)
+         (catch Exception e
+           (throw (ex-info "Error processing value"
+                           (merge (Throwable->map e) {:value v})))))
+    v))
+
 (defn process-kinds
-  [form page-format]
-  (try (walk/postwalk (fn process? [v] (if (kindly-map? v) (render-kindly v) v))
-                      form)
-       (catch Exception e
-         (do (println "encountered an error processing form")
-             #_(pprint/pprint form)))))
+  [page-data page-format]
+  (walk/postwalk process-kindly? page-data))
+
+(defn test-hiccup-entry
+  [entry opts]
+  (let [{:keys [site.fabricate.document/data] :as processed-entry}
+        (update entry
+                :site.fabricate.document/data
+                #(process-kinds % :hiccup/html))
+        output-hiccup     [chassis/doctype-html5
+                           (hiccup/entry->hiccup-head processed-entry)
+                           (hiccup/entry->hiccup-body processed-entry)]
+        output-html       (try (chassis/html output-hiccup)
+                               (catch Exception e "<<<HTML RENDERING ERROR>>>"))
+        validation-result (html-check/validate-html-string output-html)]
+    ;; uncomment this when the schema supports lists/seqs of elements!
+    #_(tu/check-schema html/element
+                       data
+                       "api/produce should produce valid Hiccup elements")
+    (binding [pprint/*print-miser-width* 60
+              pprint/*print-right-margin* 75
+              *print-length* 10
+              *print-level* 7]
+      ;; make this configurable, eventually
+      #_(pprint/pprint (mapv
+                        #(select-keys % ["type" "subType" "extract" "message"])
+                        (get validation-result "messages")))
+      (tu/check-schema html-check/ValidHTMLOutput validation-result))))
+
+;; putting the manual on a separate classpath really was more trouble than it
+;; was worth!
+(def skip-entry-filenames
+  #{"template-structure.html.fab" "site-visuals.html.fab"
+    "site.fabricate.prototype.schema.html.fab"
+    "site.fabricate.prototype.read.grammar.html.fab"
+    "fabricate-for-docs.html.fab" "site.fabricate.prototype.read.html.fab"
+    "site.fabricate.prototype.html.html.fab"})
 
 (defn register-produce-methods!
   []
@@ -199,32 +247,11 @@
     [{:keys [value] :as form}]
     (site.fabricate.prototype.read/error->hiccup (assoc form :error value)))
   (defmethod api/produce! [::hiccup :chassis/hiccup]
-    [{:keys [site.fabricate.document/title] :as entry} opts]
-    (t/testing (str "\n" title)
-      (let [{:keys [site.fabricate.document/data] :as processed-entry}
-            (update entry
-                    :site.fabricate.document/data
-                    #(process-kinds % :hiccup/html))
-            output-hiccup     [chassis/doctype-html5
-                               (hiccup/entry->hiccup-head processed-entry)
-                               (hiccup/entry->hiccup-body processed-entry)]
-            output-html       (try (chassis/html output-hiccup)
-                                   (catch Exception e
-                                     "<<<HTML RENDERING ERROR>>>"))
-            validation-result (html-check/validate-html-string output-html)]
-        ;; uncomment this when the schema supports lists/seqs of elements!
-        #_(t/is (valid-schema? html/element data)
-                "api/produce should produce valid Hiccup elements")
-        (binding [pprint/*print-miser-width* 60
-                  pprint/*print-right-margin* 75
-                  *print-length* 10
-                  *print-level* 7]
-          ;; make this configurable, eventually
-          #_(pprint/pprint
-             (mapv #(select-keys % ["type" "subType" "extract" "message"])
-                   (get validation-result "messages")))
-          (t/is (valid-schema? html-check/ValidHTMLOutput
-                               validation-result)))))))
+    [{:keys [site.fabricate.document/title site.fabricate.source/location]
+      :as   entry} opts]
+    (when-not (skip-entry-filenames (str (fs/file-name location)))
+      (t/testing (str "\n" title "\n" location)
+        (test-hiccup-entry entry opts)))))
 
 (defn unregister-multimethods!
   "clean up + unmap test-specific multimethod impls"
@@ -258,5 +285,5 @@
                        :done))))))))
 
 (t/deftest sites
-  (if (test-utils/cli-test?) (match-config/enable-abbreviation!))
+  (if (tu/cli-test?) (match-config/enable-abbreviation!))
   (run! test-site (into [manual-site-config] additional-sites)))
