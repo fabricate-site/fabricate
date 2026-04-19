@@ -8,7 +8,10 @@
             [malli.error :as me]
             [matcher-combinators.test]
             [matcher-combinators.matchers :as m]
-            [clojure.test :as t]))
+            [site.fabricate.prototype.test-utils]
+            [clojure.test :as t]
+            [site.fabricate.prototype.properties :as props]
+            [site.fabricate.prototype.test-utils :as tu]))
 
 (def example-file "test-resources/site/fabricate/example.clj")
 
@@ -122,9 +125,10 @@
                         result-form))))))
   (t/testing "fabricate source code"
     (let [valid-form-map? (malli/validator clj/form-schema)
-          form-explainer  (malli/explainer clj/form-schema)]
+          form-explainer (malli/explainer clj/form-schema)
+          files (fs/glob "." "**.clj")]
       (t/testing "parsing file into sequence of forms with rewrite-clj"
-        (doseq [src-file (fs/glob "." "**.clj")]
+        (doseq [src-file files]
           (t/testing (str "\n" src-file)
             (let [forms      (try (:clojure/forms (clj/read-forms (fs/file
                                                                    src-file)))
@@ -138,7 +142,20 @@
                 (doseq [invalid-form (filter #(not (valid-form-map? %)) forms)]
                   (println (dissoc (form-explainer invalid-form) :schema))
                   (println (me/humanize (form-explainer invalid-form)))))
-              (t/is all-valid? "Each parsed form should be valid."))))))))
+              (t/is all-valid? "Each parsed form should be valid."))))
+        (t/testing "evaluation of files without fallback"
+          (binding [clj/*parse-fallback?* false
+                    #_true]
+            (doseq [src-file files]
+              (t/testing (str "\n" src-file)
+                (let [evaluation-result (-> (fs/file src-file)
+                                            clj/read-forms
+                                            clj/eval-forms)]
+                  (doseq [r (:clojure/forms evaluation-result)]
+                    (tu/check-schema
+                     props/EvaluatedClojureForm
+                     r
+                     "evaluation should not have errors")))))))))))
 
 (t/deftest hiccup
   (t/testing "individual forms"

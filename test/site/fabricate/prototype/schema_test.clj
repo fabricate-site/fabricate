@@ -4,7 +4,7 @@
             [site.fabricate.prototype.hiccup]
             [site.fabricate.prototype.read]
             [site.fabricate.prototype.read.grammar]
-            [site.fabricate.prototype.test-utils :as test-utils]
+            [site.fabricate.prototype.test-utils :as test-utils :as tu]
             [malli.core :as m]
             [clojure.test :as t]))
 
@@ -49,7 +49,7 @@
   (t/testing "general purpose schemas + validators"
     (let [exception-map (try (#(throw (Exception. "error")))
                              (catch Exception e (Throwable->map e)))]
-      (t/is (valid-schema? throwable-map-schema exception-map))
+      (t/is (tu/check-schema throwable-map-schema exception-map))
       (t/is (throwable-map? exception-map)))))
 
 (defn has-schema?

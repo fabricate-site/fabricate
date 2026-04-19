@@ -6,7 +6,7 @@
             [site.fabricate.prototype.document.clojure :as clj]
             [site.fabricate.prototype.document.fabricate :as fabricate]
             [site.fabricate.prototype.properties :as props]
-            [site.fabricate.prototype.test-utils]
+            [site.fabricate.prototype.test-utils :as tu]
             [babashka.fs :as fs]
             [malli.core :as m]
             [malli.util :as mu]
@@ -53,8 +53,8 @@
                                             (assoc :context entry)
                                             (#(ex-info "Error building entry"
                                                        %))))))]
-          (t/is (valid-schema? (malli.util/dissoc props/BuiltEntry
-                                :site.fabricate.document/title)
-                               built-entry))))
+          (tu/check-schema (malli.util/dissoc props/BuiltEntry
+                            :site.fabricate.document/title)
+                           built-entry)))
       (when-not (= "example.clj" (str (fs/file-name location)))
         (load-file (str location))))))

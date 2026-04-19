@@ -18,7 +18,6 @@
             [site.fabricate.prototype.hiccup :as prototype.hiccup]
             [site.fabricate.prototype.document.fabricate :as fab]
             [site.fabricate.prototype.properties :as props]
-            [site.fabricate.prototype.test-utils :as test-utils]
             [dev.onionpancakes.chassis.core :as chassis]
             [malli.core :as m]
             [malli.dev.pretty :as mp]
@@ -26,9 +25,10 @@
             [babashka.fs :as fs]
             [clojure.java.io :as io]
             [clojure.walk :as walk]
-            [malli.util :as mu]))
+            [malli.util :as mu]
+            [site.fabricate.prototype.test-utils :as tu]))
 
-(t/use-fixtures :once test-utils/with-instrumentation)
+(t/use-fixtures :once tu/with-instrumentation)
 
 (def manual-site-config
   {:site.fabricate.api/options
@@ -105,8 +105,10 @@
                                 :site.fabricate.source/location
                                 (fs/file (fs/canonicalize (fs/absolutize p)))})
                              (fs/glob dir pattern))]
-           (t/is (valid-schema? (m/schema [:* props/CollectedEntry]) results)
-                 (str "every collected entry should match expected schema"))
+           (tu/check-schema
+            (m/schema [:* props/CollectedEntry])
+            results
+            (str "every collected entry should match expected schema"))
            results)))))
   ([] (register-collect-methods! pattern-formats)))
 
@@ -114,8 +116,8 @@
   "Build and test the entry from a Fabricate template"
   [{:keys [site.fabricate.source/location site.fabricate.source/file] :as entry}
    opts]
-  {:pre  [(t/is (valid-schema? props/CollectedEntry entry))]
-   :post [(t/is (valid-schema? props/FabricateHiccupEntry %))]}
+  {:pre  [(tu/check-schema props/CollectedEntry entry)]
+   :post [(tu/check-schema props/FabricateHiccupEntry %)]}
   (let [hiccup-article (fab/entry->hiccup-article entry opts)
         page-metadata  (meta hiccup-article)]
     (assoc entry
@@ -125,8 +127,8 @@
 (defn build-clojure
   "Build and test the entry from a Clojure source"
   [{:keys [site.fabricate.source/location] :as entry} opts]
-  {:pre  [(t/is (valid-schema? props/CollectedEntry entry))]
-   :post [(t/is (valid-schema? props/FabricateHiccupEntry %))]}
+  {:pre  [(tu/check-schema props/CollectedEntry entry)]
+   :post [(tu/check-schema props/FabricateHiccupEntry %)]}
   (let [data (-> location
                  clj/read-forms
                  clj/eval-forms
@@ -217,8 +219,9 @@
                                (catch Exception e "<<<HTML RENDERING ERROR>>>"))
         validation-result (html-check/validate-html-string output-html)]
     ;; uncomment this when the schema supports lists/seqs of elements!
-    #_(t/is (valid-schema? html/element data)
-            "api/produce should produce valid Hiccup elements")
+    #_(tu/check-schema html/element
+                       data
+                       "api/produce should produce valid Hiccup elements")
     (binding [pprint/*print-miser-width* 60
               pprint/*print-right-margin* 75
               *print-length* 10
@@ -227,7 +230,7 @@
       #_(pprint/pprint (mapv
                         #(select-keys % ["type" "subType" "extract" "message"])
                         (get validation-result "messages")))
-      (t/is (valid-schema? html-check/ValidHTMLOutput validation-result)))))
+      (tu/check-schema html-check/ValidHTMLOutput validation-result))))
 
 ;; putting the manual on a separate classpath really was more trouble than it
 ;; was worth!
@@ -282,5 +285,5 @@
                        :done))))))))
 
 (t/deftest sites
-  (if (test-utils/cli-test?) (match-config/enable-abbreviation!))
+  (if (tu/cli-test?) (match-config/enable-abbreviation!))
   (run! test-site (into [manual-site-config] additional-sites)))

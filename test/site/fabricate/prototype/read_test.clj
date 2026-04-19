@@ -10,6 +10,7 @@
             [clojure.pprint :as pprint]
             [site.fabricate.adorn :as adorn]
             [site.fabricate.api :as api]
+            [site.fabricate.prototype.test-utils :as tu]
             [matcher-combinators.test]
             [matcher-combinators.matchers :as matchers]
             [site.fabricate.prototype.kindly]
@@ -54,21 +55,6 @@
 
 (t/use-fixtures :once #_setup)
 
-(defmethod t/assert-expr 'valid-schema?
-  [msg form]
-  `(let [schema#      ~(nth form 1)
-         form#        (m/form schema#)
-         data#        ~(nth form 2)
-         result#      (m/validate schema# data#)
-         schema-name# (last form#)]
-     (t/do-report
-      {:type     (if result# :pass :fail)
-       :message  ~msg
-       :expected (str (with-out-str (pprint/pprint data#))
-                      " conforms to schema for "
-                      schema#)
-       :actual   (if (not result#) (m/explain schema# data#) result#)})
-     result#))
 
 (t/deftest file-utils
   (t/testing "Filename utilities"
@@ -134,30 +120,27 @@
 
 (t/deftest text-parser
   (t/testing "parsed element schema"
-    (t/is (valid-schema?
-           prototype.eval/Parsed-Form
-           (form-decoder
-            {:expr-src "(+ 3 4)" :expr '(+ 3 4) :error nil :result 7})))
-    (t/is (valid-schema?
-           prototype.eval/Parsed-Form
-           (form-decoder
-            {:expr-src "(+ 3 4)" :exec '(+ 3 4) :error nil :result nil})))
-    (t/is (valid-schema?
-           prototype.eval/Parsed-Form
-           (form-decoder {:expr-src "((+ 3 4)"
-                          :expr nil
-                          :error {:type clojure.lang.ExceptionInfo
+    (tu/check-schema
+     prototype.eval/Parsed-Form
+     (form-decoder {:expr-src "(+ 3 4)" :expr '(+ 3 4) :error nil :result 7}))
+    (tu/check-schema
+     prototype.eval/Parsed-Form
+     (form-decoder {:expr-src "(+ 3 4)" :exec '(+ 3 4) :error nil :result nil}))
+    (tu/check-schema prototype.eval/Parsed-Form
+                     (form-decoder
+                      {:expr-src "((+ 3 4)"
+                       :expr     nil
+                       :error    {:type clojure.lang.ExceptionInfo
                                   :cause
                                   "Unexpected EOF while reading item 1 of list."
                                   :data {:type :reader-exception :ex-kind :eof}}
-                          :result nil})))
-    (t/is
-     (valid-schema?
-      prototype.eval/Parsed-Form
-      (form-decoder
-       (first
-        (parse
-         "✳+(println \"a form evaluated but displayed without its output\")🔚"))))))
+                       :result   nil}))
+    (tu/check-schema
+     prototype.eval/Parsed-Form
+     (form-decoder
+      (first
+       (parse
+        "✳+(println \"a form evaluated but displayed without its output\")🔚")))))
   (t/testing "expression parsing"
     (t/is (fabricate-expr? (first (parse "✳=:foo🔚 bar ✳=:baz🔚")))
           "Predicate should match parsed expressions")
@@ -176,14 +159,13 @@
             {:code "{:class \"col\"}" :form {:class "col"}} [:txt "some text"]]
            (extended-form->form [:extended-form "[" ":div {:class \"col\"}"
                                  [:form-contents [:txt "some text"]] "]"])))
-    (t/is
-     (valid-schema?
-      Template
-      (template
-       "✳//[:div
+    (tu/check-schema
+     Template
+     (template
+      "✳//[:div
 ✳+=(let [s \"output\"]
     [:code (format \"a form evaluated and displayed with its %s\" s)]) 🔚
-]//🔚")))
+]//🔚"))
     (t/is
      (match?
       [{:code ":div" :form :div} [:txt "\n"]
@@ -219,7 +201,7 @@
 
 (t/deftest parsed-content-transforms
   (t/testing "schema conformance"
-    #_(t/is (valid-schema? Template (parse "✳(ns test-ns)🔚")))
+    ;(tu/check-schema Template (parse "✳(ns test-ns)🔚"))
     (t/is (every? #(m/validate prototype.eval/Parsed-Form %)
                   (parse "✳(ns test-ns)🔚"))))
   (t/testing "namespace retrieval"
@@ -331,12 +313,13 @@
                                 'var-test-ns)
             form-meta (meta evaluated)]
         (tap> form-meta)
-        (t/is (valid-schema? prototype.eval/Evaluated-Form (evaluated 0))
-              "Evaluation should produce valid Kindly forms")
+        (tu/check-schema prototype.eval/Evaluated-Form
+                         (evaluated 0)
+                         "Evaluation should produce valid Kindly forms")
         (t/is (string? (evaluated 1)))
-        (t/is (valid-schema? prototype.eval/Evaluated-Form
-                             (evaluated 2)
-                             "Evaluation should produce valid Kindly forms"))
+        (tu/check-schema prototype.eval/Evaluated-Form
+                         (evaluated 2)
+                         "Evaluation should produce valid Kindly forms")
         (t/is (some? (:namespace form-meta))
               "Namespace information should be attached to evaluated form")
         (t/is (match? {:a 3} (:metadata form-meta))
